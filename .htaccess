@@ -1,0 +1,6 @@
+RewriteEngine On
+
+RewriteCond $1 !(robots.txt|css/|js/|fonts/|images/|includes/tasks/|favicon.ico|api.php|logout.php)
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+

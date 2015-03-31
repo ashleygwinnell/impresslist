@@ -1,0 +1,3 @@
+data/database.sql
+data/backups/*
+includes/config.php

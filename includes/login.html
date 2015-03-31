@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+	<head>
+		<?php include_once("head.html"); ?>
+	</head>
+	<body> 
+		<br/>
+		<div class='container'>
+			<div class="jumbotron">
+				<h1>impress[]</h1>
+				<!-- <p>A system in-development for people you want to impress.</p> -->
+				<p>A system in-development for managing your PR.</p>
+				
+				<?php
+					if (count($errors) > 0) {
+						for($i = 0; $i < count($errors); $i++) {
+							echo '	<div class="alert alert-danger" role="alert">
+								  		<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+								  		<span class="sr-only">Error:</span>
+								  		' . $errors[$i] . '
+								  	</div>';
+						}
+					}
+				?>
+				<form class="form" role="login" action='/' method='POST'>
+					<div class="form-group">
+						<input name='email' type="text" class="form-control" placeholder="Email" <?php 
+
+						if (isset($_POST['email'])) {
+							echo "value='" . $_POST['email'] . "' ";
+						}
+
+						?> />
+					</div>
+					<div class="form-group">
+						<input name='password' type="password" class="form-control" placeholder="Password" <?php 
+
+						if (isset($_POST['password'])) {
+							echo "value='' ";
+						}
+
+						?>>
+					</div>
+					<button type="submit" class="btn btn-primary">Login</button>
+				</form>
+
+
+
+			</div>
+
+			<h1>About</h1><br/>
+			<div class='row'>
+				<div class='col-sm-4'>
+					<h3>What's this all about?</h3>
+					<p>impress[] <i>(pronounced "impress list")</i> is a system that helps you manage your contacts, marketing and PR.</p><p> It's like <a href='http://www.promoterapp.com/' target='new'>Promoter</a>, <a href='https://dodistribute.com/' target='new'>distribute()</a> and <i>something else</i>, all in the same place.</p><br/>
+
+					<p class='sm'>Have you read the license?</p>
+					<button class="btn btn-primary btn-lg" style='width:100%;' type="button"  aria-expanded="false">Download from Github</button>
+
+				</div>
+				<div class='col-sm-8'>
+					<div class='row'>
+						<div class='col-sm-6'>
+							<h3>Contact Management</h3>
+							<p>An advanced 'address book' geared specifically towards games media. Organises journalists, publications/sites and YouTubers.</p>
+							<p>Search by any term. Order by custom priorities, followers, last contact date, and more. Filter by anything too!</p><br/>
+						</div>
+						<div class='col-sm-6'>
+							<h3>Email Tracking</h3>
+							<p>Tracks emails sent from your team to your contacts. See immediately who you might have to follow-up with and why. </p>
+							<p><i>Coming Soon: Track who opens your emails and who doesn't (via inserting an html tracking pixel).</i> </p><br/>
+						</div>
+					</div>
+
+					<div class='row'>
+						<div class='col-sm-6'>
+							<h3>It's <i>Fast</i>!</h3>
+							<p>Everything is handled on the client; no waiting around for full-page browser refreshes!</p><br/>
+						</div>
+						<div class='col-sm-6'>
+							<h3>It's <i>Fluid</i>!</h3>
+							<p>Sometimes you just <i>have</i> to manage this stuff while on-the-move, so the system works across a wide range of device types. </p><br/>
+						</div>
+					</div>
+
+					<div class='row'>
+						<div class='col-sm-6'>
+							<h3>It's <i>Customisable</i>!</h3>
+							<p>Written in Bootstrap, the system is completely customisable (or at the very least themeable). Theme it to your company brand, game, or whatever!</p>
+						</div>
+						<div class='col-sm-6'>
+							<h3>It's <i>Open Source</i>!</h3>
+							<p>The system is Open Source under a very liberal license. BSD / MIT / GPLv3 or so.</p>
+							<p>However that <b>doesn't mean it's free</b>!</p>
+							<p>If you're a company with over 6 people, a subsidiary of another company, or are otherwise <i>not indie</i>, you have to pay us the big dollar.</p>
+						</div>
+					</div>
+					
+
+					
+
+					
+				</div>
+				
+			</div><br/>
+			
+			
+			<div class='row'>
+				<div class='col-sm-4'></div>
+				<div class='col-sm-8'>
+					<h4>Special Thanks</h4>
+					<ul>
+						<li><p>Everybody who has given feedback, suggested features, or used the system. Without you impress[] would probably still be a bit wonky.</p> </li>
+						<li><p>Vlambeer - the makers of presskit() and distribute() - for inspiring us to make a tool for other independent game developers (and generally being awesome).</p></li>
+						
+					</ul>
+				</div>
+			</div><br/>
+			<!-- Show only people you haven't contacted recently.-->
+
+			<!-- <p class="text-muted fl"><a href='/about.php'>About</a></p> -->
+			<!-- <p class="text-muted fr">&copy; Made with love by <a href='http://forceofhab.it/'>Force Of Habit</a></p> -->
+		</div>
+
+		<footer class="footer">
+			<div class="container mywidecontainer">
+				<p class="text-muted">&copy; Made with love by <a href='http://forceofhab.it/'>Force Of Habit</a></p>
+			</div>
+		</footer>
+
+	</body>
+</html>

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+	<head>
+		<?php include_once("head.html"); ?>
+		
+      	<script type='text/javascript'>
+      		
+        	$().ready(function() { 
+	        	
+	        	impresslist.config.system.email = "<?php echo $impresslist_emailAddress; ?>";
+	        	impresslist.config.system.backups.lastmanual = <?php echo $settings['manual_backup_lastbackedupon']; ?>;
+        		impresslist.config.user.id = <?php echo $user_id; ?>;
+        		impresslist.config.user.game = <?php echo $user_currentGame; ?>;
+      			impresslist.config.user.gmail = <? echo $user_gmailIndex; ?>;
+
+      			<?php for($i = 0; $i < $num_users; $i++): ?>
+	        		impresslist.addUser(new User(<?php echo json_encode($users[$i]); ?>), true);
+        		<?php endfor; ?>
+
+        		<?php for($i = 0; $i < $num_games; $i++): ?>
+	        		impresslist.addGame(new Game(<?php echo json_encode($games[$i]); ?>), true);
+        		<?php endfor; ?>
+
+      			<?php for($i = 0; $i < $num_people; $i++): ?>
+	        		impresslist.addPerson(new Person(<?php echo json_encode($people[$i]); ?>), true);
+        		<?php endfor; ?>
+
+        		<?php for($i = 0; $i < $num_publications; $i++): ?>
+	        		impresslist.addPublication(new Publication(<?php echo json_encode($publications[$i]); ?>), true);
+        		<?php endfor; ?>
+
+        		<?php for($i = 0; $i < $num_personPublications; $i++): ?>
+	        		impresslist.addPersonPublication(new PersonPublication(<?php echo json_encode($personPublications[$i]); ?>), true);
+        		<?php endfor; ?>
+
+        		<?php for($i = 0; $i < $num_youtubers; $i++): ?>
+	        		impresslist.addYoutuber(new Youtuber(<?php echo json_encode($youtubers[$i]); ?>), true);
+        		<?php endfor; ?>
+
+        		<?php for($i = 0; $i < $num_emails; $i++): ?>
+	        		impresslist.addEmail(new Email(<?php echo json_encode($emails[$i]); ?>), true);
+        		<?php endfor; ?>
+
+        		
+
+        		impresslist.init();
+      			
+        	});
+        </script>
+
+	</head>
+	<body> 
+		<nav class="navbar navbar-default navbar-fixed-top">
+			<div class="container mywidecontainer">
+				<!-- Brand and toggle get grouped for better mobile display -->
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+						<span class="sr-only">Toggle navigation</span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</button>
+					<a class="navbar-brand" href="/">impress[]</a>
+				</div>
+
+				<!-- Collect the nav links, forms, and other content for toggling -->
+
+				<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+			      
+					<ul class="nav navbar-nav navbar-right">
+				    	<!-- <li><a href="#">Link</a></li> -->
+				    	<li class="dropdown">
+				    		<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Add <span class="caret"></span></a>
+				    		<ul class="dropdown-menu" role="menu">
+				    			<li><a id='nav-add-person' href="javascript:;">Person</a></li>
+				    			<li><a id='nav-add-publication' href="javascript:;">Publication</a></li>
+				    			<li><a id='nav-add-youtuber' href="javascript:;">YouTuber</a></li>
+				    			<!-- <li class="divider"></li>
+				    			<li><a href="#">Something else</a></li> -->
+				    		</ul>
+				    	</li>
+				    	<li class='dropdown'>
+				    		<a href='#' class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Settings <span class="caret"></span></a>
+
+				    		<ul class="dropdown-menu" role="menu">
+				    			<?php if ($user_admin): ?>
+				    				<li><a id='nav-admin' data-nav-page='admin' href="javascript:;">Admin Panel</a></li>
+				    				<li class="divider"></li>
+				    			<?php endif;?>
+				    			
+				    			<li><a id='nav-user-changepassword' href="#" data-toggle='modal' data-target='.password_modal'>Change Password</a></li>
+				    			<li><a id='nav-help' href="#" data-nav-page="help" href='javascript:;'>Help</a></li>
+				    			<li><a id='nav-feedback'>Feedback</a></li>
+				    			<li class="divider"></li>
+				    			<li><a href="/logout.php">Logout</a></li>
+				    		</ul>
+				    	</li>
+				    </ul>
+
+				    <form class="navbar-form navbar-left" role="search">
+				    	<div class="form-group">
+				    		<input id='filter' type="text" class="form-control" placeholder="Search" style='width:400px;'>
+				    	</div>
+				    </form>
+
+				</div>
+			</div>
+		</nav>
+
+		<!-- Spacer -->
+		<div class='container mycontainer' style='margin-top:50px;'>
+			&nbsp;
+		</div>
+
+		
+
+		<!-- Home page -->
+		<div id='home-page' data-type-page='true' data-page='home'>
+
+			<div id='chat-container' class='container mycontainer'>
+				<div id='chat'>
+					<div class='row'>
+						<div class='col-sm-12'>
+							<p><b>Chat:</b></p>
+							<div><b>Online Users:</b> <span class='online-users'></span></div>
+							<p></p>
+							<div class='messages form-control' style='min-height:100px; overflow:scroll;'>
+							</div>
+						</div>
+					</div>
+					<p></p>
+
+					<div class='row'>
+						<div class='col-sm-10'>
+							<input type='text' class='form-control message'/>
+						</div>
+						<div class='col-sm-2'>
+							<button class='btn btn-primary submit-message' style='width:100%'>Chat</button>
+						</div>
+					</div>
+					<hr/>
+				</div>
+			</div>
+
+			<div id='current-project' class='container mycontainer'>
+				<div class='filters' style='float:left;text-align:left;'>
+					<div class='filter-item'><b>Logged in as:</b> <span id='current-user-name'></span></div>
+					<div class='filter-item'><b>Current Project:</b> <span id='current-project-name'></span></div>
+				</div>
+				<div class='filters'>
+					<div class='filter-item'><b>Filters:</b></div>
+					<div class='filter-item'>Not recently contacted (1 week) - <input id='filter-recent-contact' type='checkbox'/></div>
+					<div class='filter-item'>High Priority - <input id='filter-high-priority' type='checkbox'/></div>
+					<div class='filter-item'>People I've contacted - <input id='filter-personal-contact' type='checkbox'/></div>
+					<div class='filter-item'>People with Email Addresses - <input id='filter-email-attached' type='checkbox'/></div>
+					<div class='filter-item'>People assigned to me - <input id='filter-assigned-self' type='checkbox'/></div>
+				</div>
+			</div><br/>	
+			
+			
+			<!-- People -->
+			<div id='people-container' class='container mycontainer'>
+				<div class="panel panel-default">
+	  				<div class="panel-heading oa"><span class='fl'>People</span><span id='people-count' class='fr'>(0)</div>
+					<table class='table table-striped sortable' >
+						<thead>
+							<tr>
+								<!-- <th data-defaultsort="desc">ID</th> -->
+								<th data-defaultsort="asc">Name</th>
+								<th>Priority</th>
+								<th>Twitter</th>
+								<th>Last Contacted</th>
+							</tr>
+						</thead>
+						<tbody id='people'>
+							
+						</tbody>
+						<tfoot id='people-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+					</table>
+				</div>
+			</div>
+
+		
+			<!-- Publications / Sites -->
+			<div id='publications-container' class='container mycontainer'>
+				<div class="panel panel-default">
+	  				<div class="panel-heading oa"><span class='fl'>Publications / Sites</span><span id='publication-count' class='fr'>(0)</span></div>
+					<table class='table table-striped sortable' >
+						<thead>
+							<tr>
+								<!-- <th data-defaultsort="asc">ID</th> -->
+								<th data-defaultsort="asc">Name</th>
+								<th>Priority</th>
+								<th>Url</th>
+								<th>Twitter</th>
+								<th>Last Posted On</th>
+							</tr>
+						</thead>
+						<tbody id='publications'>
+							
+						</tbody>
+						<tfoot id='publications-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+					</table>
+				</div>
+			</div><br/>
+
+			<!-- Youtubers -->
+			<div id='youtubers-container' class='container mycontainer'>
+				<div class="panel panel-default">
+	  				<div class="panel-heading oa"><span class='fl'>YouTubers</span><span id='youtuber-count' class='fr'>(0)</span></div>
+					<table class='table table-striped sortable' >
+						<thead>
+							<tr>
+								<!-- <th data-defaultsort="asc">ID</th> -->
+								<th data-defaultsort="asc">Channel Name</th>
+								<th>Priority</th>
+								<th>Subscribers</th>
+								<th>Views</th>
+								<th>Twitter</th>
+								<th>Last Uploaded On</th>
+							</tr>
+						</thead>
+						<tbody id='youtubers'>
+							
+						</tbody>
+						<tfoot id='youtubers-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+					</table>
+				</div>
+			</div><br/>
+
+		</div>
+
+		<!-- Admin panel -->
+		<div id='help-page' data-type-page='true' data-page='help'>
+			<div class='container mycontainer'>
+				<p><b>Help:</b></p>
+				<!-- <p>Everybody knows by now that you can't just carpet-bomb the entire games press with a single non-personalised email, especially so if you're not part of the infamous (and totally fictional) indie elite. That is why this tool was created, and why it doesn't include an "email all" feature.</p>
+				
+				
+
+				<p><b>Tips</b></p>-->
+				<p>Using this tool is hopefully pretty self-explanatory, so instead we decided it would be better of us to list a bunch of really useful articles that help you hone your story, and make you think a bit more about how you approach your PR and Marketing.</p><p> As below:</p>
+				<ul>
+					<li><a href='http://indiegames.com/2013/07/five_pr_tips_indies_really_nee.html' target='new'>Five PR tips indies really need</a> - Leigh Alexander, indiegames.com</li>
+					<li><a href='http://www.gamasutra.com/view/news/198381/How_to_talk_to_the_video_game_press_in_2013.php' target='new'>How to talk to the video game press in 2013</a> - Mike Rose, gamasutra.com</li>
+					<li><a href='http://forceofhab.it/blog/launch-meet-the-games-press/' target='new'>How to talk to games press</a> - Force Of Habit</li>
+					<li><a href='http://joostdevblog.blogspot.co.uk/2012/11/the-indie-marketing-plan.html' target='new'>The indie marketing plan</a> - Joost van Dongen</li>
+					<li><a href='http://gillen.cream.org/wordpress_html/assorted-essays/how-to-use-and-abuse-the-games-press-and-how-the-games-press-wants-to-use-and-abuse-you/' target='new'>How to use and abuse the gaming press and how the gaming press wants to use and abuse you</a> - Kieron Gillen</li>
+					<li>...and of course, <a href='http://www.pixelprospector.com/the-big-list-of-indie-game-marketing/'>The Big List of Indie Game Marketing</a> - Pixel Prospector</li>
+
+					<!-- 
+						Kids review sites lists
+						http://www.reviewfordev.com/list-of-review-sites-to-find-the-best-educational-apps-for-kids.php
+					-->
+
+
+					
+				</ul>
+			</div>
+			
+		</div>	
+
+
+
+		<!-- Admin panel -->
+		<div id='admin-page' data-type-page='true' data-page='admin'>
+			<div id='current-project' class='container mycontainer'>
+				<div class='filters' style='float:left;text-align:left;'>
+					<div class='filter-item'><b>Admin Panel</b></div>
+				</div>
+			</div><br/>	
+
+			<div class='container mycontainer'>
+				<div class="panel panel-default">
+					<div class="panel-heading">Users:</div>
+					<div class='pady padx'>
+						<div class='admin-users-list'>
+							<?php 
+								echo "<p><i>TODO: User management, stats, etc.</i></p>";
+
+								$userEmails = array(0,0,0,0,0,0);
+								foreach ($emails as &$email) {
+									$userEmails[$email['user_id']]++;
+								}
+								foreach ($users as &$user) {
+									echo "<p>" . $user['id'] . ". <b style='color:" . $user['color'] . "'>" . $user['forename'] . "</b> - " . $userEmails[$user['id']] . " emails sent.</p>";
+								}
+								
+							?>	
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class='container mycontainer'>
+				<div class="panel panel-default">
+					<div class="panel-heading">Manual Tasks:</div>
+					<div class='pady padx'>
+						<a href='includes/tasks/refresh-email.php' target='new'><button class='btn btn-primary'>Refresh Emails</button></a>
+						<a href='includes/tasks/refresh-rss.php' target='new'><button class='btn btn-primary'>Refresh RSS Feeds</button></a>
+						<a href='includes/tasks/refresh-twitter.php' target='new'><button class='btn btn-primary'>Refresh Twitter Followers</button></a>
+						
+						
+					</div>
+				</div>
+			</div>
+
+			<div class='container mycontainer'>
+				<div class="panel panel-default">
+					<div class="panel-heading">Backup Settings:</div>
+					<div class='pady padx'>
+						<!-- <div class='form-group'>
+							<label>Email Backups:</label><input type='checkbox' class='form-control'/>
+						</div> -->
+						<!-- impresslist.config.system.backups.lastmanual -->
+						<p><i>TODO: Automatic email backups.</i></p>
+						<p><b>Last Backup On: </b><span data-last-backup='true'></p>
+						<p><a href='/api.php?endpoint=/backup/'><button id='save-backup-submit' type='submit' class='btn btn-primary'>Save Backup Now!</button></a></p>
+						<p><a href='includes/tasks/backup-email.php' target='new'><button class='btn btn-primary'>Email Backup Now!</button></a></p>
+						
+					</div>
+				</div>
+			</div>
+
+			<div class='container mycontainer'>
+				<div class="panel panel-default">
+					<div class="panel-heading">SQL Query:</div>
+					<div class='pady padx'>
+						<form role='form' onsubmit='return false;'>
+							<div class='form-group'>
+								<p>You must use double-quotes.</p>
+								<textarea id='sql-query-text' class='form-control' style='min-height:75px;'></textarea>
+							</div>
+						</form>
+						<button id='sql-query-submit' type='submit' class='btn btn-danger'>Live Dangerously</button>
+					</div>
+				</div>
+			</div>
+
+		</div>
+
+		<div id='modals'></div>
+
+		<footer class="footer">
+			<div class="container mywidecontainer">
+				<p class="text-muted">&copy; Made with love by <a href='http://forceofhab.it/'>Force Of Habit</a></p>
+			</div>
+		</footer>
+	</body>
+</html>

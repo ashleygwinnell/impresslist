@@ -1,0 +1,46 @@
+/* Sticky footer styles
+-------------------------------------------------- */
+.mycontainer {
+  width: 800px;
+}
+.mywidecontainer {
+  width: 900px;
+}
+
+.pady {
+	padding-top:10px;
+	padding-bottom:10px;
+}
+.padx {
+	padding-left:10px;
+	padding-right:10px;
+}
+
+h3 {
+	margin-top:0px;
+	margin-bottom:15px;
+}
+.fl { float:left; }
+.fr { float:right; }
+.oa { overflow: auto; }
+
+.table-list {
+	cursor:pointer;
+}
+
+.filters {
+	float:right;
+	text-align: right;
+}
+.filters .filter-item {
+	padding-bottom:6px;
+}
+.filters .filter-item:last-child {
+	padding-bottom:0px;
+}
+
+
+
+#home-page { display:block; }
+#admin-page { display:none; }
+#help-page { display:none; }
