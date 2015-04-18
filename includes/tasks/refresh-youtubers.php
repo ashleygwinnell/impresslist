@@ -10,9 +10,7 @@ $require_login = false;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // People
-$youtubeChannels = array();
-$youtubeChannel_resultset = $db->query("SELECT * FROM youtuber;");
-while($row = $youtubeChannel_resultset->fetchArray()) { $youtubeChannels[] = $row; }
+$youtubeChannels = $db->query("SELECT * FROM youtuber;");
 $num_youtubeChannels = count($youtubeChannels);
 
 $twittersUpdated = 0;

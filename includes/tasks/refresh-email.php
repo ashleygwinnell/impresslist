@@ -42,16 +42,10 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 		
 		//echo $in[$i]['from'] . "<br/>";
 		$stmt = $db->prepare("SELECT * from user WHERE email = :email LIMIT 1");
-		$stmt->bindValue(":email", $in[$i]['from'], SQLITE3_TEXT);
-		$rs = $stmt->execute();
+		$stmt->bindValue(":email", $in[$i]['from'], Database::VARTYPE_STRING);
+		$userResults = $stmt->query();
 
-		$count = 0;
-		$userResults = array();
-		while ($arr = $rs->fetchArray()) {
-			$userResults[] = $arr;
-			$count++;
-		}
-
+		$count = count($userResults);
 		if ($count == 0) {
 			// flag this email as being sent from a non impresslist email.
 			echo "Found an email sent from a non impresslist email account?<br/>";
@@ -68,46 +62,38 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 			$count_recipients_2 = 0;
 			
 			$stmt2 = $db->prepare("SELECT * FROM person WHERE email = :email; ");
-			$stmt2->bindValue(":email", $in[$i]['to'], SQLITE3_TEXT);
-			$rs2 = $stmt2->execute(); 
-			$rs2arr = array();
-			while ($arr = $rs2->fetchArray()) { $rs2arr[] = $arr; $count_recipients_1++; }
-
-			$rs2->finalize();
-			$stmt2->close();
-
+			$stmt2->bindValue(":email", $in[$i]['to'], Database::VARTYPE_STRING);
+			$rs2arr = $stmt2->query(); 
+			$count_recipients_1 = count($rs2arr);
+			
+			
 			$stmt3 = $db->prepare("SELECT * FROM person_publication WHERE email = :email; ");
-			$stmt3->bindValue(":email", $in[$i]['to'], SQLITE3_TEXT);
-			$rs3 = $stmt3->execute();
-			$rs3arr = array();
-			while ($arr = $rs3->fetchArray()) { $rs3arr[] = $arr; $count_recipients_2++; }
-
-			$rs3->finalize();
-			$stmt3->close();
-
+			$stmt3->bindValue(":email", $in[$i]['to'], Database::VARTYPE_STRING);
+			$rs3arr = $stmt3->query();
+			$count_recipients_2 = count($rs3arr);
+			
 			if ($count_recipients_1 > 1 || $count_recipients_2 > 1) {
 				echo "THIS EMAIL IS IN THE DATABASE FOR TWO PEOPLE. CANNOT ADD EMAIL.<br/>";
 			} else if ($count_recipients_1 == 0 && $count_recipients_2 == 0) {
 				echo "ADD RECIPIENT TO DATABASE<br/>";
 				$stmt4 = $db->prepare("INSERT INTO person (id, 	name,  email,  priorities,  twitter,  twitter_followers,  notes,  lastcontacted, lastcontactedby, removed)
 												  VALUES (NULL, :name, :email, :priorities, :twitter, :twitter_followers, :notes, :lastcontacted, :lastcontactedby, :removed);");
-				$stmt4->bindValue(":name", $in[$i]['to'], SQLITE3_TEXT);
-				$stmt4->bindValue(":email", $in[$i]['to'], SQLITE3_TEXT);
-				$stmt4->bindValue(":priorities", db_defaultPrioritiesString($db), SQLITE3_TEXT);
-				$stmt4->bindValue(":twitter", "", SQLITE3_INTEGER);
-				$stmt4->bindValue(":twitter_followers", 0, SQLITE3_TEXT);
-				$stmt4->bindValue(":notes", "Automatically generated.", SQLITE3_TEXT);
-				$stmt4->bindValue(":lastcontacted", $in[$i]['timestamp'], SQLITE3_INTEGER);
-				$stmt4->bindValue(":lastcontactedby", $userResults[0]['id'], SQLITE3_INTEGER);
-				$stmt4->bindValue(":removed", 0, SQLITE3_INTEGER);
+				$stmt4->bindValue(":name", $in[$i]['to'], Database::VARTYPE_STRING);
+				$stmt4->bindValue(":email", $in[$i]['to'], Database::VARTYPE_STRING);
+				$stmt4->bindValue(":priorities", db_defaultPrioritiesString($db), Database::VARTYPE_STRING);
+				$stmt4->bindValue(":twitter", "", Database::VARTYPE_INTEGER);
+				$stmt4->bindValue(":twitter_followers", 0, Database::VARTYPE_STRING);
+				$stmt4->bindValue(":notes", "Automatically generated.", Database::VARTYPE_STRING);
+				$stmt4->bindValue(":lastcontacted", $in[$i]['timestamp'], Database::VARTYPE_INTEGER);
+				$stmt4->bindValue(":lastcontactedby", $userResults[0]['id'], Database::VARTYPE_INTEGER);
+				$stmt4->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
 				$rs4 = $stmt4->execute();
 
 				$rs2arr[] = array("id" => $db->lastInsertRowID());
 				$count_recipients_1 = 1;
 				$count_recipients_2 = 0;
 
-				$rs4->finalize();
-				$stmt4->close();
+				
 			}
 
 			if (($count_recipients_1 == 1 && $count_recipients_2 == 0) || ($count_recipients_1 == 0 && $count_recipients_2 == 1)) 
@@ -126,21 +112,17 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 																from_email = :from_email AND 
 																subject = :subject AND
 																contents = :contents;");
-				$stmt5->bindValue(":user_id", $userResults[0]['id'], SQLITE3_INTEGER);
-				$stmt5->bindValue(":person_id", $person_id, SQLITE3_INTEGER);
-				$stmt5->bindValue(":utime", $in[$i]['timestamp'], SQLITE3_INTEGER);
-				$stmt5->bindValue(":from_email", $in[$i]['from'], SQLITE3_TEXT);
-				$stmt5->bindValue(":to_email", $in[$i]['to'], SQLITE3_TEXT);
-				$stmt5->bindValue(":subject", $in[$i]['subject'], SQLITE3_TEXT);
-				$stmt5->bindValue(":contents", $in[$i]['contents'], SQLITE3_TEXT);
-				$rs5 = $stmt5->execute();
+				$stmt5->bindValue(":user_id", $userResults[0]['id'], Database::VARTYPE_INTEGER);
+				$stmt5->bindValue(":person_id", $person_id, Database::VARTYPE_INTEGER);
+				$stmt5->bindValue(":utime", $in[$i]['timestamp'], Database::VARTYPE_INTEGER);
+				$stmt5->bindValue(":from_email", $in[$i]['from'], Database::VARTYPE_STRING);
+				$stmt5->bindValue(":to_email", $in[$i]['to'], Database::VARTYPE_STRING);
+				$stmt5->bindValue(":subject", $in[$i]['subject'], Database::VARTYPE_STRING);
+				$stmt5->bindValue(":contents", $in[$i]['contents'], Database::VARTYPE_STRING);
+				$rs5 = $stmt5->query();
 
-				$count_email_dups = 0;
-				while ($arr = $rs5->fetchArray()) { $count_email_dups++; }
-
-				$rs5->finalize();
-				$stmt5->close();
-
+				$count_email_dups = count($rs5);
+				
 				if ($count_email_dups > 0) {
 					echo "already in database (" . $count_email_dups . ") <br/>";
 					imap_delete($imap_connection, $in[$i]['id']);
@@ -150,37 +132,38 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 					$stmt = $db->prepare("INSERT INTO email (id, 	user_id, 	person_id, 	utime, 	from_email,  to_email, 	subject,  contents, unmatchedrecipient   )
 													VALUES  (NULL, :user_id, 	:person_id, :utime, :from_email, :to_email, :subject, :contents, :unmatchedrecipient );");
-					$stmt->bindValue(":user_id", $userResults[0]['id'], SQLITE3_INTEGER);
-					$stmt->bindValue(":person_id", $person_id, SQLITE3_INTEGER);
-					$stmt->bindValue(":utime", $in[$i]['timestamp'], SQLITE3_INTEGER);
-					$stmt->bindValue(":from_email", $in[$i]['from'], SQLITE3_TEXT);
-					$stmt->bindValue(":to_email", $in[$i]['to'], SQLITE3_TEXT);
-					$stmt->bindValue(":subject", $in[$i]['subject'], SQLITE3_TEXT);
-					$stmt->bindValue(":contents", $in[$i]['contents'], SQLITE3_TEXT);
-					$stmt->bindValue(":unmatchedrecipient", 0, SQLITE3_INTEGER);
-					if ($stmt->execute() === FALSE) {
+					$stmt->bindValue(":user_id", $userResults[0]['id'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":person_id", $person_id, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":utime", $in[$i]['timestamp'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":from_email", $in[$i]['from'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":to_email", $in[$i]['to'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":subject", $in[$i]['subject'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":contents", $in[$i]['contents'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":unmatchedrecipient", 0, Database::VARTYPE_INTEGER);
+					$stmt->execute();
+					/*if ($stmt->execute() === FALSE) {
 						echo $userResults[0]['id'] . "<br/>";
 						echo $person_id . "<br/>";
 						print_r($in[$i]);
-					}
-					$stmt->close();
+					}*/
+					//$stmt->close();
 
 					// update "last contacted" for this person.
 					$stmt = $db->prepare("UPDATE person SET lastcontacted = :lastcontacted, lastcontactedby = :lastcontactedby WHERE id = :id; ");
-					$stmt->bindValue(":id", $person_id, SQLITE3_INTEGER);
-					$stmt->bindValue(":lastcontacted", $in[$i]['timestamp'], SQLITE3_INTEGER);
-					$stmt->bindValue(":lastcontactedby", $userResults[0]['id'], SQLITE3_INTEGER);
+					$stmt->bindValue(":id", $person_id, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":lastcontacted", $in[$i]['timestamp'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":lastcontactedby", $userResults[0]['id'], Database::VARTYPE_INTEGER);
 					$stmt->execute();
-					$stmt->close();
+					//$stmt->close();
 
 					if (count($rs2arr) == 0) {
 						$stmt = $db->prepare("UPDATE person_publication SET lastcontacted = :lastcontacted, lastcontactedby = :lastcontactedby WHERE person = :person_id AND publication = :pulication_id ");
-						$stmt->bindValue(":person_id", $person_id, SQLITE3_INTEGER);
-						$stmt->bindValue(":publication_id", $rs3arr['publication'], SQLITE3_INTEGER);
-						$stmt->bindValue(":lastcontacted", $in[$i]['timestamp'], SQLITE3_INTEGER);
-						$stmt->bindValue(":lastcontactedby", $userResults[0]['id'], SQLITE3_INTEGER);
+						$stmt->bindValue(":person_id", $person_id, Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":publication_id", $rs3arr['publication'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":lastcontacted", $in[$i]['timestamp'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":lastcontactedby", $userResults[0]['id'], Database::VARTYPE_INTEGER);
 						$stmt->execute();
-						$stmt->close();
+						//$stmt->close();
 					}
 
 					// todo: delete the email.

@@ -2,6 +2,8 @@
 
 session_start();
 
+include_once("includes/database.class.php");
+
 include_once("includes/config.php");
 include_once("includes/util.php");
 include_once("includes/database.php");
@@ -26,14 +28,11 @@ if ($require_login) {
 			if (empty($errors)) {
 
 				$stmt = $db->prepare("SELECT * FROM user WHERE email = :email AND password = :password; ");
-				$stmt->bindValue("email", $email, SQLITE3_TEXT);
-				$stmt->bindValue("password", md5($password), SQLITE3_TEXT);
-				$rs = $stmt->execute();
+				$stmt->bindValue(":email", $email, Database::VARTYPE_STRING);
+				$stmt->bindValue(":password", md5($password), Database::VARTYPE_STRING);
+				$results = $stmt->query();
 
-				$count = 0;
-				$results = array();
-				while($arr = $rs->fetchArray()) { $results[] = $arr; $count++; }
-
+				$count = count($results);
 				if ($count == 0) {
 					$errors[] = "Invalid email address / password combination. ";
 				} else if ($count > 1 || $count < 0) { 

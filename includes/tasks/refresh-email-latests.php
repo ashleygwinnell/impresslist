@@ -4,27 +4,19 @@ $require_login = false;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // Emails
-$emails = array();
-$emails_resultset = $db->query("SELECT * FROM email WHERE unmatchedrecipient == 0 ORDER BY utime DESC;");
-while($row = $emails_resultset->fetchArray(SQLITE3_ASSOC)) { $emails[] = $row; }
+$emails = $db->query("SELECT * FROM email WHERE unmatchedrecipient == 0 ORDER BY utime DESC;");
 $num_emails = count($emails);
 
 // People
-$people = array();
-$people_resultset = $db->query("SELECT * FROM person WHERE removed = 0;");
-while($row = $people_resultset->fetchArray(SQLITE3_ASSOC)) { $people[] = $row; }
+$people = $db->query("SELECT * FROM person WHERE removed = 0;");
 $num_people = count($people);
 
 // Publications
-$publications = array();
-$publications_resultset = $db->query("SELECT * FROM publication WHERE removed = 0;");
-while($row = $publications_resultset->fetchArray(SQLITE3_ASSOC)) { $publications[] = $row; }
+$publications = $db->query("SELECT * FROM publication WHERE removed = 0;");
 $num_publications = count($publications);
 
 // Add Publications to People
-$personPublications = array();
-$personPublications_resultset = $db->query("SELECT * FROM person_publication;");
-while($row = $personPublications_resultset->fetchArray(SQLITE3_ASSOC)) { $personPublications[] = $row; }
+$personPublications = $db->query("SELECT * FROM person_publication;");
 $num_personPublications = count($personPublications);
 
 //ALTER TABLE person_publication ADD COLUMN lastcontactedby INTEGER NOT NULL DEFAULT 0;
@@ -61,9 +53,9 @@ for ($i = 0; $i < count($people); $i++)
 				//echo $latestEmailTimestamp . "<br/>";
 				//echo $emails[$latestEmailIndex]['user_id'] . "<br/>";
 				$stmt = $db->prepare("UPDATE person_publication SET lastcontacted = :lastcontacted, lastcontactedby = :lastcontactedby WHERE id = :id; ");
-				$stmt->bindValue(":id", $personPublications[$k]['id'], SQLITE3_INTEGER); 
-				$stmt->bindValue(":lastcontacted", $latestEmailTimestamp, SQLITE3_INTEGER);
-				$stmt->bindValue(":lastcontactedby", $latestEmailUser, SQLITE3_INTEGER); 
+				$stmt->bindValue(":id", $personPublications[$k]['id'], Database::VARTYPE_INTEGER); 
+				$stmt->bindValue(":lastcontacted", $latestEmailTimestamp, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":lastcontactedby", $latestEmailUser, Database::VARTYPE_INTEGER); 
 				$stmt->execute();
 				$stmt->close();
 
@@ -89,9 +81,9 @@ for ($i = 0; $i < count($people); $i++)
 	}
 	if ($latestAllContactUser > 0) {
 		$stmt = $db->prepare("UPDATE person SET lastcontacted = :lastcontacted, lastcontactedby = :lastcontactedby WHERE id = :id; ");
-		$stmt->bindValue(":id", $people[$i]['id'], SQLITE3_INTEGER); 
-		$stmt->bindValue(":lastcontacted", $latestAllContactTimestamp, SQLITE3_INTEGER);
-		$stmt->bindValue(":lastcontactedby", $latestAllContactUser, SQLITE3_INTEGER); 
+		$stmt->bindValue(":id", $people[$i]['id'], Database::VARTYPE_INTEGER); 
+		$stmt->bindValue(":lastcontacted", $latestAllContactTimestamp, Database::VARTYPE_INTEGER);
+		$stmt->bindValue(":lastcontactedby", $latestAllContactUser, Database::VARTYPE_INTEGER); 
 		$stmt->execute();
 		$stmt->close();
 	}

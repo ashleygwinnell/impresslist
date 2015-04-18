@@ -10,9 +10,7 @@ $require_login = false;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // People
-$people = array();
-$people_resultset = $db->query("SELECT * FROM person;");
-while($row = $people_resultset->fetchArray()) { $people[] = $row; }
+$people = $db->query("SELECT * FROM person;");
 $num_people = count($people);
 
 for($i = 0; $i < count($people); $i++) {
@@ -27,9 +25,7 @@ for($i = 0; $i < count($people); $i++) {
 }
 
 // Publications
-$publications = array();
-$publications_resultset = $db->query("SELECT * FROM publication;");
-while($row = $publications_resultset->fetchArray()) { $publications[] = $row; }
+$publications = $db->query("SELECT * FROM publication;");
 $num_publications = count($publications);
 
 for($i = 0; $i < count($publications); $i++) {

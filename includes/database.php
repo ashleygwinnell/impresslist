@@ -1,53 +1,43 @@
 <?php
 
 
-	$db = new SQLite3($_SERVER['DOCUMENT_ROOT'] . "/" . $impresslist_databaseName, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE);
+	$db = Database::getInstance();
 
 	function sqlite_epoch($time = 0) {
 		return date("Y-m-d H:i:s", $time);
 	}
 	function db_singleuser($db, $userId) {
 		if (!is_numeric($userId)) { return false; }
-		$user_resultset = $db->query("SELECT * FROM user WHERE id = '" . $userId . "' LIMIT 1;");
-		$user = $user_resultset->fetchArray(SQLITE3_ASSOC);
-		$user_resultset->finalize();
-		return $user;
+		$results = $db->query("SELECT * FROM user WHERE id = '" . $userId . "' LIMIT 1;");
+		return $results[0];
 	}
 	function db_singleperson($db, $personId) {
-		$people_resultset = $db->query("SELECT *, strftime('%s', lastcontacted) as lastcontacted_timestamp FROM person WHERE id = '" . $personId . "' LIMIT 1;");
-		$person = $people_resultset->fetchArray(SQLITE3_ASSOC);
-		$people_resultset->finalize();
-		return $person;
+		$rs = $db->query("SELECT *, strftime('%s', lastcontacted) as lastcontacted_timestamp FROM person WHERE id = '" . $personId . "' LIMIT 1;");
+		return $rs[0];
 	}
 	function db_singlepersonpublication($db, $personPublicationId) {
-		$people_resultset = $db->query("SELECT *, strftime('%s', lastcontacted) as lastcontacted_timestamp FROM person_publication WHERE id = '" . $personPublicationId . "' LIMIT 1;");
-		$arr = $people_resultset->fetchArray(SQLITE3_ASSOC);
-		$people_resultset->finalize();
-		return $arr;
+		$people = $db->query("SELECT *, strftime('%s', lastcontacted) as lastcontacted_timestamp FROM person_publication WHERE id = '" . $personPublicationId . "' LIMIT 1;");
+		return $people[0];
 	}
 	function db_singlepublication($db, $publicationId) {
 		if (!is_numeric($publicationId)) { return false; }
-		$publication_resultset = $db->query("SELECT * FROM publication WHERE id = '" . $publicationId . "' LIMIT 1;");
-		$arr = $publication_resultset->fetchArray(SQLITE3_ASSOC);
-		$publication_resultset->finalize();
-		return $arr;
+		$publications = $db->query("SELECT * FROM publication WHERE id = '" . $publicationId . "' LIMIT 1;");
+		return $publications[0];
 	}
 	function db_singleyoutubechannel($db, $youtuberId) {
 		if (!is_numeric($youtuberId)) { return false; }
-		$youtuber_resultset = $db->query("SELECT * FROM youtuber WHERE id = '" . $youtuberId . "' LIMIT 1;");
-		$arr = $youtuber_resultset->fetchArray(SQLITE3_ASSOC);
-		$youtuber_resultset->finalize();
-		return $arr;
+		$youtubeChannels = $db->query("SELECT * FROM youtuber WHERE id = '" . $youtuberId . "' LIMIT 1;");
+		return $youtubeChannels[0];
 	}
 	function db_defaultPrioritiesString($db) {
 		$string = "";
 		$count = 0;
-		$resultset = $db->query("SELECT * FROM game;");
-		while($row = $resultset->fetchArray(SQLITE3_ASSOC)) { 
+		$results = $db->query("SELECT * FROM game;");
+		foreach ($results as $result) {
 			if ($count > 0) {
 				$string .= ",";
 			}
-			$string .= $row['id'] . "=0";
+			$string .= $result['id'] . "=0";
 			$count += 1;
 		}
 		return $string;
@@ -84,10 +74,17 @@
 
 	}
 	
+	// keywords
+	$autoincrement = "AUTOINCREMENT";
+	$blobTextDefaultToZero = " DEFAULT '0' ";
+	if ($db->type == Database::TYPE_MYSQL) {
+		$autoincrement = "AUTO_INCREMENT";
+		$blobTextDefaultToZero = "";
+	}
 
 	// create persons
 	$sql = "CREATE TABLE IF NOT EXISTS person (
-				id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+				id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
 				name VARCHAR(255) NOT NULL,
 				email VARCHAR(255) NOT NULL,
 				priorities VARCHAR(255) NOT NULL,
@@ -107,7 +104,7 @@
 
 	// create publications
 	$sql = "CREATE TABLE IF NOT EXISTS publication (
-				id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+				id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
 				name VARCHAR(255) NOT NULL,
 				url VARCHAR(255) NOT NULL,
 				iconurl VARCHAR(255) NOT NULL,
@@ -131,7 +128,7 @@
 
 	// create persons
 	$sql = "CREATE TABLE IF NOT EXISTS person_publication (
-				id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+				id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
 				person INTEGER NOT NULL,
 				publication INTEGER NOT NULL,
 				email VARCHAR(255) NOT NULL,
@@ -146,15 +143,15 @@
 
 	// create youtubes
 	$sql = "CREATE TABLE IF NOT EXISTS youtuber (
-				id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+				id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
 				name VARCHAR(255) NOT NULL,
 				description TEXT NOT NULL,
 				email VARCHAR(255) NOT NULL DEFAULT '',
 				priorities VARCHAR(255) NOT NULL,
 				channel VARCHAR(255) NOT NULL,
 				iconurl VARCHAR(255) NOT NULL,
-				subscribers TEXT NOT NULL DEFAULT '0',
-				views TEXT NOT NULL DEFAULT '0',
+				subscribers TEXT NOT NULL {$blobTextDefaultToZero},
+				views TEXT NOT NULL {$blobTextDefaultToZero},
 				twitter VARCHAR(255) NOT NULL DEFAULT '',
 				twitter_followers INTEGER NOT NULL DEFAULT 0,
 				notes TEXT NOT NULL,
@@ -167,11 +164,12 @@
 		//$db->exec("INSERT INTO youtuber (id, name, channel, iconurl, subscribers, views, notes, lastpostedon, removed) VALUES (NULL, 'Stumpt', 'stumptgamers', '', 1000, 1000, 'multiplayer pc', 0, 0); "); 
 	}
 	
+
 	
 	// create users
 	// ALTER TABLE user ADD COLUMN lastactivity INTEGER NOT NULL DEFAULT 0
 	$sql = "CREATE TABLE IF NOT EXISTS user (
-				id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+				id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
 				forename VARCHAR(255) NOT NULL,
 				surname VARCHAR(255) NOT NULL,
 				email VARCHAR(255) NOT NULL,
@@ -190,7 +188,7 @@
 
 	// create email boxes
 	$sql = "CREATE TABLE IF NOT EXISTS email (
-				id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+				id INTEGER PRIMARY KEY {$autoincrement} NOT NULL, 
 				user_id INTEGER NOT NULL,
 				person_id INTEGER NOT NULL,
 				utime TIMESTAMP NOT NULL,
@@ -204,14 +202,14 @@
 			);";
 	$db->exec($sql);
 	if ($resetdb) { 
-	//	$db->exec("INSERT INTO email VALUES (NULL, 1, 1, " . (time()-86401) . ",  'ashley@forceofhab.it', 'keith.stuart@theguardian.com', 'Hello Keith', 'I made you a game with boogers in it.', 0); "); 
-	//	$db->exec("INSERT INTO email VALUES (NULL, 1, 1, " . (time()-40000) . ",  'ashley@forceofhab.it', 'keith.stuart@theguardian.com', 'Hello Keith', 'Dont you love me, baby?', 0); "); 
-	//	$db->exec("INSERT INTO email VALUES (NULL, 1, 1, " . (time()) . ",  	   'ashley@forceofhab.it', 'keith.stuart@theguardian.com', 'Hello Keith', 'Goodbye', 0); "); 
+	//	$db->exec("INSERT INTO email VALUES (NULL, 1, 1, " . (time()-86401) . ",  'ashley@forceofhab.it', 'keith@theguardian.com', 'Hello Keith', 'I made you a game with boogers in it.', 0); "); 
+	//	$db->exec("INSERT INTO email VALUES (NULL, 1, 1, " . (time()-40000) . ",  'ashley@forceofhab.it', 'keith@theguardian.com', 'Hello Keith', 'Dont you love me, baby?', 0); "); 
+	//	$db->exec("INSERT INTO email VALUES (NULL, 1, 1, " . (time()) . ",  	   'ashley@forceofhab.it', 'keith@theguardian.com', 'Hello Keith', 'Goodbye', 0); "); 
 	}
 
 	// create game table
 	$sql = "CREATE TABLE IF NOT EXISTS game (
-				id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+				id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
 				name VARCHAR(255),
 				iconurl VARCHAR(255) NOT NULL
 			);";
@@ -231,13 +229,13 @@
 	// - 
 
 	$sql = "CREATE TABLE IF NOT EXISTS settings (
-				key VARCHAR(255) PRIMARY KEY NOT NULL,
-				value VARCHAR(255)
+				`key` VARCHAR(255) PRIMARY KEY NOT NULL,
+				`value` VARCHAR(255)
 			);";
 	$db->exec($sql);
-	@$db->exec("INSERT INTO settings VALUES ('auto_backup_email', ''); "); 
-	@$db->exec("INSERT INTO settings VALUES ('auto_backup_frequency', 0); "); 
-	@$db->exec("INSERT INTO settings VALUES ('manual_backup_lastbackedupon', 0); "); 
+	@$db->exec("INSERT IGNORE INTO settings VALUES ('auto_backup_email', ''); "); 
+	@$db->exec("INSERT IGNORE INTO settings VALUES ('auto_backup_frequency', 0); "); 
+	@$db->exec("INSERT IGNORE INTO settings VALUES ('manual_backup_lastbackedupon', 0); "); 
 
 	
 

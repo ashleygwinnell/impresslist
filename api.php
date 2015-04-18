@@ -84,6 +84,7 @@ if (!isset($_GET['endpoint'])) {
 
 	$endpoints = array(
 		"/backup/",
+		"/backup-sql/",
 		"/person/add/",
 		"/person/save/",
 		"/person/remove/",
@@ -139,6 +140,88 @@ if (!isset($_GET['endpoint'])) {
 			return; 
 			
 		} 
+		else if ($endpoint == "/backup-sql/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			if ($db->type == Database::TYPE_SQLITE) { 
+
+				$sql = "";
+				$sql .= "--------------------\n";
+				$sql .= "-- impress[] backup.\n";
+				$sql .= "--------------------\n\n";
+
+
+				//echo "<h1>Backup</h1>";
+				$tables = $db->query("SELECT name FROM sqlite_master WHERE type='table';");
+				foreach ($tables as $table) {
+					$name = $table['name'];
+					if (strpos($name, "sqlite_", 0) !== FALSE) { continue; }
+					//echo "<h2>{$name}</h2>";
+
+
+					$sql .= "CREATE TABLE IF NOT EXISTS {$name} (\n";
+
+					$fields = $db->query("PRAGMA table_info({$name})");
+					$count = 0;
+					foreach ($fields as $field) {
+						//echo $field['name'];
+						//echo "<br/>";
+
+						$fname = $field['name'];
+						$ftype = $field['type'];
+						$fnn = ($field['notnull']==1)?"NOT NULL":"";
+						$fdefault = ($field['dflt_value'] != "")?("DEFAULT " . $field['dflt_value']): "";
+						$fpk = ($field['pk']==1)?"PRIMARY KEY":"";
+
+						if ($ftype == "TEXT" && strlen($fdefault) > 0) {
+							$fdefault = "";
+						}
+
+						if ($count > 0) {
+							$sql .= ",\n";
+						}
+						$sql .= "	`{$fname}` {$ftype} {$fpk} {$fnn} {$fdefault}";
+						$count++;
+					}
+
+					$sql .= "\n);\n\n";
+
+					$rows = $db->query("SELECT * FROM {$name};");
+					foreach ($rows as $row) {
+						$values = "";
+						$count = 0;
+						foreach ($row as $key => $val) { 
+							if ($count > 0) {
+								$values .= ",";
+							}
+							$values .= "'" . addslashes($val) . "'";
+							$count++;
+						}
+						$sql .= "INSERT IGNORE INTO {$name} VALUES (" . $values . " ); \n";
+					}
+					$sql .= "\n";
+
+					//print_r($fields);
+					
+					
+				}
+				//echo $sql;
+
+				serve_file("impresslist-backup-sql-" . date("c") . ".sql", $sql, "txt");
+				die();
+			} else {
+				$error = api_error("SQL Backup not implemented for MySQL yet.");
+			}
+
+			
+
+//			header("Location: /"); 
+			//return; 
+			
+			
+		} 
 		else if ($endpoint == "/person/add/")
 		{
 			$require_login = true;
@@ -154,15 +237,15 @@ if (!isset($_GET['endpoint'])) {
 			if (!$error) {
 				$stmt = $db->prepare(" INSERT INTO person  (id,   name,  email, priorities,   twitter, twitter_followers,   notes, lastcontacted, lastcontactedby, removed)  
 													VALUES (NULL, :name, :email, :priorities, :twitter, :twitter_followers, :notes, :lastcontacted, :lastcontactedby, :removed); ");
-				$stmt->bindValue(":name", $_GET['name'], SQLITE3_TEXT); 
-				$stmt->bindValue(":email", "", SQLITE3_TEXT);
-				$stmt->bindValue(":twitter", "", SQLITE3_TEXT);
-				$stmt->bindValue(":twitter_followers", 0, SQLITE3_INTEGER);
-				$stmt->bindValue(":priorities", db_defaultPrioritiesString($db), SQLITE3_TEXT);
-				$stmt->bindValue(":notes", "", SQLITE3_TEXT);
-				$stmt->bindValue(":lastcontacted", 0, SQLITE3_INTEGER);
-				$stmt->bindValue(":lastcontactedby", 0, SQLITE3_INTEGER); 
-				$stmt->bindValue(":removed", 0, SQLITE3_INTEGER); 
+				$stmt->bindValue(":name", $_GET['name'], Database::VARTYPE_STRING); 
+				$stmt->bindValue(":email", "", Database::VARTYPE_STRING);
+				$stmt->bindValue(":twitter", "", Database::VARTYPE_STRING);
+				$stmt->bindValue(":twitter_followers", 0, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":priorities", db_defaultPrioritiesString($db), Database::VARTYPE_STRING);
+				$stmt->bindValue(":notes", "", Database::VARTYPE_STRING);
+				$stmt->bindValue(":lastcontacted", 0, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":lastcontactedby", 0, Database::VARTYPE_INTEGER); 
+				$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER); 
 				$stmt->execute();
 
 				$person_id = $db->lastInsertRowID();
@@ -192,14 +275,14 @@ if (!isset($_GET['endpoint'])) {
 				$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
 
 				$stmt = $db->prepare(" UPDATE person SET name = :name, email = :email, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes WHERE id = :id ");
-				$stmt->bindValue(":name", $_GET['name'], SQLITE3_TEXT);
-				$stmt->bindValue(":email", trim($_GET['email']), SQLITE3_TEXT);
-				$stmt->bindValue(":twitter", $_GET['twitter'], SQLITE3_TEXT);
+				$stmt->bindValue(":name", $_GET['name'], Database::VARTYPE_STRING);
+				$stmt->bindValue(":email", trim($_GET['email']), Database::VARTYPE_STRING);
+				$stmt->bindValue(":twitter", $_GET['twitter'], Database::VARTYPE_STRING);
 				if ($twitter_followers > 0) { 
-					$stmt->bindValue(":twitter_followers", $twitter_followers, SQLITE3_INTEGER);
+					$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
 				}
-				$stmt->bindValue(":notes", strip_tags($_GET['notes']), SQLITE3_TEXT);
-				$stmt->bindValue(":id", $_GET['id'], SQLITE3_INTEGER);
+				$stmt->bindValue(":notes", strip_tags($_GET['notes']), Database::VARTYPE_STRING);
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
 				$rs = $stmt->execute();
 
 				$result = new stdClass();
@@ -218,7 +301,7 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 				$stmt = $db->prepare("UPDATE person SET removed = 1 WHERE id = :id;");
-				$stmt->bindValue(":id", $_GET['id'], SQLITE3_TEXT);
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_STRING);
 				$rs = $stmt->execute();
 
 				$result = new stdClass();
@@ -240,19 +323,19 @@ if (!isset($_GET['endpoint'])) {
 			{
 				// make sure this user doesn't have this publication already.
 				$stmt = $db->prepare("SELECT COUNT(*) as count FROM person_publication WHERE person = :person AND publication = :publication");
-				$stmt->bindValue(":person", $_GET['person'], SQLITE3_TEXT);
-				$stmt->bindValue(":publication", $_GET['publication'], SQLITE3_TEXT);
-				$row = $stmt->execute()->fetchArray();
+				$stmt->bindValue(":person", $_GET['person'], Database::VARTYPE_STRING);
+				$stmt->bindValue(":publication", $_GET['publication'], Database::VARTYPE_STRING);
+				$row = $stmt->query()[0];
 				if ($row['count'] > 0) {
 					$result = api_error("This person already has this publication attached.");
 				} else { 
 
 					$stmt = $db->prepare(" INSERT INTO person_publication (id, person, publication, email, lastcontacted, lastcontactedby) VALUES (NULL, :person, :publication, :email, :lastcontacted, :lastcontactedby); ");
-					$stmt->bindValue(":person", $_GET['person'], SQLITE3_TEXT);
-					$stmt->bindValue(":publication", $_GET['publication'], SQLITE3_TEXT);
-					$stmt->bindValue(":email", "", SQLITE3_TEXT);
-					$stmt->bindValue(":lastcontacted", 0, SQLITE3_INTEGER);
-					$stmt->bindValue(":lastcontactedby", 0, SQLITE3_INTEGER);
+					$stmt->bindValue(":person", $_GET['person'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":publication", $_GET['publication'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":email", "", Database::VARTYPE_STRING);
+					$stmt->bindValue(":lastcontacted", 0, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":lastcontactedby", 0, Database::VARTYPE_INTEGER);
 					$rs = $stmt->execute();
 
 					$personPublication_id = $db->lastInsertRowID();
@@ -277,8 +360,8 @@ if (!isset($_GET['endpoint'])) {
 			if (!$error) 
 			{
 				$stmt = $db->prepare(" UPDATE person_publication set email = :email WHERE id = :id;");
-				$stmt->bindValue(":id", $_GET['personPublication'], SQLITE3_TEXT);
-				$stmt->bindValue(":email", $_GET['email'], SQLITE3_TEXT);
+				$stmt->bindValue(":id", $_GET['personPublication'], Database::VARTYPE_STRING);
+				$stmt->bindValue(":email", $_GET['email'], Database::VARTYPE_STRING);
 				$rs = $stmt->execute();
 
 				$result = new stdClass();
@@ -299,7 +382,7 @@ if (!isset($_GET['endpoint'])) {
 			if (!$error) 
 			{
 				$stmt = $db->prepare(" DELETE FROM person_publication WHERE id = :id;");
-				$stmt->bindValue(":id", $_GET['personPublication'], SQLITE3_TEXT);
+				$stmt->bindValue(":id", $_GET['personPublication'], Database::VARTYPE_STRING);
 				$rs = $stmt->execute();
 
 				$result = new stdClass();
@@ -325,8 +408,8 @@ if (!isset($_GET['endpoint'])) {
 				$assigned = $_GET['user'];
 
 				$stmt = $db->prepare(" UPDATE person SET assigned = :assigned WHERE id = :id ");
-				$stmt->bindValue(":assigned", $assigned, SQLITE3_TEXT);
-				$stmt->bindValue(":id", $_GET['id'], SQLITE3_INTEGER);
+				$stmt->bindValue(":assigned", $assigned, Database::VARTYPE_STRING);
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
 				$rs = $stmt->execute();
 
 				$result = new stdClass();
@@ -367,8 +450,8 @@ if (!isset($_GET['endpoint'])) {
 				$priorities = implode(",", $games);
 
 				$stmt = $db->prepare(" UPDATE person SET priorities = :priorities WHERE id = :id ");
-				$stmt->bindValue(":priorities", $priorities, SQLITE3_TEXT);
-				$stmt->bindValue(":id", $_GET['id'], SQLITE3_INTEGER);
+				$stmt->bindValue(":priorities", $priorities, Database::VARTYPE_STRING);
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
 				$rs = $stmt->execute();
 
 				$result = new stdClass();
@@ -388,14 +471,14 @@ if (!isset($_GET['endpoint'])) {
 			if (!$error) {
 				$stmt = $db->prepare(" INSERT INTO publication (id,   name,  url,  iconurl, rssfeedurl, twitter, twitter_followers,	notes, lastpostedon)
 														VALUES (NULL, :name, :url, :iconurl, :rssfeedurl, :twitter, :twitter_followers, :notes, :lastpostedon); ");
-				$stmt->bindValue(":name", $_GET['name'], SQLITE3_TEXT);
-				$stmt->bindValue(":url", "http://example.com/", SQLITE3_TEXT);
-				$stmt->bindValue(":iconurl", "http://example.com/images/favicon.png", SQLITE3_TEXT);
-				$stmt->bindValue(":rssfeedurl", "http://example.com/rss/", SQLITE3_TEXT);
-				$stmt->bindValue(":twitter", "", SQLITE3_TEXT);
-				$stmt->bindValue(":twitter_followers", 0, SQLITE3_INTEGER);
-				$stmt->bindValue(":notes", "", SQLITE3_TEXT);
-				$stmt->bindValue(":lastpostedon", 0, SQLITE3_INTEGER);
+				$stmt->bindValue(":name", $_GET['name'], Database::VARTYPE_STRING);
+				$stmt->bindValue(":url", "http://example.com/", Database::VARTYPE_STRING);
+				$stmt->bindValue(":iconurl", "http://example.com/images/favicon.png", Database::VARTYPE_STRING);
+				$stmt->bindValue(":rssfeedurl", "http://example.com/rss/", Database::VARTYPE_STRING);
+				$stmt->bindValue(":twitter", "", Database::VARTYPE_STRING);
+				$stmt->bindValue(":twitter_followers", 0, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":notes", "", Database::VARTYPE_STRING);
+				$stmt->bindValue(":lastpostedon", 0, Database::VARTYPE_INTEGER);
 				$stmt->execute();
 
 				$publication_id = $db->lastInsertRowID();
@@ -439,8 +522,9 @@ if (!isset($_GET['endpoint'])) {
 				$priorities = implode(",", $games);
 
 				$stmt = $db->prepare(" UPDATE publication SET priorities = :priorities WHERE id = :id ");
-				$stmt->bindValue(":priorities", $priorities, SQLITE3_TEXT);
-				$stmt->bindValue(":id", $_GET['id'], SQLITE3_INTEGER);
+				$stmt->bindValue(":priorities", $priorities, Database::VARTYPE_STRING);
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER
+					);
 				$rs = $stmt->execute();
 
 				$result = new stdClass();
@@ -469,15 +553,15 @@ if (!isset($_GET['endpoint'])) {
 				$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
 
 				$stmt = $db->prepare(" UPDATE publication SET name = :name, url = :url, rssfeedurl = :rssfeedurl, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes WHERE id = :id ");
-				$stmt->bindValue(":name", $_GET['name'], SQLITE3_TEXT);
-				$stmt->bindValue(":url", $_GET['url'], SQLITE3_TEXT);
-				$stmt->bindValue(":rssfeedurl", $_GET['rssfeedurl'], SQLITE3_TEXT);
-				$stmt->bindValue(":twitter", $_GET['twitter'], SQLITE3_TEXT);
+				$stmt->bindValue(":name", $_GET['name'], Database::VARTYPE_STRING);
+				$stmt->bindValue(":url", $_GET['url'], Database::VARTYPE_STRING);
+				$stmt->bindValue(":rssfeedurl", $_GET['rssfeedurl'], Database::VARTYPE_STRING);
+				$stmt->bindValue(":twitter", $_GET['twitter'], Database::VARTYPE_STRING);
 				if ($twitter_followers > 0) { 
-					$stmt->bindValue(":twitter_followers", $twitter_followers, SQLITE3_INTEGER);
+					$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
 				}
-				$stmt->bindValue(":notes", strip_tags($_GET['notes']), SQLITE3_TEXT);
-				$stmt->bindValue(":id", $_GET['id'], SQLITE3_INTEGER);
+				$stmt->bindValue(":notes", strip_tags($_GET['notes']), Database::VARTYPE_STRING);
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
 				$rs = $stmt->execute();
 
 				$result = new stdClass();
@@ -496,7 +580,7 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 				$stmt = $db->prepare("UPDATE publication SET removed = 1 WHERE id = :id;");
-				$stmt->bindValue(":id", $_GET['id'], SQLITE3_INTEGER);
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
 				$rs = $stmt->execute();
 
 				$result = new stdClass();
@@ -517,9 +601,9 @@ if (!isset($_GET['endpoint'])) {
 				$twitter_followers = twitter_countFollowers($twitter);
 				$stmt = $db->prepare(" INSERT INTO youtuber (id, 	name,   description, email, channel,  priorities, iconurl,   subscribers, views, notes, twitter,   twitter_followers, 	lastpostedon, removed) 
 													VALUES  (NULL, 'Blank', '', 	 	 '', 	:channel, '', 		  '', 		 0, 		  0, 	 '', 	:twitter, :twitter_followers, 	 0, 		  	0);	");
-				$stmt->bindValue(":channel", $_GET['channel'], SQLITE3_TEXT);
-				$stmt->bindValue(":twitter", $twitter, SQLITE3_TEXT);
-				$stmt->bindValue(":twitter_followers", $twitter_followers, SQLITE3_INTEGER);
+				$stmt->bindValue(":channel", $_GET['channel'], Database::VARTYPE_STRING);
+				$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);
+				$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
 				$stmt->execute();
 				
 
@@ -565,24 +649,24 @@ if (!isset($_GET['endpoint'])) {
 											WHERE 
 												id = :id; 
 										");
-					$stmt->bindValue(":id", $_GET['id'], SQLITE3_INTEGER);
-					$stmt->bindValue(":channel", $_GET['channel'], SQLITE3_TEXT);
-					$stmt->bindValue(":email", $_GET['email'], SQLITE3_TEXT); 
+					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":channel", $_GET['channel'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":email", $_GET['email'], Database::VARTYPE_STRING); 
 
-					$stmt->bindValue(":name", $youtuber['name'], SQLITE3_TEXT); 
-					$stmt->bindValue(":description", $youtuber['description'], SQLITE3_TEXT);
+					$stmt->bindValue(":name", $youtuber['name'], Database::VARTYPE_STRING); 
+					$stmt->bindValue(":description", $youtuber['description'], Database::VARTYPE_STRING);
 					
-					$stmt->bindValue(":iconurl", $youtuber['iconurl'], SQLITE3_TEXT);
-					$stmt->bindValue(":subscribers", "" . $youtuber['subscribers'], SQLITE3_TEXT);
-					$stmt->bindValue(":views", "" . $youtuber['views'], SQLITE3_TEXT);
-					$stmt->bindValue(":lastpostedon", $youtuber['lastpostedon'], SQLITE3_INTEGER);
+					$stmt->bindValue(":iconurl", $youtuber['iconurl'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":subscribers", "" . $youtuber['subscribers'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":views", "" . $youtuber['views'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":lastpostedon", $youtuber['lastpostedon'], Database::VARTYPE_INTEGER);
 
 					$twitter = $_GET['twitter'];
 					$twitter_followers = twitter_countFollowers($_GET['twitter']);
 
-					$stmt->bindValue(":twitter", $twitter, SQLITE3_TEXT);
-					$stmt->bindValue(":twitter_followers", $twitter_followers, SQLITE3_INTEGER);
-					$stmt->bindValue(":notes", strip_tags($_GET['notes']), SQLITE3_TEXT);
+					$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);
+					$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":notes", strip_tags($_GET['notes']), Database::VARTYPE_STRING);
 					
 					$rs = $stmt->execute();
 
@@ -625,8 +709,8 @@ if (!isset($_GET['endpoint'])) {
 				$priorities = implode(",", $games);
 
 				$stmt = $db->prepare(" UPDATE youtuber SET priorities = :priorities WHERE id = :id ");
-				$stmt->bindValue(":priorities", $priorities, SQLITE3_TEXT);
-				$stmt->bindValue(":id", $_GET['id'], SQLITE3_INTEGER);
+				$stmt->bindValue(":priorities", $priorities, Database::VARTYPE_STRING);
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
 				$rs = $stmt->execute();
 
 				$result = new stdClass();
@@ -645,7 +729,7 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 				$stmt = $db->prepare("UPDATE youtuber SET removed = 1 WHERE id = :id;");
-				$stmt->bindValue(":id", $_GET['id'], SQLITE3_INTEGER);
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
 				$rs = $stmt->execute();
 
 				$result = new stdClass();
@@ -672,7 +756,7 @@ if (!isset($_GET['endpoint'])) {
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
-				$query = $_GET['query'];
+				/*$query = $_GET['query'];
 				if (get_magic_quotes_gpc()) { $query = stripslashes($query); }
 				$query = SQLite3::escapeString($query);
 
@@ -691,7 +775,8 @@ if (!isset($_GET['endpoint'])) {
 
 				} else {
 					$result = api_error("Query was not successful: " .  $query);
-				}
+				}*/
+				$result = api_error("This API call is disabled. ");
 			}
 		}
 		else if ($endpoint == "/user/change-password/")
@@ -711,21 +796,13 @@ if (!isset($_GET['endpoint'])) {
 					$result = api_error("You can only change your own password.");
 				} else {
 					$stmt = $db->prepare("SELECT * FROM user WHERE id = :id AND password = :currentPassword; ");
-					$stmt->bindValue("id", $_GET['id'], SQLITE3_INTEGER);
-					$stmt->bindValue("currentPassword", md5($_GET['currentPassword']), SQLITE3_TEXT);
-					$rs = $stmt->execute();
+					$stmt->bindValue("id", $_GET['id'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue("currentPassword", md5($_GET['currentPassword']), Database::VARTYPE_STRING);
+					$users = $stmt->query();
 
-					$usersreturned = array();
-					while ($row = $rs->fetchArray(SQLITE3_ASSOC)) {
-						$usersreturned[] = $row;
-						$count++;
-					}
-					$rs->finalize();
-					$stmt->close();
-					
-					if (count($usersreturned) == 0) {
+					if (count($users) == 0) {
 						$result = api_error("Your current password was wrong.");
-					} else if (count($usersreturned) > 1 || count($usersreturned) < 0) {
+					} else if (count($users) > 1 || count($users) < 0) {
 						$result = api_error("Something went terribly wrong. Please inform an administrator.");
 					} else {
 						$newPassword = $_GET['newPassword'];
@@ -736,9 +813,9 @@ if (!isset($_GET['endpoint'])) {
 							$result = api_error("Your password must be 8 characters long.");
 						} else {
 							$stmt = $db->prepare("UPDATE user SET password = :newPassword WHERE id = :id AND password = :currentPassword; ");
-							$stmt->bindValue("id", $_GET['id'], SQLITE3_INTEGER);
-							$stmt->bindValue("currentPassword", md5($_GET['currentPassword']), SQLITE3_TEXT);
-							$stmt->bindValue("newPassword", md5($newPassword), SQLITE3_TEXT);
+							$stmt->bindValue("id", $_GET['id'], Database::VARTYPE_INTEGER);
+							$stmt->bindValue("currentPassword", md5($_GET['currentPassword']), Database::VARTYPE_STRING);
+							$stmt->bindValue("newPassword", md5($newPassword), Database::VARTYPE_STRING);
 							$rs = $stmt->execute();
 							
 							$result = new stdClass();
@@ -764,30 +841,24 @@ if (!isset($_GET['endpoint'])) {
 				$result = api_error("You are not logged in.");
 			} else {
 				// Update current user time.
-				$stmt = $db->prepare(" UPDATE user SET lastactivity = :lastactivity WHERE id = :id ");
-				$stmt->bindValue(":id", $_SESSION['user'], SQLITE3_INTEGER);
-				$stmt->bindValue(":lastactivity", time(), SQLITE3_INTEGER);
-				$rs = $stmt->execute();
-				$rs->finalize();
-				$stmt->close();
+				$stmt = $db->prepare("UPDATE user SET lastactivity = :lastactivity WHERE id = :id ");
+				$stmt->bindValue("lastactivity", time(), Database::VARTYPE_INTEGER);
+				$stmt->bindValue("id", $_SESSION['user'], Database::VARTYPE_INTEGER);
+				$stmt->execute();
+
 
 				// Fetch other logged-in users.
-				$stmt = $db->prepare(" SELECT id, forename, surname, email, color, lastactivity FROM user WHERE lastactivity >= :lastactivity;");
-				$stmt->bindValue(":lastactivity", time() - 60, SQLITE3_INTEGER);
-				$rs = $stmt->execute();
-				
-				$arr = array();
-				while ($row = $rs->fetchArray(SQLITE3_ASSOC)) {
-					$arr[] = $row['id'];;
+				$stmt = $db->prepare("SELECT id, forename, surname, email, color, lastactivity FROM user WHERE lastactivity >= :lastactivity; ");
+				$stmt->bindValue("lastactivity", time(), Database::VARTYPE_INTEGER);
+				$rs = $stmt->query();
+				$results = array();
+				foreach ($rs as $row) { 
+					$results[] = $row['id'];
 				}
-
-				$rs->finalize();
-				$stmt->close();
-
 
 				$result = new stdClass();
 				$result->success = true;
-				$result->data = array("users" => $arr);
+				$result->data = array("users" => $results);
 				
 			}
 

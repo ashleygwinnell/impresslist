@@ -7,11 +7,8 @@ $require_login = false;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // Publications
-$publications = array();
-$publications_resultset = $db->query("SELECT * FROM publication WHERE removed = 0;");
-while($row = $publications_resultset->fetchArray(SQLITE3_ASSOC)) { $publications[] = $row; }
+$publications = $db->query("SELECT * FROM publication WHERE removed = 0;");
 $num_publications = count($publications);
-
 
 for($i = 0; $i < $num_publications; ++$i) {
 	$rss = $publications[$i]['rssfeedurl'];
@@ -57,8 +54,8 @@ for($i = 0; $i < $num_publications; ++$i) {
 
 		if ($latestArticleTimestamp > 0) {
 			$stmt = $db->prepare(" UPDATE publication SET lastpostedon = :lastpostedon WHERE id = :id;");
-			$stmt->bindValue(":id", $publications[$i]['id'], SQLITE3_INTEGER);
-			$stmt->bindValue(":lastpostedon", $latestArticleTimestamp, SQLITE3_INTEGER);
+			$stmt->bindValue(":id", $publications[$i]['id'], Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":lastpostedon", $latestArticleTimestamp, Database::VARTYPE_INTEGER);
 			$stmt->execute();
 			$stmt->close();
 		}
