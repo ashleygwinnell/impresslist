@@ -86,10 +86,11 @@ function isNumeric($number, $name = "Field", $length = -1)
 }
 
 function util_isEmail($emailAddress) {
-	if (!preg_match("/([a-z0-9])([-a-z0-9._])+([a-z0-9])\@([a-z0-9])([-a-z0-9_])+([a-z0-9])(\.([a-z0-9])([-a-z0-9_-])([a-z0-9])+)*/i", $emailAddress)) {
-		return false;
-	}
-	return true;
+	//if (!preg_match("/([a-z0-9])([-a-z0-9._])+([a-z0-9])\@([a-z0-9])([-a-z0-9_])+([a-z0-9])(\.([a-z0-9])([-a-z0-9_-])([a-z0-9])+)*/i", $emailAddress)) {
+	//	return false;
+	//}
+	//return true;
+	return (filter_var($emailAddress, FILTER_VALIDATE_EMAIL));
 }
 
 function util_isInteger($integer) {
