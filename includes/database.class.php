@@ -56,21 +56,57 @@ class MysqliDatabase_PreparedStatement extends PreparedStatement {
 		return $arr;
 	}
 	private function finishBinds() {
+		
+		if (count($this->order) == 0) { return; }
 		$types = "";
-		foreach ($this->order as $o) { $types .= $this->orderbindings[$o]['type']; }
+		foreach ($this->order as $key => $o) { $types .= $this->orderbindings[$o]['type']; }
+
 		$a = array($types);
-		foreach ($this->order as $o) { $a[] = $this->orderbindings[$o]['val']; }
+		foreach ($this->order as $key => $o) { $a[] = $this->orderbindings[$o]['val']; }
+
+		//$r = $this->refValues($a);
+		//print_r($r);
+		//print_r($this->order);
+		//print_r($this->orderbindings);
+		//print_r($a);
 		call_user_func_array(array($this->stmt, "bind_param"), $this->refValues($a));
+
+		//$ref    = new ReflectionClass('mysqli_stmt'); 
+		//$method = $ref->getMethod("bind_param"); 
+		//$method->invokeArgs($this->stmt, $this->refValues($a)); 
 	}
 	function query() { 
 		$this->finishBinds();
-		$this->stmt->execute();
-		$rs = $this->stmt->get_result();
+		$b = $this->stmt->execute();
+		if (!$b) { return array(); }
+		
+		// PHP 5.3.0 only...
+		//$rs = $this->stmt->get_result();
+		//$results = array();
+		//while($arr = $rs->fetch_array(MYSQLI_ASSOC)) { 
+		//	$results[] = $arr; 
+		//}
+		//return $results;
+		
+		// Older PHP...
+		$row = array();
+		$params = array();
+		$meta = $this->stmt->result_metadata(); 
+		while ($field = $meta->fetch_field()) { 
+			$params[] = &$row[$field->name]; 
+		} 
+		call_user_func_array(array($this->stmt, 'bind_result'), $params); 
 
 		$results = array();
-		while($arr = $rs->fetch_array(MYSQLI_ASSOC)) { 
-			$results[] = $arr; 
+		while ($this->stmt->fetch()) { 
+			$c = array();
+			foreach($row as $key => $val) {
+				$c[$key] = $val; 
+			} 
+			$results[] = $c; 
 		}
+		//$this->stmt->free_result();
+		$this->stmt->close();
 		return $results;
 	}
 	function execute() {
@@ -156,23 +192,37 @@ class MysqliDatabase extends Database {
 	function prepare($sql) {
 		$order = array();
 		$offset = 0;
-		//$count = 0;
+		$count = 0;
 		while (($start = strpos($sql, ":", $offset)) !== FALSE) {
-			$end = strpos($sql, " ", $start);
-			if ($end === FALSE || $end == strlen($sql) - 1) {
-				$end = strpos($sql, ";", $start);
-			}
-			$name = substr($sql, $start+1, $end - ($start+1));
-			$sql = str_replace(":" . $name, " ? ", $sql);
+			$end1 = strpos($sql, ",", $start);
+			if ($end1 === FALSE) { $end1 = PHP_INT_MAX; }
+		
+			$end2 = strpos($sql, " ", $start);
+			if ($end2 === FALSE) { $end2 = PHP_INT_MAX; }
+			
+			$end3 = strpos($sql, ";", $start);
+			if ($end3 === FALSE) { $end3 = PHP_INT_MAX; }
+	
+			$end = min(array($end1, $end2, $end3));
+			$len = $end - $start;
+
+			$name = substr($sql, $start, $len);
+			//echo $name . "<br/>";
+			//echo "len: " . $len . "<br/>";;
+			$sql = str_replace($name, " ? ", $sql);
+
 			$offset = 0;
 			$order[] = $name;
-			//echo $sql . "<br/>";	
-			//$count++;
-			//if ($count >= 100) { break; }
+
+			$count++;
+			if ($count >= 100) { break; }
 		}
 		//print_r($order);
 
 		$stmt = $this->db->prepare($sql);
+		if ($stmt == false) {
+			die("error: " . $sql);
+		}
 		return new MysqliDatabase_PreparedStatement($stmt, $order);
 	}
 	function lastInsertRowID() {
@@ -229,6 +279,138 @@ class Database
 		}
 		return Database::$s_instance;
 	}
+
+
+
+	public function sql() {
+		global $impresslist_mysqlDatabaseName;
+
+		$sql = "";
+		$sql .= "/*\n";
+		$sql .= "  impress[] backup.\n";
+		$sql .= "*/\n\n";
+
+		if ($this->type == Database::TYPE_SQLITE) { 
+
+			$convert_to_mysql = true;
+
+			$tables = $this->query("SELECT name FROM sqlite_master WHERE type='table';");
+			foreach ($tables as $table) {
+				$name = $table['name'];
+				if (strpos($name, "sqlite_", 0) !== FALSE) { continue; }
+				
+				$sql .= "CREATE TABLE IF NOT EXISTS {$name} (\n";
+
+					$fields = $this->query("PRAGMA table_info({$name})");
+					$count = 0;
+					foreach ($fields as $field) {
+						//echo $field['name'];
+						//echo "<br/>";
+
+						$fname = $field['name'];
+						$ftype = $field['type'];
+						$fnn = ($field['notnull']==1)?"NOT NULL":"";
+						$fdefault = ($field['dflt_value'] != "")?("DEFAULT " . $field['dflt_value']): "";
+						$fpk = ($field['pk']==1)?"PRIMARY KEY":"";
+
+						if ($convert_to_mysql) { 
+							
+							if ($ftype == "TIMESTAMP") {
+								$ftype = "INT(11)";
+							}
+							if ($ftype == "TEXT" && strlen($fdefault) > 0) {
+								$fdefault = "";
+							}
+						}
+
+
+						if ($count > 0) { $sql .= ",\n"; }
+						$sql .= "	`{$fname}` {$ftype} {$fpk} {$fnn} {$fdefault}";
+						$count++;
+					}
+
+				$sql .= "\n);\n\n";
+
+				$rows = $this->query("SELECT * FROM {$name};");
+				foreach ($rows as $row) {
+					$values = "";
+					$count = 0;
+					foreach ($row as $key => $val) { 
+						if ($count > 0) {
+							$values .= ",";
+						}
+						$values .= "'" . addslashes($val) . "'";
+						$count++;
+					}
+					$sql .= "INSERT IGNORE INTO {$name} VALUES (" . $values . " ); \n";
+				}
+				$sql .= "\n";
+
+				//print_r($fields);
+				
+				
+			}
+			//echo $sql;
+
+			
+			
+		} else if ($this->type == Database::TYPE_MYSQL) {
+
+
+
+			$tables = $this->query("SHOW TABLES;");
+
+			foreach ($tables as $table) {
+
+				$name = $table['Tables_in_' . $impresslist_mysqlDatabaseName];
+
+				$columnSql = "SHOW COLUMNS FROM " . $impresslist_mysqlDatabaseName . "." . $name . ";";
+				//echo $columnSql;
+				$columns = $this->query($columnSql);
+				
+				$sql .= "CREATE TABLE IF NOT EXISTS {$name} (\n";
+					$count = 0;
+					foreach ($columns as $column) {
+						$fname = $column['Field'];
+						$ftype = $column['Type'];
+						$fpk = ($column['Key'] == "PRI")?"PRIMARY KEY":"";
+						$fnn = ($column['Null'] == "NO")?"NOT NULL":"";
+						$fdefault = (strlen($column['Default'])>0)?("DEFAULT ".$column['Default']):"";
+
+						if ($count > 0) { $sql .= ",\n"; }
+						$sql .= "	`{$fname}` {$ftype} {$fpk} {$fnn} {$fdefault}";
+						$count++;
+					}
+				$sql .= "\n);\n\n";
+
+				// content
+				$rows = $this->query("SELECT * FROM {$name};");
+				foreach ($rows as $row) {
+					$values = "";
+					$count = 0;
+					foreach ($row as $key => $val) { 
+						if ($count > 0) {
+							$values .= ",";
+						}
+						$values .= '"' . addslashes($val) . '"';
+						$count++;
+					}
+					$sql .= "INSERT IGNORE INTO {$name} VALUES (" . $values . " ); \n";
+				}
+				$sql .= "\n";
+			}
+
+
+			
+			//echo $sql;
+			//$result = $sql;
+			//serve_file("impresslist-backup-sql-" . date("c") . ".sql", $sql, "txt");
+
+
+		}
+		return $sql;
+	}
+
 }
 
 ?>

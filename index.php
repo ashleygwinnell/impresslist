@@ -32,6 +32,10 @@ usort($youtubers, "sortByName");
 // Emails
 $emails = $db->query("SELECT * FROM email WHERE unmatchedrecipient = 0 ORDER BY utime DESC;");
 $num_emails = count($emails);
+for($i = 0; $i < $num_emails; $i++) { 
+	$emails[$i]['contents'] = utf8_encode($emails[$i]['contents']);
+}
+//print_r($emails);
 
 // Users
 $users = $db->query("SELECT id, forename, surname, email, color FROM user;");

@@ -12,11 +12,16 @@
 		return $results[0];
 	}
 	function db_singleperson($db, $personId) {
-		$rs = $db->query("SELECT *, strftime('%s', lastcontacted) as lastcontacted_timestamp FROM person WHERE id = '" . $personId . "' LIMIT 1;");
+		$lastcontacted = ", strftime('%s', lastcontacted) as lastcontacted_timestamp ";
+		if ($db->type == Database::TYPE_MYSQL) { $lastcontacted = ""; }
+		$rs = $db->query("SELECT * " . $lastcontacted . " FROM person WHERE id = '" . $personId . "' LIMIT 1;");
 		return $rs[0];
 	}
 	function db_singlepersonpublication($db, $personPublicationId) {
-		$people = $db->query("SELECT *, strftime('%s', lastcontacted) as lastcontacted_timestamp FROM person_publication WHERE id = '" . $personPublicationId . "' LIMIT 1;");
+		$lastcontacted = ", strftime('%s', lastcontacted) as lastcontacted_timestamp ";
+		if ($db->type == Database::TYPE_MYSQL) { $lastcontacted = ""; }
+
+		$people = $db->query("SELECT * " . $lastcontacted . " FROM person_publication WHERE id = '" . $personPublicationId . "' LIMIT 1;");
 		return $people[0];
 	}
 	function db_singlepublication($db, $publicationId) {

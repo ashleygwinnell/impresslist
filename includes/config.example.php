@@ -10,6 +10,7 @@ $impresslist_backupEmail = "hello@example.com";
 $impresslist_databaseType = Database::TYPE_SQLITE;
 
 $impresslist_sqliteDatabaseName = "data/database.sql";
+$impresslist_sqliteDatabaseBackupFile = "data/database-backup.sql";
 
 $impresslist_mysqlServer = "yourwebdomain.com";
 $impresslist_mysqlUsername = "yourwebd_impress";

@@ -515,7 +515,9 @@ DBO = function(data) {
 		
 	}
 	DBO.prototype.field = function(f) {
-		return this.fields[f];
+		var r = this.fields[f];
+		if (r == null) { console.error("field " + f + " was null."); return ""; }
+		return r;
 	}
 
 

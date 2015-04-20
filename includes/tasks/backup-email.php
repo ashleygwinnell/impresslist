@@ -3,21 +3,27 @@
 $require_login = false;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
-$filename = $impresslist_databaseName;
+$filename = $impresslist_sqliteDatabaseName;
 $filename2 = $_SERVER['DOCUMENT_ROOT'] . "/" . $filename;
+$filename3 = $_SERVER['DOCUMENT_ROOT'] . "/" . $impresslist_sqliteDatabaseBackupFile;
 
-//mail_attachment();
+file_put_contents($filename3, Database::getInstance()->sql());
+
+
+$backup_email_content = "impresslist backup - " . date('r');
+//$backup_email_content .= 
+
 $no_reply = "no-reply" . substr($impresslist_emailAddress, strpos($impresslist_emailAddress, "@"));
 //echo $no_reply . "<br/>";
 mail_attachment(
-	$impresslist_databaseName, 
+	$impresslist_sqliteDatabaseBackupFile, 
 	$_SERVER['DOCUMENT_ROOT'] . "/", 
 	$impresslist_backupEmail, 
 	$impresslist_emailAddress, 
 	"impresslist", 
 	$no_reply, 
 	"impresslist backup", 
-	"impresslist backup - " . date('r')
+	$backup_email_content
 );
 
 /*

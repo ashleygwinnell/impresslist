@@ -131,7 +131,7 @@ if (!isset($_GET['endpoint'])) {
 			}*/
 			$db->query("UPDATE settings SET `value` = " . time() . " WHERE `key` = 'manual_backup_lastbackedupon'; ");
 
-			$filename = $impresslist_databaseName;
+			$filename = $impresslist_sqliteDatabaseName;
 			$filename2 = $_SERVER['DOCUMENT_ROOT'] . "/" . $filename;
 			$contents = file_get_contents($filename2);
 			serve_file("impresslist-backup-" . date("c") . ".sql", $contents, "sql");
@@ -145,76 +145,10 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once("init.php");
 
-			if ($db->type == Database::TYPE_SQLITE) { 
+			$sql = $db->sql();
 
-				$sql = "";
-				$sql .= "--------------------\n";
-				$sql .= "-- impress[] backup.\n";
-				$sql .= "--------------------\n\n";
-
-
-				//echo "<h1>Backup</h1>";
-				$tables = $db->query("SELECT name FROM sqlite_master WHERE type='table';");
-				foreach ($tables as $table) {
-					$name = $table['name'];
-					if (strpos($name, "sqlite_", 0) !== FALSE) { continue; }
-					//echo "<h2>{$name}</h2>";
-
-
-					$sql .= "CREATE TABLE IF NOT EXISTS {$name} (\n";
-
-					$fields = $db->query("PRAGMA table_info({$name})");
-					$count = 0;
-					foreach ($fields as $field) {
-						//echo $field['name'];
-						//echo "<br/>";
-
-						$fname = $field['name'];
-						$ftype = $field['type'];
-						$fnn = ($field['notnull']==1)?"NOT NULL":"";
-						$fdefault = ($field['dflt_value'] != "")?("DEFAULT " . $field['dflt_value']): "";
-						$fpk = ($field['pk']==1)?"PRIMARY KEY":"";
-
-						if ($ftype == "TEXT" && strlen($fdefault) > 0) {
-							$fdefault = "";
-						}
-
-						if ($count > 0) {
-							$sql .= ",\n";
-						}
-						$sql .= "	`{$fname}` {$ftype} {$fpk} {$fnn} {$fdefault}";
-						$count++;
-					}
-
-					$sql .= "\n);\n\n";
-
-					$rows = $db->query("SELECT * FROM {$name};");
-					foreach ($rows as $row) {
-						$values = "";
-						$count = 0;
-						foreach ($row as $key => $val) { 
-							if ($count > 0) {
-								$values .= ",";
-							}
-							$values .= "'" . addslashes($val) . "'";
-							$count++;
-						}
-						$sql .= "INSERT IGNORE INTO {$name} VALUES (" . $values . " ); \n";
-					}
-					$sql .= "\n";
-
-					//print_r($fields);
-					
-					
-				}
-				//echo $sql;
-
-				serve_file("impresslist-backup-sql-" . date("c") . ".sql", $sql, "txt");
-				die();
-			} else {
-				$error = api_error("SQL Backup not implemented for MySQL yet.");
-			}
-
+			serve_file("impresslist-backup-sql-" . date("c") . ".sql", $sql, "txt");
+			die();
 			
 
 //			header("Location: /"); 
@@ -325,8 +259,8 @@ if (!isset($_GET['endpoint'])) {
 				$stmt = $db->prepare("SELECT COUNT(*) as count FROM person_publication WHERE person = :person AND publication = :publication");
 				$stmt->bindValue(":person", $_GET['person'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":publication", $_GET['publication'], Database::VARTYPE_STRING);
-				$row = $stmt->query()[0];
-				if ($row['count'] > 0) {
+				$row = $stmt->query();
+				if ($row[0]['count'] > 0) {
 					$result = api_error("This person already has this publication attached.");
 				} else { 
 
@@ -819,11 +753,7 @@ if (!isset($_GET['endpoint'])) {
 							$rs = $stmt->execute();
 							
 							$result = new stdClass();
-							$result->success = true;
-
-							$rs->finalize();
-							$stmt->close();
-							
+							$result->success = true;							
 						}
 					}
 				}
@@ -841,15 +771,15 @@ if (!isset($_GET['endpoint'])) {
 				$result = api_error("You are not logged in.");
 			} else {
 				// Update current user time.
-				$stmt = $db->prepare("UPDATE user SET lastactivity = :lastactivity WHERE id = :id ");
-				$stmt->bindValue("lastactivity", time(), Database::VARTYPE_INTEGER);
-				$stmt->bindValue("id", $_SESSION['user'], Database::VARTYPE_INTEGER);
+				$stmt = $db->prepare("UPDATE user SET lastactivity = :lastactivity WHERE id = :id;");
+				$stmt->bindValue(":lastactivity", time(), Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":id", $_SESSION['user'], Database::VARTYPE_INTEGER);
 				$stmt->execute();
 
 
 				// Fetch other logged-in users.
 				$stmt = $db->prepare("SELECT id, forename, surname, email, color, lastactivity FROM user WHERE lastactivity >= :lastactivity; ");
-				$stmt->bindValue("lastactivity", time(), Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":lastactivity", time(), Database::VARTYPE_INTEGER);
 				$rs = $stmt->query();
 				$results = array();
 				foreach ($rs as $row) { 
