@@ -4,6 +4,134 @@ API = function() {
 API.prototype = {
 
 }
+API.listPeople = function(fromInit) {
+	if (typeof fromInit == 'undefined') { fromInit = true; }
+	
+	var url = "api.php?endpoint=/person/list/";
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			
+			for(var i = 0; i < json.people.length; ++i) { 
+				var person = new Person(json.people[i]);
+				impresslist.addPerson(person, fromInit);
+			}
+			if (fromInit) { impresslist.refreshFilter(); }
+		})
+		.fail(function() {
+			API.errorMessage("Could not list People.");
+		});
+}
+API.listPublications = function(fromInit) {
+	if (typeof fromInit == 'undefined') { fromInit = true; }
+
+	var url = "api.php?endpoint=/publication/list/";
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			
+			for(var i = 0; i < json.publications.length; ++i) { 
+				var publication = new Publication(json.publications[i]);
+				impresslist.addPublication(publication, fromInit);
+			}
+			if (fromInit) { impresslist.refreshFilter(); }
+		})
+		.fail(function() {
+			API.errorMessage("Could not list Publications.");
+		});
+}
+API.listPersonPublications = function(fromInit) {
+	if (typeof fromInit == 'undefined') { fromInit = true; }
+
+	var url = "api.php?endpoint=/person-publication/list/";
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			for(var i = 0; i < json.personPublications.length; ++i) { 
+				var publication = new PersonPublication(json.personPublications[i]);
+				impresslist.addPersonPublication(publication, fromInit);
+			}
+			if (fromInit) { impresslist.refreshFilter(); }
+		})
+		.fail(function() {
+			API.errorMessage("Could not list Person Publications.");
+		});
+}
+API.listYoutubeChannels = function(fromInit) {
+	if (typeof fromInit == 'undefined') { fromInit = true; }
+
+	var url = "api.php?endpoint=/youtuber/list/";
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			for(var i = 0; i < json.youtubechannels.length; ++i) { 
+				var youtuber = new Youtuber(json.youtubechannels[i]);
+				impresslist.addYoutuber(youtuber, fromInit);
+			}
+			if (fromInit) { impresslist.refreshFilter(); }
+		})
+		.fail(function() {
+			API.errorMessage("Could not list Youtubers.");
+		});
+}
+API.listEmails = function(fromInit) {
+	if (typeof fromInit == 'undefined') { fromInit = true; }
+
+	var url = "api.php?endpoint=/email/list/";
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			for(var i = 0; i < json.emails.length; ++i) { 
+				var email = new Email(json.emails[i]);
+				impresslist.addEmail(email, fromInit);
+			}
+			if (fromInit) { impresslist.refreshFilter(); }
+		})
+		.fail(function() {
+			API.errorMessage("Could not list Emails.");
+		});
+}
+
 API.addPerson = function() {
 	var name = "Blank";
 	var email = "blank@blank.com";
@@ -1530,6 +1658,12 @@ var impresslist = {
 	users: [],
 	games: [],
 	init: function() {
+		API.listPeople();
+		API.listPublications();
+		API.listPersonPublications();
+		API.listYoutubeChannels();
+		API.listEmails();
+
 		// Navigation links
 		var thiz = this;
 		$('#nav-add-person').click(API.addPerson);

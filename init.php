@@ -8,6 +8,9 @@ include_once("includes/config.php");
 include_once("includes/util.php");
 include_once("includes/database.php");
 
+// Sorts
+function sortByName($a, $b) { return $a['name'] > $b['name']; }
+
 //if (!is_ssl()) {
 //	header("Location: " . "https://" . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
 //	die();

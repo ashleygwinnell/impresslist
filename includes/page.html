@@ -21,28 +21,6 @@
 	        		impresslist.addGame(new Game(<?php echo json_encode($games[$i]); ?>), true);
         		<?php endfor; ?>
 
-      			<?php for($i = 0; $i < $num_people; $i++): ?>
-	        		impresslist.addPerson(new Person(<?php echo json_encode($people[$i]); ?>), true);
-        		<?php endfor; ?>
-
-        		<?php for($i = 0; $i < $num_publications; $i++): ?>
-	        		impresslist.addPublication(new Publication(<?php echo json_encode($publications[$i]); ?>), true);
-        		<?php endfor; ?>
-
-        		<?php for($i = 0; $i < $num_personPublications; $i++): ?>
-	        		impresslist.addPersonPublication(new PersonPublication(<?php echo json_encode($personPublications[$i]); ?>), true);
-        		<?php endfor; ?>
-
-        		<?php for($i = 0; $i < $num_youtubers; $i++): ?>
-	        		impresslist.addYoutuber(new Youtuber(<?php echo json_encode($youtubers[$i]); ?>), true);
-        		<?php endfor; ?>
-
-        		<?php for($i = 0; $i < $num_emails; $i++): ?>
-	        		impresslist.addEmail(new Email(<?php echo json_encode($emails[$i]); ?>), true);
-        		<?php endfor; ?>
-
-        		
-
         		impresslist.init();
       			
         	});

@@ -85,6 +85,7 @@ if (!isset($_GET['endpoint'])) {
 	$endpoints = array(
 		"/backup/",
 		"/backup-sql/",
+		"/person/list/",
 		"/person/add/",
 		"/person/save/",
 		"/person/remove/",
@@ -93,6 +94,7 @@ if (!isset($_GET['endpoint'])) {
 		"/person/remove-publication/",
 		"/person/set-priority/",
 		"/person/set-assignment/",
+		"/publication/list/",
 		"/publication/add/",
 		"/publication/set-priority/",
 		"/publication/save/",
@@ -101,10 +103,14 @@ if (!isset($_GET['endpoint'])) {
 		"/admin/user/add/",
 		"/user/change-password/",
 
+		"/youtuber/list/",
 		"/youtuber/add/",
 		"/youtuber/save/",
 		"/youtuber/set-priority/",
 		"/youtuber/remove/",
+
+		"/person-publication/list/",
+		"/email/list/",
 
 		
 		"/chat/online-users/",
@@ -156,6 +162,73 @@ if (!isset($_GET['endpoint'])) {
 			
 			
 		} 
+
+
+
+		else if ($endpoint == "/person/list/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$people = $db->query("SELECT * FROM person WHERE removed = 0;");
+			usort($people, "sortByName");
+
+			$result = new stdClass();
+			$result->success = true;
+			$result->people = $people;
+		}
+		else if ($endpoint == "/publication/list/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$publications = $db->query("SELECT * FROM publication WHERE removed = 0;");
+			usort($publications, "sortByName");
+
+			$result = new stdClass();
+			$result->success = true;
+			$result->publications = $publications;
+		}
+		else if ($endpoint == "/person-publication/list/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$personPublications = $db->query("SELECT * FROM person_publication; ");
+			
+			$result = new stdClass();
+			$result->success = true;
+			$result->personPublications = $personPublications;
+		}
+		else if ($endpoint == "/youtuber/list/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$youtubeChannels = $db->query("SELECT * FROM youtuber WHERE removed = 0;");
+			usort($youtubeChannels, "sortByName");
+			$result = new stdClass();
+			$result->success = true;
+			$result->youtubechannels = $youtubeChannels;
+		}
+		else if ($endpoint == "/email/list/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$emails = $db->query("SELECT * FROM email WHERE unmatchedrecipient = 0 ORDER BY utime DESC;");
+			$num_emails = count($emails);
+			for($i = 0; $i < $num_emails; $i++) { 
+				$emails[$i]['contents'] = utf8_encode($emails[$i]['contents']);
+			}
+
+			$result = new stdClass();
+			$result->success = true;
+			$result->emails = $emails;
+		}
+
+
+
 		else if ($endpoint == "/person/add/")
 		{
 			$require_login = true;
@@ -215,7 +288,7 @@ if (!isset($_GET['endpoint'])) {
 				if ($twitter_followers > 0) { 
 					$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
 				}
-				$stmt->bindValue(":notes", strip_tags($_GET['notes']), Database::VARTYPE_STRING);
+				$stmt->bindValue(":notes", strip_tags(stripslashes($_GET['notes'])), Database::VARTYPE_STRING);
 				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
 				$rs = $stmt->execute();
 
@@ -494,7 +567,7 @@ if (!isset($_GET['endpoint'])) {
 				if ($twitter_followers > 0) { 
 					$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
 				}
-				$stmt->bindValue(":notes", strip_tags($_GET['notes']), Database::VARTYPE_STRING);
+				$stmt->bindValue(":notes", strip_tags(stripslashes($_GET['notes'])), Database::VARTYPE_STRING);
 				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
 				$rs = $stmt->execute();
 
@@ -600,7 +673,7 @@ if (!isset($_GET['endpoint'])) {
 
 					$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);
 					$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
-					$stmt->bindValue(":notes", strip_tags($_GET['notes']), Database::VARTYPE_STRING);
+					$stmt->bindValue(":notes", strip_tags(stripslashes($_GET['notes'])), Database::VARTYPE_STRING);
 					
 					$rs = $stmt->execute();
 
