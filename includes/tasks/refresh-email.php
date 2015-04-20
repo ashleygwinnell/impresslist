@@ -39,47 +39,50 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 	for($i = 0; $i < count($in); $i++) 
 	{
-		
+		$from = strtolower( $in[$i]['from'] );
+		$to = strtolower( $in[$i]['to'] );
+
 		//echo $in[$i]['from'] . "<br/>";
 		$stmt = $db->prepare("SELECT * from user WHERE email = :email LIMIT 1");
-		$stmt->bindValue(":email", $in[$i]['from'], Database::VARTYPE_STRING);
+		$stmt->bindValue(":email", $from, Database::VARTYPE_STRING);
 		$userResults = $stmt->query();
 
 		$count = count($userResults);
 		if ($count == 0) {
 			// flag this email as being sent from a non impresslist email.
 			echo "Found an email sent from a non impresslist email account?<br/>";
-			echo $in[$i]['from'] . "<br/>";
+			echo $from . "<br/>";
 		} else if ($count == 1) {
 			// add this to email db and delete the email.
 			echo "ADD EMAIL TO DATABASE<br/>";
-			echo $in[$i]['from'] . "<br/>";
-			echo $in[$i]['to'] . "<br/>";
+			echo $from . "<br/>";
+			echo $to . "<br/>";
 
 
 			// Make sure this user is in the database. 
 			$count_recipients_1 = 0;
 			$count_recipients_2 = 0;
 			
-			$stmt2 = $db->prepare("SELECT * FROM person WHERE email = :email; ");
-			$stmt2->bindValue(":email", $in[$i]['to'], Database::VARTYPE_STRING);
+			$stmt2 = $db->prepare("SELECT * FROM person WHERE email = :email AND removed = 0; ");
+			$stmt2->bindValue(":email", $to, Database::VARTYPE_STRING);
 			$rs2arr = $stmt2->query(); 
 			$count_recipients_1 = count($rs2arr);
 			
 			
 			$stmt3 = $db->prepare("SELECT * FROM person_publication WHERE email = :email; ");
-			$stmt3->bindValue(":email", $in[$i]['to'], Database::VARTYPE_STRING);
+			$stmt3->bindValue(":email", $to, Database::VARTYPE_STRING);
 			$rs3arr = $stmt3->query();
 			$count_recipients_2 = count($rs3arr);
 			
 			if ($count_recipients_1 > 1 || $count_recipients_2 > 1) {
-				echo "THIS EMAIL IS IN THE DATABASE FOR TWO PEOPLE. CANNOT ADD EMAIL.<br/>";
+				echo "THIS EMAIL ADDRESS IS IN THE DATABASE FOR TWO PEOPLE. CANNOT ADD EMAIL.<br/>";
+				continue;
 			} else if ($count_recipients_1 == 0 && $count_recipients_2 == 0) {
 				echo "ADD RECIPIENT TO DATABASE<br/>";
 				$stmt4 = $db->prepare("INSERT INTO person (id, 	name,  email,  priorities,  twitter,  twitter_followers,  notes,  lastcontacted, lastcontactedby, removed)
 												  VALUES (NULL, :name, :email, :priorities, :twitter, :twitter_followers, :notes, :lastcontacted, :lastcontactedby, :removed);");
-				$stmt4->bindValue(":name", $in[$i]['to'], Database::VARTYPE_STRING);
-				$stmt4->bindValue(":email", $in[$i]['to'], Database::VARTYPE_STRING);
+				$stmt4->bindValue(":name", $to, Database::VARTYPE_STRING);
+				$stmt4->bindValue(":email", $to, Database::VARTYPE_STRING);
 				$stmt4->bindValue(":priorities", db_defaultPrioritiesString($db), Database::VARTYPE_STRING);
 				$stmt4->bindValue(":twitter", "", Database::VARTYPE_INTEGER);
 				$stmt4->bindValue(":twitter_followers", 0, Database::VARTYPE_STRING);
@@ -115,8 +118,8 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 				$stmt5->bindValue(":user_id", $userResults[0]['id'], Database::VARTYPE_INTEGER);
 				$stmt5->bindValue(":person_id", $person_id, Database::VARTYPE_INTEGER);
 				$stmt5->bindValue(":utime", $in[$i]['timestamp'], Database::VARTYPE_INTEGER);
-				$stmt5->bindValue(":from_email", $in[$i]['from'], Database::VARTYPE_STRING);
-				$stmt5->bindValue(":to_email", $in[$i]['to'], Database::VARTYPE_STRING);
+				$stmt5->bindValue(":from_email", $from, Database::VARTYPE_STRING);
+				$stmt5->bindValue(":to_email", $to, Database::VARTYPE_STRING);
 				$stmt5->bindValue(":subject", $in[$i]['subject'], Database::VARTYPE_STRING);
 				$stmt5->bindValue(":contents", $in[$i]['contents'], Database::VARTYPE_STRING);
 				$rs5 = $stmt5->query();
@@ -135,8 +138,8 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 					$stmt->bindValue(":user_id", $userResults[0]['id'], Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":person_id", $person_id, Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":utime", $in[$i]['timestamp'], Database::VARTYPE_INTEGER);
-					$stmt->bindValue(":from_email", $in[$i]['from'], Database::VARTYPE_STRING);
-					$stmt->bindValue(":to_email", $in[$i]['to'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":from_email", $from, Database::VARTYPE_STRING);
+					$stmt->bindValue(":to_email", $to, Database::VARTYPE_STRING);
 					$stmt->bindValue(":subject", $in[$i]['subject'], Database::VARTYPE_STRING);
 					$stmt->bindValue(":contents", $in[$i]['contents'], Database::VARTYPE_STRING);
 					$stmt->bindValue(":unmatchedrecipient", 0, Database::VARTYPE_INTEGER);
