@@ -193,6 +193,7 @@ class MysqliDatabase extends Database {
 		$order = array();
 		$offset = 0;
 		$count = 0;
+		$osql = $sql;
 		while (($start = strpos($sql, ":", $offset)) !== FALSE) {
 			$end1 = strpos($sql, ",", $start);
 			if ($end1 === FALSE) { $end1 = PHP_INT_MAX; }
@@ -209,7 +210,11 @@ class MysqliDatabase extends Database {
 			$name = substr($sql, $start, $len);
 			//echo $name . "<br/>";
 			//echo "len: " . $len . "<br/>";;
-			$sql = str_replace($name, " ? ", $sql);
+			
+			//$sql = str_replace($name, " ? ", $sql);
+
+			$pos = strpos($sql, $name);
+			$sql = substr_replace($sql, " ? ", $pos, strlen($name));
 
 			$offset = 0;
 			$order[] = $name;
@@ -221,7 +226,10 @@ class MysqliDatabase extends Database {
 
 		$stmt = $this->db->prepare($sql);
 		if ($stmt == false) {
-			die("error: " . $sql);
+			echo "error: " . $sql;
+			echo " " . $osql;
+			print_r($order);
+			die();
 		}
 		return new MysqliDatabase_PreparedStatement($stmt, $order);
 	}
