@@ -229,6 +229,9 @@
 					<!-- 
 						Kids review sites lists
 						http://www.reviewfordev.com/list-of-review-sites-to-find-the-best-educational-apps-for-kids.php
+
+						tinyBuild big list of Twitch streamers.
+						http://tinybuild.com/twitch
 					-->
 
 
@@ -256,12 +259,8 @@
 							<?php 
 								echo "<p><i>TODO: User management, stats, etc.</i></p>";
 
-								$userEmails = array(0,0,0,0,0,0);
-								foreach ($emails as &$email) {
-									$userEmails[$email['user_id']]++;
-								}
 								foreach ($users as &$user) {
-									echo "<p>" . $user['id'] . ". <b style='color:" . $user['color'] . "'>" . $user['forename'] . "</b> - " . $userEmails[$user['id']] . " emails sent.</p>";
+									echo "<p>" . $user['id'] . ". <b style='color:" . $user['color'] . "'>" . $user['forename'] . "</b></p>";
 								}
 								
 							?>	

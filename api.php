@@ -92,6 +92,8 @@ if (!isset($_GET['endpoint'])) {
 		"/person/add-publication/",
 		"/person/save-publication/",
 		"/person/remove-publication/",
+		"/person/add-youtube-channel/",
+		"/person/remove-youtube-channel/",
 		"/person/set-priority/",
 		"/person/set-assignment/",
 		"/publication/list/",
@@ -110,6 +112,7 @@ if (!isset($_GET['endpoint'])) {
 		"/youtuber/remove/",
 
 		"/person-publication/list/",
+		"/person-youtube-channel/list/",
 		"/email/list/",
 
 		
@@ -170,12 +173,20 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once("init.php");
 
+
+
 			$people = $db->query("SELECT * FROM person WHERE removed = 0;");
+			$num_people = count($people);
 			usort($people, "sortByName");
+
+			for($i = 0; $i < $num_people; $i++) { 
+				$people[$i]['notes'] = utf8_encode($people[$i]['notes']);
+			}
 
 			$result = new stdClass();
 			$result->success = true;
 			$result->people = $people;
+
 		}
 		else if ($endpoint == "/publication/list/") 
 		{
@@ -200,13 +211,31 @@ if (!isset($_GET['endpoint'])) {
 			$result->success = true;
 			$result->personPublications = $personPublications;
 		}
+		else if ($endpoint == "/person-youtube-channel/list/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$personYoutubers = $db->query("SELECT * FROM person_youtuber; ");
+			
+			$result = new stdClass();
+			$result->success = true;
+			$result->personYoutubeChannels = $personYoutubers;
+		}
 		else if ($endpoint == "/youtuber/list/") 
 		{
 			$require_login = true;
 			include_once("init.php");
 
 			$youtubeChannels = $db->query("SELECT * FROM youtuber WHERE removed = 0;");
+			$num_youtubeChannels = count($youtubeChannels);
 			usort($youtubeChannels, "sortByName");
+
+			for($i = 0; $i < $num_youtubeChannels; $i++) { 
+				$youtubeChannels[$i]['notes'] = utf8_encode($youtubeChannels[$i]['notes']);
+				$youtubeChannels[$i]['description'] = utf8_encode($youtubeChannels[$i]['description']);
+			}
+
 			$result = new stdClass();
 			$result->success = true;
 			$result->youtubechannels = $youtubeChannels;
@@ -283,7 +312,7 @@ if (!isset($_GET['endpoint'])) {
 
 				$stmt = $db->prepare(" UPDATE person SET name = :name, email = :email, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes WHERE id = :id ");
 				$stmt->bindValue(":name", $_GET['name'], Database::VARTYPE_STRING);
-				$stmt->bindValue(":email", trim($_GET['email']), Database::VARTYPE_STRING);
+				$stmt->bindValue(":email", strtolower(trim($_GET['email'])), Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter", $_GET['twitter'], Database::VARTYPE_STRING);
 				if ($twitter_followers > 0) { 
 					$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
@@ -390,6 +419,61 @@ if (!isset($_GET['endpoint'])) {
 			{
 				$stmt = $db->prepare(" DELETE FROM person_publication WHERE id = :id;");
 				$stmt->bindValue(":id", $_GET['personPublication'], Database::VARTYPE_STRING);
+				$rs = $stmt->execute();
+
+				$result = new stdClass();
+				$result->success = true;
+			}
+		}
+		else if ($endpoint == "/person/add-youtube-channel/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'person', 'type' => 'integer'),
+				array('name' => 'youtubeChannel', 'type' => 'integer')
+			);
+
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) 
+			{
+				// make sure this user doesn't have this youtube channel already.
+				$stmt = $db->prepare("SELECT COUNT(*) as count FROM person_youtuber WHERE person = :person AND youtuber = :youtuber ;");
+				$stmt->bindValue(":person", $_GET['person'], Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":youtuber", $_GET['youtubeChannel'], Database::VARTYPE_INTEGER);
+				$row = $stmt->query();
+				if ($row[0]['count'] > 0) {
+					$result = api_error("This person already has this Youtube Channel attached.");
+				} else { 
+
+					$stmt = $db->prepare(" INSERT INTO person_youtuber (id, person, youtuber) VALUES (NULL, :person, :youtuber); ");
+					$stmt->bindValue(":person", $_GET['person'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":youtuber", $_GET['youtubeChannel'], Database::VARTYPE_INTEGER);
+					$rs = $stmt->execute();
+
+					$personYoutuber_id = $db->lastInsertRowID();
+
+					$result = new stdClass();
+					$result->success = true;
+					$result->personYoutubeChannel = db_singlepersonyoutubechannel($db, $personYoutuber_id);
+				}
+			}
+		}
+		else if ($endpoint == "/person/remove-youtube-channel/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'personYoutubeChannel', 'type' => 'integer')
+			);
+
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) 
+			{
+				$stmt = $db->prepare(" DELETE FROM person_youtuber WHERE id = :id;");
+				$stmt->bindValue(":id", $_GET['personYoutubeChannel'], Database::VARTYPE_INTEGER);
 				$rs = $stmt->execute();
 
 				$result = new stdClass();
@@ -979,7 +1063,15 @@ if (!isset($_GET['endpoint'])) {
 
 
 }
-echo json_encode($result);
+
+$var = json_encode($result, true);
+if ($var === FALSE) {
+	$lasterr = json_last_error();
+	echo json_encode(api_error("utf8 error -- could not encode data... " . $lasterr));
+	print_r($result);
+} else {
+	echo $var;
+}
 
 //$db->close();
 //die();

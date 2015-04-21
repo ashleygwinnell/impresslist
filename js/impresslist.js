@@ -81,6 +81,31 @@ API.listPersonPublications = function(fromInit) {
 			API.errorMessage("Could not list Person Publications.");
 		});
 }
+API.listPersonYoutubeChannels = function(fromInit) {
+	if (typeof fromInit == 'undefined') { fromInit = true; }
+
+	var url = "api.php?endpoint=/person-youtube-channel/list/";
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			for(var i = 0; i < json.personYoutubeChannels.length; ++i) { 
+				var channel = new PersonYoutubeChannel(json.personYoutubeChannels[i]);
+				impresslist.addPersonYoutubeChannel(channel, fromInit);
+			}
+			if (fromInit) { impresslist.refreshFilter(); }
+		})
+		.fail(function() {
+			API.errorMessage("Could not list Person Youtube Channels.");
+		});
+}
 API.listYoutubeChannels = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
@@ -182,6 +207,55 @@ API.addPersonPublication = function(personObj, publicationId) {
 		})
 		.fail(function() {
 			API.errorMessage("Could not add Person.");
+		});
+}
+API.addPersonYoutubeChannel = function(personObj, youtubeChannelId) {
+	var url = "api.php?endpoint=/person/add-youtube-channel/" +
+				"&person=" + encodeURIComponent(personObj.id) + 
+				"&youtubeChannel=" + encodeURIComponent(youtubeChannelId);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Person Youtube Channel added.");
+			console.log(json);
+
+			impresslist.addPersonYoutubeChannel(new PersonYoutubeChannel(json.personYoutubeChannel), false);			
+		})
+		.fail(function() {
+			API.errorMessage("Could not add Person - Youtube Channel.");
+		});
+}
+API.removePersonYoutubeChannel = function(personYoutuberObj) {
+	var url = "api.php?endpoint=/person/remove-youtube-channel/" +
+				"&personYoutubeChannel=" + encodeURIComponent(personYoutuberObj.id);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Person Youtube Channel removed.");
+			console.log(json);
+
+			impresslist.removePersonYoutubeChannel(personYoutuberObj);			
+		})
+		.fail(function() {
+			API.errorMessage("Could not removed Person Youtube Channel.");
 		});
 }
 API.savePersonPublication = function(personPublicationObj, email) {
@@ -956,6 +1030,54 @@ PersonPublication = function(data) {
 	}
 
 
+PersonYoutubeChannel = function(data) {
+	DBO.call(this, data); 
+}
+	PersonYoutubeChannel.prototype = Object.create(DBO.prototype);
+	PersonYoutubeChannel.prototype.constructor = PersonYoutubeChannel;
+	PersonYoutubeChannel.prototype.init = function(data) {
+		DBO.prototype.init.call(this, data);
+		this.id = this.fields['id'];
+	}
+	PersonYoutubeChannel.prototype.open = function() {
+		console.log('per yt open');
+		var obj = this;
+		var yt = impresslist.findYoutuberById(this.fields['youtuber']);
+		var html = "<div data-peryt-id='" + this.id + "' data-peryt-tablerow='true' class='panel panel-default'> \
+						<div class='panel-heading oa'> \
+							<h3 class='panel-title fl'>" + yt.name + "&nbsp;</h3> \
+						</div> \
+						<div class='panel-body'> \
+							<div class='row'> \
+								<div class='fr padx'> \
+									<button id='delete_personYoutubeChannelId" + this.id + "' type='submit' class='btn btn-danger' data-peryt-id='" + this.id + "'>Remove</button> \
+								</div> \
+							</div> \
+						</div> \
+					</div>";
+		$('#person-youtubechannels').append(html);
+
+		$('#delete_personYoutubeChannelId' + this.id).click(function() { API.removePersonYoutubeChannel(obj); });
+
+		$("[data-peryt-id='" + this.id + "'] a").click(function(e) {
+			e.preventDefault();
+			$("#person_tabs [data-tab='person_messages']").click();
+		});
+	}
+	
+	PersonYoutubeChannel.prototype.update = function() {
+
+	}
+	PersonYoutubeChannel.prototype.onAdded = function(fromInit) {
+		if (!fromInit) {
+			this.open();
+		}
+	};
+	PersonYoutubeChannel.prototype.onRemoved = function() {
+		$("[data-peryt-id='" + this.id + "'][data-peryt-tablerow='true']").remove();
+	}
+
+
 
 
 
@@ -1053,6 +1175,7 @@ Person = function(data) {
 		html += '		<ul id="person_tabs" class="nav nav-tabs" role="tablist"> \
 							<li role="presentation" class="active"><a role="tab" href="#" data-tab="person_profile" data-toggle="tab">Profile</a></li> \
 							<li role="presentation"><a role="tab" href="#" data-tab="person_publications" data-toggle="tab">Publications</a></li> \
+							<li role="presentation"><a role="tab" href="#" data-tab="person_youtubeChannels" data-toggle="tab">Youtube Channels</a></li> \
 							<li role="presentation"><a role="tab" href="#" data-tab="person_messages" data-toggle="tab">Messages</a></li> \
 						</ul> \
 						<div class="tab-content">';
@@ -1125,6 +1248,28 @@ Person = function(data) {
 									</table>\
 								</div> \
 								<div id='person-publications'>";
+
+				html += "		</div>\
+							</div>";
+ 				
+
+ 				// Youtube Channels panel
+				html += "	<div role='tabpanel' class='tab-pane pady' data-tab='person_youtubeChannels'> \
+								<div class='form-group'>\
+									<label for='add-youtubechannel'>Add:&nbsp;</label> \
+									<input id='add-youtubechannel-search' type='text' class='form-control' placeholder='Search' /> \
+								</div>\
+								<div id='add-youtubechannel-results-container' style='display:none;'>\
+									<table class='table table-striped'>\
+										<thead>\
+											<th>Name</th> \
+											<th>Subscribers</th> \
+										</thead> \
+										<tbody id='add-youtubechannel-results'> \
+										</tbody> \
+									</table>\
+								</div> \
+								<div id='person-youtubechannels'>";
 
 				html += "		</div>\
 							</div>";
@@ -1271,6 +1416,52 @@ Person = function(data) {
 			var perpub = impresslist.personPublications[i];
 			if (perpub.field('person') == this.id) {
 				perpub.open(); 
+			}
+		}
+
+		// Add Youtube Channel binds
+		$("#add-youtubechannel-search").keyup(function() {
+			var searchfield = $(this);
+			var text = $(this).val().toLowerCase();
+			if (text.length == 0) {
+				$("#add-youtubechannel-results").html("");
+				$('#add-youtubechannel-results-container').hide();
+				return;
+			}
+			var html = "";
+			for(var i = 0; i < impresslist.youtubers.length; i++) { 
+				var include = impresslist.youtubers[i].search(text);
+				if (include) {
+					html += "	<tr class='table-list' data-youtubechannel-id='" + impresslist.youtubers[i].id + "' data-add-youtubechannel-result='true' >\
+									<td>" + impresslist.youtubers[i].name + "</td> \
+									<td>" + impresslist.youtubers[i].field('subscribers') + "</td> \
+								</tr>";
+				}
+			}
+			if (html.length == 0) { 
+				html += "	<tr>\
+								<td colspan='2'>No Results</td> \
+							</tr>";
+			}
+			$("#add-youtubechannel-results").html(html);
+			$('#add-youtubechannel-results-container').show();
+
+			$("[data-add-youtubechannel-result='true']").click(function() {
+				var ytId = $(this).attr("data-youtubechannel-id");
+				API.addPersonYoutubeChannel(person, ytId);
+
+				searchfield.val("");
+				$("#add-youtubechannel-results").html("");
+				$('#add-youtubechannel-results-container').hide();
+			});
+
+		});
+
+		// Init youtube channels for this person.
+		for(var i = 0; i < impresslist.personYoutubeChannels.length; ++i) {
+			var peryt = impresslist.personYoutubeChannels[i];
+			if (peryt.field('person') == this.id) {
+				peryt.open(); 
 			}
 		}
 
@@ -1438,10 +1629,19 @@ Person = function(data) {
 		ret = this.field('email').toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
-		// search all publications too.
+		// Search all publications too.
 		for(var i = 0; i < impresslist.personPublications.length; ++i) {
 			if (impresslist.personPublications[i].field('person') == this.id) {
 				var pub = impresslist.findPublicationById( impresslist.personPublications[i].field('publication') );
+				ret = pub.search(text);
+				if (ret) { return ret; }
+			}
+		}
+
+		// Search all youtube channels too.
+		for(var i = 0; i < impresslist.personYoutubeChannels.length; ++i) {
+			if (impresslist.personYoutubeChannels[i].field('person') == this.id) {
+				var pub = impresslist.findYoutuberById( impresslist.personYoutubeChannels[i].field('youtuber') );
 				ret = pub.search(text);
 				if (ret) { return ret; }
 			}
@@ -1653,6 +1853,7 @@ var impresslist = {
 	people: [],
 	publications: [],
 	personPublications: [],
+	personYoutubeChannels: [],
 	youtubers: [],
 	emails: [],
 	users: [],
@@ -1661,6 +1862,7 @@ var impresslist = {
 		API.listPeople();
 		API.listPublications();
 		API.listPersonPublications();
+		API.listPersonYoutubeChannels();
 		API.listYoutubeChannels();
 		API.listEmails();
 
@@ -1750,6 +1952,11 @@ var impresslist = {
 		this.personPublications.push(obj);
 		if (!fromInit) { impresslist.refreshFilter(); }
 	},
+	addPersonYoutubeChannel: function(obj, fromInit) {
+		obj.onAdded(fromInit);
+		this.personYoutubeChannels.push(obj);
+		if (!fromInit) { impresslist.refreshFilter(); }
+	},
 	addEmail: function(obj, fromInit) {
 		obj.onAdded();
 		this.emails.push(obj);
@@ -1808,6 +2015,17 @@ var impresslist = {
 				console.log('person publication removed: ' + obj.id);
 				obj.onRemoved();
 				this.personPublications.splice(i, 1);
+				impresslist.refreshFilter();
+				break;
+			}
+		}
+	},
+	removePersonYoutubeChannel: function(obj) {
+		for(var i = 0, len = this.personYoutubeChannels.length; i < len; ++i) {
+			if (this.personYoutubeChannels[i].id == obj.id) {
+				console.log('person youtube channel removed: ' + obj.id);
+				obj.onRemoved();
+				this.personYoutubeChannels.splice(i, 1);
 				impresslist.refreshFilter();
 				break;
 			}

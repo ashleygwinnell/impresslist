@@ -24,6 +24,13 @@
 		$people = $db->query("SELECT * " . $lastcontacted . " FROM person_publication WHERE id = '" . $personPublicationId . "' LIMIT 1;");
 		return $people[0];
 	}
+	function db_singlepersonyoutubechannel($db, $personYoutubeChannelId) {
+		$lastcontacted = ", strftime('%s', lastcontacted) as lastcontacted_timestamp ";
+		if ($db->type == Database::TYPE_MYSQL) { $lastcontacted = ""; }
+
+		$people = $db->query("SELECT * " . $lastcontacted . " FROM person_youtuber WHERE id = '" . $personYoutubeChannelId . "' LIMIT 1;");
+		return $people[0];
+	}
 	function db_singlepublication($db, $publicationId) {
 		if (!is_numeric($publicationId)) { return false; }
 		$publications = $db->query("SELECT * FROM publication WHERE id = '" . $publicationId . "' LIMIT 1;");
@@ -169,7 +176,13 @@
 		//$db->exec("INSERT INTO youtuber (id, name, channel, iconurl, subscribers, views, notes, lastpostedon, removed) VALUES (NULL, 'Stumpt', 'stumptgamers', '', 1000, 1000, 'multiplayer pc', 0, 0); "); 
 	}
 	
-
+	// create person_youtubechannel
+	$sql = "CREATE TABLE IF NOT EXISTS person_youtuber (
+				id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+				person INTEGER NOT NULL,
+				youtuber INTEGER NOT NULL
+			);";
+	$db->exec($sql);
 	
 	// create users
 	// ALTER TABLE user ADD COLUMN lastactivity INTEGER NOT NULL DEFAULT 0
@@ -225,6 +238,20 @@
 	}
 
 	//$db->close();
+
+
+
+	// track coverage
+	$sql = "CREATE TABLE IF NOT EXISTS publication_coverage (
+				id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+				publication INTEGER NOT NULL,
+				person INTEGER, 
+				url VARCHAR(255) NOT NULL,
+				utime TIMESTAMP NOT NULL
+			);";
+	$db->exec($sql);
+
+
 
 
 	// add database for storing system variables.
