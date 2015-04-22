@@ -704,7 +704,6 @@ if (!isset($_GET['endpoint'])) {
 				$result->followers = $twitter_followers;
 				$result->youtubechannel = db_singleyoutubechannel($db, $youtuber_id);
 
-				$stmt->close();
 			}
 		}
 		else if ($endpoint == "/youtuber/save/")
@@ -736,7 +735,7 @@ if (!isset($_GET['endpoint'])) {
 												lastpostedon = :lastpostedon,
 												twitter = :twitter, 
 												twitter_followers = :twitter_followers, 
-												notes = :notes
+												notes = :notes 
 											WHERE 
 												id = :id; 
 										");
