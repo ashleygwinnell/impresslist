@@ -198,16 +198,19 @@ class MysqliDatabase extends Database {
 			$end1 = strpos($sql, ",", $start);
 			if ($end1 === FALSE) { $end1 = PHP_INT_MAX; }
 		
-			$end2 = strpos($sql, " ", $start);
+			$end2 = strpos($sql, " ", $start); // space
 			if ($end2 === FALSE) { $end2 = PHP_INT_MAX; }
 
-			$end3 = strpos($sql, ")", $start);
+			$end3 = strpos($sql, "\n", $start); // tab
 			if ($end3 === FALSE) { $end3 = PHP_INT_MAX; }
-			
-			$end4 = strpos($sql, ";", $start);
+
+			$end4 = strpos($sql, ")", $start);
 			if ($end4 === FALSE) { $end4 = PHP_INT_MAX; }
+			
+			$end5 = strpos($sql, ";", $start);
+			if ($end5 === FALSE) { $end5 = PHP_INT_MAX; }
 	
-			$end = min(array($end1, $end2, $end3, $end4));
+			$end = min(array($end1, $end2, $end3, $end4, $end5));
 			$len = $end - $start;
 
 			$name = substr($sql, $start, $len);
