@@ -7,14 +7,13 @@ $require_login = false;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // Publications
-$publications = $db->query("SELECT * FROM publication WHERE removed = 0;");
+$publications = $db->query("SELECT * FROM publication WHERE lastpostedon_updatedon < " . (time()-3600) . " AND removed = 0;");
 $num_publications = count($publications);
 
 for($i = 0; $i < $num_publications; ++$i) {
 	$rss = $publications[$i]['rssfeedurl'];
 	if (strlen($rss) > 0) {
 		//echo $rss . "<Br/>";
-		echo "<b>" . $publications[$i]['name'] . "</b><br/>";
 		$rsscontent = file_get_contents($rss);
 		$latestArticleTimestamp = 0;
 		$offset = 0;
@@ -49,15 +48,25 @@ for($i = 0; $i < $num_publications; ++$i) {
 			}
 		}
 
-		echo $latestArticleTimestamp . "<br/>";
-		echo "<hr/>";
+		
 
 		if ($latestArticleTimestamp > 0) {
-			$stmt = $db->prepare(" UPDATE publication SET lastpostedon = :lastpostedon WHERE id = :id;");
+			echo "<b>" . $publications[$i]['name'] . "</b><br/>";
+			echo $latestArticleTimestamp . "<br/>";
+			echo "<hr/>";
+
+			$stmt = $db->prepare(" UPDATE publication 
+									SET 
+										lastpostedon = :lastpostedon,
+										lastpostedon_updatedon = :lastpostedon_updatedon
+									WHERE id = :id;");
 			$stmt->bindValue(":id", $publications[$i]['id'], Database::VARTYPE_INTEGER);
 			$stmt->bindValue(":lastpostedon", $latestArticleTimestamp, Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":lastpostedon_updatedon", time(), Database::VARTYPE_INTEGER);
 			$stmt->execute();
-			$stmt->close();
+			//$stmt->close();
+
+			sleep(1);
 		}
 	}
 }

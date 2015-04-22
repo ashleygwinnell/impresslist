@@ -724,6 +724,12 @@ if (!isset($_GET['endpoint'])) {
 				if ($youtuber == 0) { 
 					$result = api_error("Youtube channel '" . $_GET['channel'] . "' not found.");
 				} else { 
+
+					$twitter = $_GET['twitter'];
+					$twitter_followers = twitter_countFollowers($_GET['twitter']);
+					if ($twitter_followers == "") { $twitter_followers = 0; }
+					$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
+
 					$stmt = $db->prepare(" UPDATE youtuber SET 
 												channel = :channel,
 												name = :name,
@@ -734,7 +740,7 @@ if (!isset($_GET['endpoint'])) {
 												views = :views,
 												lastpostedon = :lastpostedon,
 												twitter = :twitter, 
-												twitter_followers = :twitter_followers, 
+												" . $twitter_followers_sql . "
 												notes = :notes 
 											WHERE 
 												id = :id; 
@@ -751,11 +757,13 @@ if (!isset($_GET['endpoint'])) {
 					$stmt->bindValue(":views", "" . $youtuber['views'], Database::VARTYPE_STRING);
 					$stmt->bindValue(":lastpostedon", $youtuber['lastpostedon'], Database::VARTYPE_INTEGER);
 
-					$twitter = $_GET['twitter'];
-					$twitter_followers = twitter_countFollowers($_GET['twitter']);
-
 					$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);
-					$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
+
+					if ($twitter_followers > 0) {
+						$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
+					}
+
+
 					$stmt->bindValue(":notes", strip_tags(stripslashes($_GET['notes'])), Database::VARTYPE_STRING);
 					
 					$rs = $stmt->execute();

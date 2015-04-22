@@ -103,6 +103,7 @@
 				assigned INTEGER NOT NULL DEFAULT 0, 
 				twitter VARCHAR(255) NOT NULL,
 				twitter_followers INTEGER NOT NULL DEFAULT 0,
+				twitter_updatedon INTEGER NOT NULL DEFAULT 0,
 				notes TEXT NOT NULL,
 				lastcontacted TIMESTAMP NOT NULL,
 				lastcontactedby INTEGER NOT NULL, 
@@ -124,8 +125,10 @@
 				priorities VARCHAR(255) NOT NULL,
 				twitter VARCHAR(255) NOT NULL,
 				twitter_followers INTEGER NOT NULL,
+				twitter_updatedon INTEGER NOT NULL DEFAULT 0,
 				notes TEXT NOT NULL,
 				lastpostedon TIMESTAMP NOT NULL,
+				lastpostedon_updatedon INTEGER NOT NULL DEFAULT 0,
 				removed INTEGER NOT NULL DEFAULT 0
 			);";
 	$db->exec($sql);
@@ -166,8 +169,10 @@
 				views TEXT NOT NULL {$blobTextDefaultToZero},
 				twitter VARCHAR(255) NOT NULL DEFAULT '',
 				twitter_followers INTEGER NOT NULL DEFAULT 0,
+				twitter_updatedon INTEGER NOT NULL DEFAULT 0,
 				notes TEXT NOT NULL,
 				lastpostedon INTEGER NOT NULL,
+				lastpostedon_updatedon INTEGER NOT NULL DEFAULT 0,
 				removed INTEGER NOT NULL DEFAULT 0
 			);";
 	// ALTER TABLE youtuber ADD COLUMN email VARCHAR(255) NOT NULL DEFAULT '';

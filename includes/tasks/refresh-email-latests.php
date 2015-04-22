@@ -80,12 +80,16 @@ for ($i = 0; $i < count($people); $i++)
 		}
 	}
 	if ($latestAllContactUser > 0) {
-		$stmt = $db->prepare("UPDATE person SET lastcontacted = :lastcontacted, lastcontactedby = :lastcontactedby WHERE id = :id; ");
+		$stmt = $db->prepare("UPDATE person 
+								SET 
+									lastcontacted = :lastcontacted, 
+									lastcontactedby = :lastcontactedby 
+								WHERE id = :id; ");
 		$stmt->bindValue(":id", $people[$i]['id'], Database::VARTYPE_INTEGER); 
 		$stmt->bindValue(":lastcontacted", $latestAllContactTimestamp, Database::VARTYPE_INTEGER);
 		$stmt->bindValue(":lastcontactedby", $latestAllContactUser, Database::VARTYPE_INTEGER); 
 		$stmt->execute();
-		$stmt->close();
+		//$stmt->close();
 	}
 
 

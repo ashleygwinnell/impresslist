@@ -10,7 +10,7 @@ $require_login = false;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // People
-$youtubeChannels = $db->query("SELECT * FROM youtuber;");
+$youtubeChannels = $db->query("SELECT * FROM youtuber WHERE lastpostedon_updatedon < " . (time()-3600) . " AND removed = 0;");
 $num_youtubeChannels = count($youtubeChannels);
 
 $twittersUpdated = 0;
@@ -23,6 +23,7 @@ for($i = 0; $i < $num_youtubeChannels; $i++)
 	{
 		$youtubeDetails = youtube_getInformation($youtubeChannel);
 		if ($youtubeDetails != 0) { 
+			echo "updated " . $content['entry']['title']['$t'] . "<br/>";
 			$result = array(
 				"name" => $content['entry']['title']['$t'],
 				"description" => strip_tags($content['entry']['content']['$t']),
@@ -32,30 +33,26 @@ for($i = 0; $i < $num_youtubeChannels; $i++)
 				"views" => $content['entry']['yt$statistics']['totalUploadViews']
 			);
 
-			$db->query("UPDATE youtuber 
+			$db->exec("UPDATE youtuber 
 							SET 
 								lastpostedon = '" . $youtubeDetails['lastpostedon'] . "', 
+								lastpostedon_updatedon = '" . time() . "', 
 								subscribers = '" . $youtubeDetails['subscribers'] . "', 
 								views = '" . $youtubeDetails['views'] . "' 
 							WHERE id = '" . $youtubeChannels[$i]['id'] . "';");
 			$subscriptionsUpdated++;
+			sleep(1);
 		}
 	}
 
-	$twitterAcc = $youtubeChannels[$i]['twitter'];
-	if (strlen($twitterAcc) > 0) 
-	{
-		$num_followers = twitter_countFollowers($twitterAcc);
-		$db->query("UPDATE youtuber SET twitter_followers = '" . $num_followers . "' WHERE id = '" . $youtubeChannels[$i]['id'] . "';");
-		$twittersUpdated++;
-	}
+	
 	// echo "<hr/>";
 }
 
 //header("Location: /");
 //die();
 echo "num youtubers: " . $num_youtubeChannels . "<br/>";
-echo "updated " . $twittersUpdated . " twitter accounts<br/>";
+//echo "updated " . $twittersUpdated . " twitter accounts<br/>";
 echo "updated " . $subscriptionsUpdated . " youtuber subscriptions <br/>";
 echo "done!<br/>";
 $endTime = time();
