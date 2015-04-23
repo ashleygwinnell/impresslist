@@ -721,6 +721,13 @@ DBO = function(data) {
 		if (r == null) { console.error("field " + f + " was null."); return ""; }
 		return r;
 	}
+	DBO.prototype.twitterCell = function() {
+		var str = "N/A";
+		if (this.fields['twitter'].length > 0) { 
+			str = "<a href='http://twitter.com/" + this.fields['twitter'] + "' target='new'>" + new Number(this.fields['twitter_followers']).toLocaleString() + "</a>";
+		}
+		return str;
+	}
 
 
 Email = function(data) {
@@ -819,7 +826,7 @@ Youtuber = function(data) {
 							<td data-youtuber-id='" + this.field('id') + "' data-field='priority' data-value='" + this.priority() + "'>" + Priority.name(this.priority()) + "</td> \
 							<td data-youtuber-id='" + this.field('id') + "' data-field='subscribers' data-value='" + this.field('subscribers') + "'><a href='http://youtube.com/user/" + this.field('channel') + "' target='new'>" + new Number(this.field('subscribers')).toLocaleString() + "</a></td> \
 							<td data-youtuber-id='" + this.field('id') + "' data-field='views' data-value='" + this.field('views') + "'>" + new Number(this.field('views')).toLocaleString() + "</td> \
-							<td data-youtuber-id='" + this.field('id') + "' data-field='twitter_followers' data-value='" + this.field('twitter_followers') + "'><a href='http://twitter.com/" + this.field('twitter') + "' target='new'>" + new Number(this.field('twitter_followers')).toLocaleString() + "</a></td> \
+							<td data-youtuber-id='" + this.field('id') + "' data-field='twitter_followers' data-value='" + this.field('twitter_followers') + "'>" + this.twitterCell() + "</td> \
 							<td data-youtuber-id='" + this.field('id') + "' data-field='lastpostedon' data-value='" + this.field('lastpostedon') + "'>" + impresslist.util.relativetime_contact(this.field('lastpostedon')) + "</td> \
 						</tr>";
 		$('#youtubers').append(html);
@@ -906,7 +913,7 @@ Youtuber = function(data) {
 		$("[data-youtuber-id='" + this.id + "'][data-field='subscribers']").html("<a href='http://youtube.com/user/" + this.field('channel') + "' target='new'>" + new Number(this.field('subscribers')).toLocaleString() + "</a>");
 		$("[data-youtuber-id='" + this.id + "'][data-field='views']").html( new Number(this.field('views')).toLocaleString() );
 		$("[data-youtuber-id='" + this.id + "'][data-field='twitter']").html(this.field('twitter'));
-		$("[data-youtuber-id='" + this.id + "'][data-field='twitter_followers']").html("<a href='http://twitter.com/" + this.field('twitter') + "' target='new'>" + new Number(this.field('twitter_followers')).toLocaleString() + "</a>");			
+		$("[data-youtuber-id='" + this.id + "'][data-field='twitter_followers']").html( this.twitterCell() );			
 		$("[data-youtuber-id='" + this.id + "'][data-field='lastpostedon']").html( impresslist.util.relativetime_contact(this.field('lastpostedon')) );			
 	};
 	
@@ -1100,7 +1107,7 @@ Person = function(data) {
 	Person.prototype.update = function() {
 		$("[data-person-id='" + this.id + "'][data-field='name']").html(this.name);
 		$("[data-person-id='" + this.id + "'][data-field='priority']").html(Priority.name(this.priority()));
-		$("[data-person-id='" + this.id + "'][data-field='twitter_followers']").html("<a href='http://twitter.com/" + this.field('twitter') + "' target='new'>" + new Number(this.field('twitter_followers')).toLocaleString() + "</a>");		
+		$("[data-person-id='" + this.id + "'][data-field='twitter_followers']").html( this.twitterCell() );		
 	},
 	Person.prototype.save = function() {
 		var name = $("[data-person-id=" + this.id + "][data-input-field='name']").val();
@@ -1520,7 +1527,7 @@ Person = function(data) {
 							<!-- <td data-person-id='" + this.field('id') + "' data-field='id' data-value='" + this.field('id') + "'>" + this.field('id') + "</td> -->\
 							<td data-person-id='" + this.field('id') + "' data-field='name' data-value='" + this.field('name') + "'>" + this.field('name') + "</td> \
 							<td data-person-id='" + this.field('id') + "' data-field='priority' data-value='" + this.priority() + "'>" + Priority.name(this.priority()) + "</td> \
-							<td data-person-id='" + this.field('id') + "' data-field='twitter_followers' data-value='" + this.field('twitter_followers') + "'><a href='http://twitter.com/" + this.field('twitter') + "' target='new'>" + new Number(this.field('twitter_followers')).toLocaleString() + "</a></td> \
+							<td data-person-id='" + this.field('id') + "' data-field='twitter_followers' data-value='" + this.field('twitter_followers') + "'>" + this.twitterCell() + "</td> \
 							<td data-person-id='" + this.field('id') + "' data-field='last_contacted' data-value='" + this.field('lastcontacted') + "'>" + impresslist.util.relativetime_contact(this.field('lastcontacted')) + " " + lastcontactedbystring + "</td> \
 						</tr>";
 		$('#people').append(html);
@@ -1757,7 +1764,7 @@ Publication = function(data) {
 		$("[data-publication-id='" + this.id + "'][data-field='priority']").html(Priority.name(this.priority()));
 		$("[data-publication-id='" + this.id + "'][data-field='url']").html(this.field('url'));
 		$("[data-publication-id='" + this.id + "'][data-field='twitter']").html(this.field('twitter'));		
-		$("[data-publication-id='" + this.id + "'][data-field='twitter_followers']").html("<a href='http://twitter.com/" + this.field('twitter') + "' target='new'>" + new Number(this.field('twitter_followers')).toLocaleString() + "</a>");		
+		$("[data-publication-id='" + this.id + "'][data-field='twitter_followers']").html( this.twitterCell() );		
 	}
 
 	Publication.prototype.close = function() {
@@ -1770,7 +1777,7 @@ Publication = function(data) {
 							<td data-publication-id='" + this.field('id') + "' data-field='name' 				data-value='" + this.field('name')+ "' >" + this.icon() + this.field('name') + "</td> \
 							<td data-publication-id='" + this.field('id') + "' data-field='priority' 			data-value='" + this.priority() + "'>" + Priority.name(this.priority()) + "</td> \
 							<td data-publication-id='" + this.field('id') + "' data-field='url' 				data-value='" + this.field('url')+ "'><a href='" + this.field('url') + "' target='new'>" + this.field('url') + "</a></td> \
-							<td data-publication-id='" + this.field('id') + "' data-field='twitter_followers' 	data-value='" + this.field('twitter_followers')+ "'><a href='http://twitter.com/" + this.field('twitter') + "' target='new'>" + new Number(this.field('twitter_followers')).toLocaleString() + "</a></td> \
+							<td data-publication-id='" + this.field('id') + "' data-field='twitter_followers' 	data-value='" + this.field('twitter_followers')+ "'>" + this.twitterCell() + "</td> \
 							<td data-publication-id='" + this.field('id') + "' data-field='lastpostedon' 		data-value='" + this.field('lastpostedon') + "'>" + impresslist.util.relativetime_contact(this.field('lastpostedon')) + "</td> \
 						</tr>";
 		$('#publications').append(html);
