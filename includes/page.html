@@ -46,7 +46,8 @@
 				<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
 			      
 					<ul class="nav navbar-nav navbar-right">
-				    	<!-- <li><a href="#">Link</a></li> -->
+				    	<li><a id='nav-coverage' data-nav-page='coverage' href="javascript:;">Coverage</a></li>
+
 				    	<li class="dropdown">
 				    		<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Add <span class="caret"></span></a>
 				    		<ul class="dropdown-menu" role="menu">
@@ -242,6 +243,41 @@
 		</div>	
 
 
+
+		<!-- Coverage -->
+		<div id='coverage-page' data-type-page='true' data-page='coverage'>
+			<div class='container mycontainer'>
+				<div class='filters' style='float:left;text-align:left;'>
+					<div class='filter-item'><b>Project Coverage</b></div>
+				</div>
+			</div><br/>	
+
+			<div class='container mycontainer'>
+				<div id='coverage-loading-true'>
+					<div class="alert alert-info" role="alert">
+							<span class="glyphicon glyphicon-loading" aria-hidden="true"></span>
+							<span class="sr-only"></span>
+							Loading...
+						</div>
+				</div>
+				<div id='coverage-loading-false'>
+					<div id='coverage'>
+						
+					</div>
+					<div id='coverage-footer'>
+						<div class="alert alert-info" role="alert">
+							<span class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
+							<span class="sr-only">Error:</span>
+							Dang! There is currently no coverage for your project. 
+						</div>
+					</div>
+				</div>
+
+				
+			</div>
+			<br/><br/>
+
+		</div>
 
 		<!-- Admin panel -->
 		<div id='admin-page' data-type-page='true' data-page='admin'>

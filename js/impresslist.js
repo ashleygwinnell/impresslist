@@ -50,7 +50,11 @@ API.listPublications = function(fromInit) {
 				var publication = new Publication(json.publications[i]);
 				impresslist.addPublication(publication, fromInit);
 			}
-			if (fromInit) { impresslist.refreshFilter(); }
+			if (fromInit) { 
+				impresslist.refreshFilter(); 
+				API.listCoverage(); 
+
+			}
 		})
 		.fail(function() {
 			API.errorMessage("Could not list Publications.");
@@ -151,6 +155,33 @@ API.listEmails = function(fromInit) {
 				impresslist.addEmail(email, fromInit);
 			}
 			if (fromInit) { impresslist.refreshFilter(); }
+		})
+		.fail(function() {
+			API.errorMessage("Could not list Emails.");
+		});
+}
+API.listCoverage = function(fromInit) {
+	if (typeof fromInit == 'undefined') { fromInit = true; }
+
+	impresslist.loading.set('coverage', true); 
+	var url = "api.php?endpoint=/coverage/";
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			for(var i = 0; i < json.coverage.length; ++i) { 
+				var coverage = new Coverage(json.coverage[i]);
+				impresslist.addCoverage(coverage, fromInit);
+			}
+			if (fromInit) { impresslist.refreshFilter(); }
+			impresslist.loading.set('coverage', false); 
 		})
 		.fail(function() {
 			API.errorMessage("Could not list Emails.");
@@ -740,6 +771,65 @@ Email = function(data) {
 		this.id = this.field('id');
 		//this.user_id = this.field('user_id');
 		//this.person_id = this.field('person_id');
+	}
+
+Coverage = function(data) {
+	DBO.call(this, data); 
+}
+	Coverage.prototype = Object.create(DBO.prototype)
+	Coverage.prototype.constructor = Email;
+	Coverage.prototype.init = function(data) {
+		DBO.prototype.init.call(this, data);
+		this.id = this.field('id');
+	}
+	Coverage.prototype.onAdded = function() {
+		this.createItem();
+	}
+	Coverage.prototype.filter = function(text) {
+		var element = $("#coverage [data-coverage-id='" + this.id + "']");
+		if (this.search(text)) {
+			element.show();
+			return true;
+		} else {
+			element.hide();
+			return false;
+		}
+	}
+	Coverage.prototype.search = function(text) {
+		var ret = true;
+
+		if (text.length == 0) { return ret; }
+
+		ret = this.field('url').toLowerCase().indexOf(text) != -1;
+		if (ret) { return ret; }
+
+		// Search all publications too.
+		for(var i = 0; i < impresslist.publications.length; ++i) {
+			if (impresslist.publications[i].field('id') == this.field('publication')) {
+				var pub = impresslist.findPublicationById( this.field('publication') );
+				ret = pub.search(text);
+				if (ret) { return ret; }
+			}
+		}
+
+		return false;
+	}
+	Coverage.prototype.createItem = function() {
+		var publication = impresslist.findPublicationById( this.field('publication') );
+		var html = "	<div data-coverage-id='" + this.field('id') + "' class='media'>	\
+							<div class='media-left'> \
+								<a href='" + publication.field('url') + "'><img class='media-object' width=16 src='" + publication.field('iconurl') + "' alt='Image'></a> \
+							</div> \
+							<div class='media-body'> \
+								<p class='fr'>" + impresslist.util.relativetime_contact(this.field('utime')) + "</p> \
+								<h4 class='media-heading'>" + publication.name + "</h4> \
+								<p><a href='" + this.field('url') + "' target='new'>" + this.field('title') + "</a></p> \
+							</div> \
+							<div class='media-right'> \
+								 \
+							</div> \
+						</div>";
+		$('#coverage').append(html);
 	}
 
 Game = function(data) {
@@ -1842,7 +1932,6 @@ Publication = function(data) {
 	}
 
 
-
 var impresslist = {
 	config: {
 		system: {
@@ -1865,6 +1954,26 @@ var impresslist = {
 	emails: [],
 	users: [],
 	games: [],
+	coverage: [],
+	loading: {
+		people: false,
+		publications: false,
+		personPublications: false,
+		personYoutubeChannels: false,
+		emails: false,
+		users: false,
+		games: false,
+		coverage: false,
+		set: function(type, b) {
+			impresslist.loading[type] = b;
+
+			$('#' + type + '-loading-' + b).show();
+			$('#' + type + '-loading-' + (!b)).hide();
+		},
+		isLoading: function(t) {
+			return impresslist.loading[t];
+		}
+	},
 	init: function() {
 		API.listPeople();
 		API.listPublications();
@@ -1873,12 +1982,16 @@ var impresslist = {
 		API.listYoutubeChannels();
 		API.listEmails();
 
+
+		
+
 		// Navigation links
 		var thiz = this;
 		$('#nav-add-person').click(API.addPerson);
 		$('#nav-add-publication').click(API.addPublication);
 		$('#nav-add-youtuber').click(API.addYoutuber);
 		$('#nav-user-changepassword').click(function() { thiz.findUserById(thiz.config.user.id).openChangePassword(); });
+		$('#nav-coverage').click(this.changePage);
 		$('#nav-admin').click(this.changePage);
 		$('#nav-help').click(this.changePage);
 		$('#nav-feedback').attr("href", impresslist.util.mailtoClient("ashley@forceofhab.it", "impresslist feedback", ""));
@@ -1928,13 +2041,20 @@ var impresslist = {
 			if (impresslist.youtubers[i].filter(text)) { countYoutubeChannelsVisible++; }
 		}
 
+		var countCoverageVisible = 0;
+		for(var i = 0; i < impresslist.coverage.length; i++) { 
+			if (impresslist.coverage[i].filter(text)) { countCoverageVisible++; }
+		}
+
 		if (countPeopleVisible == 0) { $('#people-footer').show(); } else { $('#people-footer').hide(); }
 		if (countPublicationsVisible == 0) { $('#publications-footer').show(); } else { $('#publications-footer').hide(); }
 		if (countYoutubeChannelsVisible == 0) { $('#youtubers-footer').show(); } else { $('#youtubers-footer').hide(); }
+		if (countCoverageVisible == 0) { $('#coverage-footer').show(); } else { $('#coverage-footer').hide(); }
 
 		if (impresslist.people.length > 0 && countPeopleVisible == 0) { $('#people-container').hide(); } else { $('#people-container').show(); }
 		if (impresslist.publications.length > 0 && countPublicationsVisible == 0) { $('#publications-container').hide(); } else { $('#publications-container').show(); }
 		if (impresslist.youtubers.length > 0 && countYoutubeChannelsVisible == 0) { $('#youtubers-container').hide(); } else { $('#youtubers-container').show(); }
+		if (impresslist.coverage.length > 0 && countCoverageVisible == 0) { $('#coverage-container').hide(); } else { $('#coverage-container').show(); }
 
 		$('#people-count').html("(" + countPeopleVisible + ")");
 		$('#publication-count').html("(" + countPublicationsVisible + ")");
@@ -1982,6 +2102,10 @@ var impresslist = {
 	addGame: function(obj, fromInit) {
 		obj.onAdded();
 		this.games.push(obj);
+	},
+	addCoverage: function(obj, fromInit) {
+		obj.onAdded();
+		this.coverage.push(obj);
 	},
 	removePerson: function(obj) {
 		for(var i = 0, len = this.people.length; i < len; ++i) {

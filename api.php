@@ -66,6 +66,17 @@ function api_checkRequiredGETFieldsWithTypes($fields, &$result) {
 					return true;
 				}
 			} else if ($type == 'url') {
+
+				$http = substr($_GET[$fields[$i]['name']], 0, 7);
+				$https = substr($_GET[$fields[$i]['name']], 0, 8);
+
+				if ($http == "http://") { }
+				else if ($https == "https://") { }
+				else {
+					$result = api_error($fields[$i]['name'] . " should begin with http:// or https:// ");
+					return true;
+				}
+
 				//$temp = strip_tags($_GET[$fields[$i]['name']]);
 				//return true;
 			} else if ($type == 'textarea') {
@@ -114,6 +125,8 @@ if (!isset($_GET['endpoint'])) {
 		"/person-publication/list/",
 		"/person-youtube-channel/list/",
 		"/email/list/",
+
+		"/coverage/",
 
 		
 		"/chat/online-users/",
@@ -254,6 +267,37 @@ if (!isset($_GET['endpoint'])) {
 			$result = new stdClass();
 			$result->success = true;
 			$result->emails = $emails;
+		}
+
+
+
+		else if ($endpoint == "/coverage/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$publication_coverage = $db->query("SELECT * FROM publication_coverage ORDER BY utime DESC;");
+			$num_publication_coverage = count($publication_coverage);
+			for($i = 0; $i < $num_publication_coverage; $i++) { 
+				$publication_coverage[$i]['title'] = utf8_encode($publication_coverage[$i]['title']);
+				if ($publication_coverage[$i]['title'] == null) {
+					$publication_coverage[$i]['title'] = "Untitled Article";
+				}
+			}
+			
+			$result = new stdClass();
+			$result->success = true;
+			$result->coverage = $publication_coverage;
+		}
+		else if ($endpoint == "/coverage/add/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			// TODO: add coverage manually. 
+			
+			$result = new stdClass();
+			$result->success = true;
 		}
 
 
