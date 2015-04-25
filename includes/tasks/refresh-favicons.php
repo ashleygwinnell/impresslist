@@ -39,18 +39,21 @@ for($i = 0; $i < $num_publications; ++$i) {
 		if ($arr === FALSE) { skip($publications[$i]['name']); continue; }
 
 		$faviconUrl = $arr[0]['href'];
-		if (substr($faviconUrl, 0, 1) == "/") { 
+		if (strlen($faviconUrl) == 0) { 
+			// Option 2
+			$faviconUrl = "http://www.google.com/s2/favicons?domain=" . $url;
+		} else if (substr($faviconUrl, 0, 1) == "/") { 
 			if (substr($url, -1, 1) == "/") {
 				$faviconUrl = $url . substr($faviconUrl, 1); 
 			} else {
 				$faviconUrl = $url . $faviconUrl;	
 			}
-			
-		}
-		
-		if (strlen($faviconUrl) == 0) { 
-			// Option 2
-			$faviconUrl = "http://www.google.com/s2/favicons?domain=" . $url;
+		} else if (substr($faviconUrl, 0, 7) != "http://" && substr($faviconUrl, 0, 8) != "https://") {
+			if (substr($url, -1, 1) == "/") {
+				$faviconUrl = $url . $faviconUrl;
+			} else {
+				$faviconUrl = $url . "/" . $faviconUrl;	
+			}
 		}
 
 		//if (strlen($faviconUrl) > 0) {
