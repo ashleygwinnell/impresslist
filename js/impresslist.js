@@ -339,6 +339,83 @@ API.removePersonPublication = function(personPublicationObj) {
 			API.errorMessage("Could not removed Person.");
 		});
 }
+API.addPublicationCoverage = function() {
+	var url = "api.php?endpoint=/coverage/publication/add/";
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Coverage added.");
+			console.log(json);
+
+			var coverage = new Coverage(json.coverage);
+			impresslist.addCoverage(coverage, false);
+		})
+		.fail(function() {
+			API.errorMessage("Could not add Coverage.");
+		});
+}
+API.savePublicationCoverage = function(coverage, publication, person, title, url, timestamp, thanked) {
+	var url = "api.php?endpoint=/coverage/publication/save/" +
+						"&id=" + encodeURIComponent(coverage.id) + 
+						"&publication=" + encodeURIComponent(publication) + 
+						"&person=" + encodeURIComponent(person) + 
+						"&title=" + encodeURIComponent(title) + 
+						"&url=" + encodeURIComponent(url) + 
+						"&timestamp=" + encodeURIComponent(timestamp) + 
+						"&thanked=" + encodeURIComponent(thanked);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Coverage saved.");
+			console.log(json);
+
+			coverage.init(json.coverage);
+			coverage.update();		
+		})
+		.fail(function() {
+			API.errorMessage("Could not add Coverage.");
+		});
+}
+API.removePublicationCoverage = function(coverage) {
+	var url = "api.php?endpoint=/coverage/publication/remove/&id=" + encodeURIComponent(coverage.id);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Coverage removed.");
+			console.log(json);
+			impresslist.removeCoverage(coverage);
+		})
+		.fail(function() {
+			API.errorMessage("Could not remove Coverage.");
+		});
+}
 API.setPersonPriority = function(person, priority, gameId) {
 	var url = "api.php?endpoint=/person/set-priority/" + 
 					"&id=" + encodeURIComponent(person.id) + 
@@ -815,21 +892,281 @@ Coverage = function(data) {
 		return false;
 	}
 	Coverage.prototype.createItem = function() {
-		var publication = impresslist.findPublicationById( this.field('publication') );
+		var url = ""; 
+		var iconurl = "images/favicon.png"; 
+		var pubname = "Unknown Publication";
+
+		if ("publication" in this.fields && this.fields['publication'] > 0) { 
+
+			var publication = impresslist.findPublicationById( this.field('publication') );
+			
+			if (publication != null) {
+				url = publication.field('url');;
+				iconurl = publication.field('iconurl');;
+				pubname = publication.name;
+			} 
+		}
 		var html = "	<div data-coverage-id='" + this.field('id') + "' class='media'>	\
 							<div class='media-left'> \
-								<a href='" + publication.field('url') + "'><img class='media-object' width=16 src='" + publication.field('iconurl') + "' alt='Image'></a> \
+								<a href='" + url + "'><img class='media-object' width=16 src='" + iconurl + "' alt='Image'></a> \
 							</div> \
 							<div class='media-body'> \
-								<p class='fr'>" + impresslist.util.relativetime_contact(this.field('utime')) + "</p> \
-								<h4 class='media-heading'>" + publication.name + "</h4> \
-								<p><a href='" + this.field('url') + "' target='new'>" + this.field('title') + "</a></p> \
+								<div class='fr' style='text-align:right;'>\
+									<p style='margin-bottom:5px;font-style:italic;'><span data-coverage-id='" + this.id + "' data-person-id='" + this.fields['person'] + "' data-field='person-name'></span> - <span data-coverage-id='" + this.id + "' data-field='utime' >" + impresslist.util.relativetime_contact(this.field('utime')) + "</span></p>\
+									<p data-coverage-id='" + this.id + "' data-field='thanked'></p>\
+								</div> \
+								<h4 data-coverage-id='" + this.id + "' data-field='name' data-publication-id='" + this.fields['publication'] + "' class='media-heading' >" + pubname + "</h4> \
+								<p><a data-coverage-id='" + this.id + "' data-field='url' href='" + this.field('url') + "' target='new'>" + this.field('title') + "</a><br/>\
 							</div> \
 							<div class='media-right'> \
-								 \
+								<button id='edit-coverage' class='btn btn-default btn-lg' data-coverage-id='" + this.field('id') + "'  data-toggle='modal' data-target='.coverage_modal' ><span class='glyphicon glyphicon-pencil'></span></button> \
 							</div> \
 						</div>";
 		$('#coverage').append(html);
+		this.update();
+
+		var t = this;
+		$("#edit-coverage[data-coverage-id='" + this.id + "']").click(function() { t.open(); });
+	}
+	Coverage.prototype.removeItem = function() {
+		$(".media[data-coverage-id='" + this.field('id') + "']").remove();
+	}
+	Coverage.prototype.getPersonName = function() {
+		var p = this.fields['person'];
+		if (p > 0) {
+			return impresslist.findPersonById(p).field('name');
+		}
+		return "Unknown";
+	}
+	Coverage.prototype.open = function() {
+
+		var publicationId = "";
+		var publicationName = "";
+		if (this.fields['publication'] > 0) {
+			publicationId = this.fields['publication'];
+			publicationName = impresslist.findPublicationById(publicationId).field('name');
+		}
+
+		var personId = "";
+		var personName = "";
+		if (this.fields['person'] > 0) {
+			personId = this.fields['person'];
+			personName = impresslist.findPersonById(personId).field('name');
+		}
+
+		var html = "<div class='modal fade coverage_modal' tabindex='-1' role='dialog'> \
+						<div class='modal-dialog'> \
+							<div class='modal-content' style='padding:5px;'> \
+								<div style='min-height:100px;padding:20px;'>";
+
+			html += "				<h3>Edit Coverage</h3>";
+			html += "				<form role='form' class='oa' onsubmit='return false;'>	\
+										<div class='row'>\
+											<div class='form-group col-md-5'>\
+												<label>Time:</label> \
+												<div class='input-group date' id='coverage-timepicker'>\
+													<input id='coverage-edit-timestamp' type='text' class='form-control' />\
+														<span class='input-group-addon'>\
+														<span class='glyphicon glyphicon-calendar'></span>\
+													</span>\
+												</div>\
+											</div>\
+										</div>\
+										<div class='row'>\
+											<div class='form-group col-md-2'>\
+												<label>Publication:&nbsp; </label> \
+												<input id='coverage-edit-publication-id' class='form-control' type='text' value='" + publicationId + "' style='width:100%;'/>\
+											</div>\
+											<div class='form-group col-md-4'>\
+												<label>&nbsp; </label> \
+												<input id='coverage-edit-publication-search' data-coverage-id='" + this.id + "' data-input-field='publication' class='form-control' type='text' value='" + publicationName + "' placeholder='Search...' />\
+											</div>\
+											<div id='coverage-edit-publication-results-container' class='form-group col-md-6' style='display:none;'>\
+												<label>Results:</label>\
+												<table class='table table-striped' style='margin-bottom:0px;'>\
+													<tbody id='coverage-edit-publication-results'> \
+													</tbody> \
+												</table>\
+											</div>\
+										</div>\
+										<div class='row'>\
+											<div class='form-group col-md-2'>\
+												<label>Person:</label> \
+												<input id='coverage-edit-person-id' class='form-control' type='text' value='" + personId + "' style='width:100%;'/>\
+											</div>\
+											<div class='form-group col-md-4'>\
+												<label>&nbsp; </label>\
+												<input id='coverage-edit-person-search' data-coverage-id='" + this.id + "' data-input-field='person' class='form-control' type='text' value='" + personName + "' placeholder='Search...' />\
+											</div>\
+											<div id='coverage-edit-person-results-container' class='form-group col-md-6' style='display:none;'>\
+												<label>Results:</label>\
+												<table class='table table-striped' style='margin-bottom:0px;'>\
+													<tbody id='coverage-edit-person-results'> \
+													</tbody> \
+												</table>\
+											</div>\
+										</div>\
+										<div class='row'>\
+											<div class='form-group col-md-12'>\
+												<label>Title:</label> \
+												<input id='coverage-edit-title' data-coverage-id='" + this.id + "' data-input-field='title' class='form-control' type='text' value='" + this.field('title') + "' />\
+											</div>\
+										</div>\
+										<div class='row'>\
+											<div class='form-group col-md-12'>\
+												<label>URL:</label> \
+												<input id='coverage-edit-url' data-coverage-id='" + this.id + "' data-input-field='url' class='form-control' type='text' value='" + this.field('url') + "' />\
+											</div>\
+										</div>\
+										<div class='row'>\
+											<div class='form-group col-md-4'>\
+												<label class='checkbox-inline'><input id='coverage-edit-thanked' type='checkbox' " + (((this.field('thanked')==1)?"checked":"")) + ">Thanked?</label>\
+											</div>\
+										</div>\
+										<div class='fl'> \
+											<button id='save_coverageId" + this.id + "' type='submit' class='btn btn-primary'>Save</button>";
+			html += "						&nbsp;<button id='close_coverageId" + this.id + "' type='submit' class='btn btn-default'>Close</button>";
+			html += " 					</div><div class='fr'> \
+											<button id='delete_coverageId" + this.id + "' type='submit' class='btn btn-danger'>Remove</button> \
+										</div>\
+									</form>";
+
+		html += "				</div>\
+							</div>\
+						</div>\
+					</div>";
+		$('#modals').html(html);
+
+		var coverageItem = this;
+		$("#save_coverageId" + this.id).click(function() { coverageItem.save(); });
+		$("#close_coverageId" + this.id).click(function() { coverageItem.close(); });
+		$("#delete_coverageId" + this.id).click(function() { API.removePublicationCoverage(coverageItem); });
+
+		var utime = this.field('utime');
+		if (utime == 0) {
+			utime = Date.now() / 1000;
+		}
+		console.log("time: " + utime);
+		$('#coverage-timepicker').datetimepicker();
+		$('#coverage-timepicker').data("DateTimePicker").defaultDate(moment(utime, "X"));
+		$('#coverage-timepicker').data("DateTimePicker").format("L h:mma");
+		
+
+		// Edit publication binds
+		$("#coverage-edit-publication-search").keyup(function() {
+			var searchfield = $(this);
+			var text = $(this).val().toLowerCase();
+			if (text.length == 0) {
+				$("#coverage-edit-publication-results").html("");
+				$('#coverage-edit-publication-results-container').hide();
+				return;
+			}
+			var html = "";
+			for(var i = 0; i < impresslist.publications.length; i++) { 
+				var include = impresslist.publications[i].search(text);
+				if (include) {
+					html += "	<tr class='table-list' data-publication-id='" + impresslist.publications[i].id + "' data-coverage-edit-publication-result='true' >\
+									<td>" + impresslist.publications[i].name + "</td> \
+								</tr>";
+				}
+			}
+			if (html.length == 0) { 
+				html += "	<tr> <td colspan='2'>No Results</td> </tr>";
+			}
+			$("#coverage-edit-publication-results").html(html);
+			$('#coverage-edit-publication-results-container').show();
+
+			$("[data-coverage-edit-publication-result='true']").click(function() {
+				var pubId = $(this).attr("data-publication-id");
+				$('#coverage-edit-publication-id').val("" + pubId);
+				$("#coverage-edit-publication-search").val( $(this).find('td').html() );
+				$("#coverage-edit-publication-results").html("");
+				$('#coverage-edit-publication-results-container').hide();
+			});
+		});
+
+		// Edit perosn binds
+		$("#coverage-edit-person-search").keyup(function() {
+			var searchfield = $(this);
+			var text = $(this).val().toLowerCase();
+			if (text.length == 0) {
+				$("#coverage-edit-person-results").html("");
+				$('#coverage-edit-person-results-container').hide();
+				return;
+			}
+			var html = "";
+			for(var i = 0; i < impresslist.people.length; i++) { 
+				var include = impresslist.people[i].search(text);
+				if (include) {
+					html += "	<tr class='table-list' data-person-id='" + impresslist.people[i].id + "' data-coverage-edit-person-result='true' >\
+									<td>" + impresslist.people[i].name + "</td> \
+								</tr>";
+				}
+			}
+			if (html.length == 0) { 
+				html += "	<tr> <td colspan='2'>No Results</td> </tr>";
+			}
+			$("#coverage-edit-person-results").html(html);
+			$('#coverage-edit-person-results-container').show();
+
+			$("[data-coverage-edit-person-result='true']").click(function() {
+				var pubId = $(this).attr("data-person-id");
+				$('#coverage-edit-person-id').val("" + pubId);
+				$("#coverage-edit-person-search").val( $(this).find('td').html() );
+				$("#coverage-edit-person-results").html("");
+				$('#coverage-edit-person-results-container').hide();
+			});
+		});
+
+	}
+	Coverage.prototype.update = function() {
+		var publicationName = "Unknown Publication";
+		if (this.fields['publication'] > 0) {
+			publicationName = impresslist.findPublicationById(this.fields['publication']).name;
+		}
+		$("[data-coverage-id='" + this.id + "'][data-field='name']").html(publicationName);
+		$("[data-coverage-id='" + this.id + "'][data-field='url']").attr('href', this.field('url'));
+		$("[data-coverage-id='" + this.id + "'][data-field='url']").html(this.field('title'));
+		$("[data-coverage-id='" + this.id + "'][data-field='utime']").html( impresslist.util.relativetime_contact(this.field('utime')) );
+		
+		var thanked = this.field('thanked');
+		if (thanked == 1) {
+			$("[data-coverage-id='" + this.id + "'][data-field='thanked']").html("<span style='color:green;font-style:italic;'>Thanked!</span>");	
+		} else {
+			$("[data-coverage-id='" + this.id + "'][data-field='thanked']").html("<span style='color:red;font-style:italic;'>Not thanked...</span>");	
+		}
+
+
+		var selector = "[data-coverage-id='" + this.id + "'][data-field='person-name']";
+		$(selector).html( this.getPersonName() );
+		
+	}
+	Coverage.prototype.onAdded = function() {
+		this.createItem();
+	}
+	Coverage.prototype.onRemoved = function() {
+		this.removeItem();
+		this.close();
+	}
+	Coverage.prototype.save = function() {
+		var title = $('#coverage-edit-title').val();
+		var url = $('#coverage-edit-url').val();
+		var timestamp = moment($('#coverage-edit-timestamp').val(), "L h:mma").format("X");
+		var publication = $('#coverage-edit-publication-id').val();
+		var person = $('#coverage-edit-person-id').val();
+		var thanked = $('#coverage-edit-thanked').is(':checked');
+
+		console.log("----");
+		console.log(this);
+		//console.log("url: " + url);
+		//console.log("timestamp: " + timestamp);
+		//console.log("publication: " + publication);
+		//console.log("person: " + person);
+		//console.log("thanked: " + thanked);
+		API.savePublicationCoverage(this, publication, person, title, url, timestamp, thanked);
+	}
+	Coverage.prototype.close = function() {
+		$('.coverage_modal').modal('hide');
 	}
 
 Game = function(data) {
@@ -1990,7 +2327,9 @@ var impresslist = {
 		$('#nav-add-person').click(API.addPerson);
 		$('#nav-add-publication').click(API.addPublication);
 		$('#nav-add-youtuber').click(API.addYoutuber);
+		$('#nav-add-coverage-publication').click(API.addPublicationCoverage);
 		$('#nav-user-changepassword').click(function() { thiz.findUserById(thiz.config.user.id).openChangePassword(); });
+		$('#nav-home').click(this.changePage);
 		$('#nav-coverage').click(this.changePage);
 		$('#nav-admin').click(this.changePage);
 		$('#nav-help').click(this.changePage);
@@ -2157,6 +2496,17 @@ var impresslist = {
 				console.log('person youtube channel removed: ' + obj.id);
 				obj.onRemoved();
 				this.personYoutubeChannels.splice(i, 1);
+				impresslist.refreshFilter();
+				break;
+			}
+		}
+	},
+	removeCoverage: function(obj) {
+		for(var i = 0, len = this.coverage.length; i < len; ++i) {
+			if (this.coverage[i].id == obj.id) {
+				console.log('coverage removed: ' + obj.id);
+				obj.onRemoved();
+				this.coverage.splice(i, 1);
 				impresslist.refreshFilter();
 				break;
 			}

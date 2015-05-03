@@ -46,6 +46,7 @@
 				<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
 			      
 					<ul class="nav navbar-nav navbar-right">
+				    	<li><a id='nav-home' data-nav-page='home' href="javascript:;">Home</a></li>
 				    	<li><a id='nav-coverage' data-nav-page='coverage' href="javascript:;">Coverage</a></li>
 
 				    	<li class="dropdown">
@@ -54,8 +55,10 @@
 				    			<li><a id='nav-add-person' href="javascript:;">Person</a></li>
 				    			<li><a id='nav-add-publication' href="javascript:;">Publication</a></li>
 				    			<li><a id='nav-add-youtuber' href="javascript:;">YouTuber</a></li>
-				    			<!-- <li class="divider"></li>
-				    			<li><a href="#">Something else</a></li> -->
+				    			<li class="divider"></li>
+								<li><a id='nav-add-coverage-publication' href="javascript:;">Coverage (Publication)</a></li>
+								<!-- <li><a id='nav-add-coverage-youtuber' href="javascript:;">Coverage (Youtuber)</a></li> -->
+				    			
 				    		</ul>
 				    	</li>
 				    	<li class='dropdown'>
@@ -255,10 +258,10 @@
 			<div class='container mycontainer'>
 				<div id='coverage-loading-true'>
 					<div class="alert alert-info" role="alert">
-							<span class="glyphicon glyphicon-loading" aria-hidden="true"></span>
-							<span class="sr-only"></span>
-							Loading...
-						</div>
+						<span class="glyphicon glyphicon-loading" aria-hidden="true"></span>
+						<span class="sr-only"></span>
+						Loading...
+					</div>
 				</div>
 				<div id='coverage-loading-false'>
 					<div id='coverage'>
@@ -270,6 +273,13 @@
 							<span class="sr-only">Error:</span>
 							Dang! There is currently no coverage for your project. 
 						</div>
+						<!-- 
+							<div class='row'>
+								<div class='col-sm-3 fr'>
+									<button class='btn btn-primary add-coverage' style='width:100%'>Add Coverage</button>
+								</div>
+							</div>
+						-->
 					</div>
 				</div>
 

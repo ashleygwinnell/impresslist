@@ -72,6 +72,7 @@ function api_checkRequiredGETFieldsWithTypes($fields, &$result) {
 
 				if ($http == "http://") { }
 				else if ($https == "https://") { }
+				else if ($https == "") { }
 				else {
 					$result = api_error($fields[$i]['name'] . " should begin with http:// or https:// ");
 					return true;
@@ -81,6 +82,12 @@ function api_checkRequiredGETFieldsWithTypes($fields, &$result) {
 				//return true;
 			} else if ($type == 'textarea') {
 				$temp = strip_tags($_GET[$fields[$i]['name']]);
+			} else if ($type == 'boolean' || $type == "bool") {
+				$val = $_GET[$fields[$i]['name']];
+				if ($val != true && $val != false) {
+					$result = api_error($fields[$i]['name'] . " should have been a boolean value. ");
+					return true;
+				}
 			}
 
 		}
@@ -127,6 +134,10 @@ if (!isset($_GET['endpoint'])) {
 		"/email/list/",
 
 		"/coverage/",
+		"/coverage/publication/add/",
+		"/coverage/publication/save/",
+		"/coverage/publication/remove/",
+		"/coverage/youtuber/add/",
 
 		
 		"/chat/online-users/",
@@ -276,10 +287,10 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once("init.php");
 
-			$publication_coverage = $db->query("SELECT * FROM publication_coverage ORDER BY utime DESC;");
+			$publication_coverage = $db->query("SELECT * FROM publication_coverage WHERE removed = 0 ORDER BY utime DESC;");
 			$num_publication_coverage = count($publication_coverage);
 			for($i = 0; $i < $num_publication_coverage; $i++) { 
-				$publication_coverage[$i]['title'] = utf8_encode($publication_coverage[$i]['title']);
+				//$publication_coverage[$i]['title'] = utf8_encode($publication_coverage[$i]['title']);
 				if ($publication_coverage[$i]['title'] == null) {
 					$publication_coverage[$i]['title'] = "Untitled Article";
 				}
@@ -289,17 +300,108 @@ if (!isset($_GET['endpoint'])) {
 			$result->success = true;
 			$result->coverage = $publication_coverage;
 		}
-		else if ($endpoint == "/coverage/add/") 
+		else if ($endpoint == "/coverage/publication/add/") 
 		{
 			$require_login = true;
 			include_once("init.php");
 
-			// TODO: add coverage manually. 
+			$stmt = $db->prepare(" INSERT INTO publication_coverage  (id, 	publication,  person,  game,  url,  title,  `utime`,  thanked, removed)
+															  VALUES (NULL, 0, 		  	  0,        0,    :url, :title, :utime, :thanked, :removed); ");
+			$stmt->bindValue(":url", "http://coverage.com/", Database::VARTYPE_STRING); 
+			$stmt->bindValue(":title", "A massive article about your game project.", Database::VARTYPE_STRING); 
+			$stmt->bindValue(":utime", 0, Database::VARTYPE_INTEGER); 
+			$stmt->bindValue(":thanked", 0, Database::VARTYPE_INTEGER); 
+			$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER); 
+			$stmt->execute();
 			
+			$coverageId = $db->lastInsertRowID();
+
+			$coverages = $db->query("SELECT * FROM publication_coverage WHERE id = {$coverageId};");
 			$result = new stdClass();
 			$result->success = true;
+			$result->coverage = $coverages[0];
 		}
+		else if ($endpoint == "/coverage/publication/save/") 
+		{
+			$require_login = true;
+			include_once("init.php");
 
+			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer'),
+				array('name' => 'title', 'type' => 'textarea'),
+				array('name' => 'url', 'type' => 'url'),
+				array('name' => 'thanked', 'type' => 'boolean')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+
+				// validate person
+				$person = $_GET['person'];
+				if ($_GET['person'] != "" && !util_isInteger($person)) {
+					$result = api_error("person was not an integer");
+				} else { 
+
+					// validate publication
+					$publication = $_GET['publication'];
+					if ($_GET['publication'] != "" && !util_isInteger($publication)) {
+						$result = api_error("publication was not an integer");
+					} else { 
+
+						$title = "";
+						$thanked = ($_GET['thanked'] == "true")?1:0;
+						//die($_GET['thanked']);
+
+
+
+						$stmt = $db->prepare(" UPDATE publication_coverage 
+												SET
+													publication = :publication,  
+													person = :person, 
+													game = :game,  
+													url = :url, 
+													title = :title, 
+													utime = :utime,
+													thanked = :thanked
+												WHERE id = :id;");
+						$stmt->bindValue(":publication", $publication, Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":person", $person, Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":url", $_GET['url'], Database::VARTYPE_STRING); 
+						$stmt->bindValue(":title", strip_tags(stripslashes($_GET['title'])), Database::VARTYPE_STRING); 
+						$stmt->bindValue(":utime", $_GET['timestamp'], Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":thanked", $thanked, Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
+						$stmt->execute();
+						//echo $_GET['title'];
+						$coverages = $db->query("SELECT * FROM publication_coverage WHERE id = " . $_GET['id'] . ";");
+						$result = new stdClass();
+						$result->success = true;
+						$result->coverage = $coverages[0];
+						//$result->test = $_GET['title'];
+					}
+				}
+			}
+		}
+		else if ($endpoint == "/coverage/publication/remove/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer')
+			);
+
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+
+				$stmt = $db->prepare(" UPDATE publication_coverage SET removed = 1 WHERE id = :id");
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
+				$stmt->execute();
+				
+				$result = new stdClass();
+				$result->success = true;
+			}
+		}
 
 
 		else if ($endpoint == "/person/add/")
@@ -608,7 +710,7 @@ if (!isset($_GET['endpoint'])) {
 														VALUES (NULL, :name, :url, :iconurl, :rssfeedurl, :twitter, :twitter_followers, :notes, :lastpostedon); ");
 				$stmt->bindValue(":name", $_GET['name'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":url", "http://example.com/", Database::VARTYPE_STRING);
-				$stmt->bindValue(":iconurl", "http://example.com/images/favicon.png", Database::VARTYPE_STRING);
+				$stmt->bindValue(":iconurl", "images/favicon.png", Database::VARTYPE_STRING);
 				$stmt->bindValue(":rssfeedurl", "http://example.com/rss/", Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter", "", Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter_followers", 0, Database::VARTYPE_INTEGER);

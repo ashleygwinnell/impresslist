@@ -3,10 +3,13 @@
 session_start();
 
 include_once("includes/database.class.php");
+include_once("includes/cache.class.php");
 
 include_once("includes/config.php");
 include_once("includes/util.php");
 include_once("includes/database.php");
+
+$cache = Cache::getInstance();
 
 // Sorts
 function sortByName($a, $b) { return $a['name'] > $b['name']; }
@@ -60,6 +63,12 @@ if ($require_login) {
 
 	} else { 
 		$user = db_singleuser($db, $_SESSION['user']);
+
+		if ($user == null) { 
+			include_once("includes/login.html");
+			die();
+		}
+
 		//$user = array("id" => 1, "emailGmailIndex" => 1, "currentGame" => 1);
 		$user_id = $user['id'];
 		$user_gmailIndex = $user['emailGmailIndex'];

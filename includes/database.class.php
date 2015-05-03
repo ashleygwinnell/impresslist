@@ -166,12 +166,25 @@ class MysqliDatabase extends Database {
 	public $type = Database::TYPE_MYSQL;
 	
 	function __construct($server, $user, $password, $database) {
-		$this->db = new mysqli($server, $user, $password, $database);
+		$this->db = new mysqli($server, $user, $password);
 
 		if ($this->db->connect_errno) {
 			echo "Failed to connect to MySQL: (" . $this->db->connect_errno . ") " . $this->db->connect_error;
 			die();
 		}
+
+		//echo $_SERVER['REQUEST_URI'];
+		if ($_SERVER['REQUEST_URI'] == "/install.php") {
+			$this->exec("CREATE DATABASE IF NOT EXISTS " . $database);
+		}
+
+		$selected = $this->db->select_db( $database );
+		if (!$selected) {
+			echo ("Could not select MySQL database: " . $database . ". Did you run the install script? " );
+		}
+
+		// set charset unicode
+		$this->db->set_charset("utf8");
 	}
 
 	function query($sql) 
@@ -242,6 +255,9 @@ class MysqliDatabase extends Database {
 	function lastInsertRowID() {
 		return $this->db->insert_id;
 	}
+	function escape_string($str) { 
+		return $this->db->escape_string($str); 
+	}
 
 	function close() {
 
@@ -270,6 +286,7 @@ class Database
 	}
 
 	function query($sql) { }
+	function escape_string($str) { return $str; }
 
 	public static $s_instance = null;
 	public static function getInstance() 
@@ -289,6 +306,8 @@ class Database
 				global $impresslist_mysqlPassword;
 				global $impresslist_mysqlDatabaseName;
 				Database::$s_instance = new MysqliDatabase($impresslist_mysqlServer, $impresslist_mysqlUsername, $impresslist_mysqlPassword, $impresslist_mysqlDatabaseName);
+
+
 			}
 		}
 		return Database::$s_instance;

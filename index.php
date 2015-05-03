@@ -11,8 +11,14 @@ $users = $db->query("SELECT id, forename, surname, email, color FROM user;");
 $num_users = count($users);
 
 // Games
-$games = $db->query("SELECT * FROM game;");
+$games = $cache->get("games");
+if ($games == NULL) { 
+	$games = $db->query("SELECT * FROM game;");
+	$cache->set("games", $games, 3600);
+}
 $num_games = count($games);
+
+
 
 // Settings
 $settings = array();
