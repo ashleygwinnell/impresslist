@@ -260,6 +260,67 @@ function youtube_getInformation($channel) {
 	
 	return $result;
 }
+function youtube_getUploads($channel) {
+	if (strlen($channel) == 0) { return 0; }
+	
+	$url = "http://gdata.youtube.com/feeds/api/users/" . $channel . "/uploads?alt=json";
+	$text = file_get_contents($url);
+	if (substr($text, 0, 1) != "{") { 
+		return 0;
+	}
+	$content = json_decode($text, JSON_ASSOC);
+	return $content;
+}
+
+function youtube_v3_getInformation($channel) {
+	global $youtube_apiKey;
+	if (strlen($channel) == 0) { return 0; }
+
+	$url = "https://www.googleapis.com/youtube/v3/channels?forUsername=" .$channel . "&key=" . $youtube_apiKey . "&part=contentDetails,snippet,statistics&maxResults=50";
+	$text = file_get_contents($url);
+	if (substr($text, 0, 1) != "{") { 
+		return 0;
+	}
+	$content = json_decode($text, JSON_ASSOC);
+	$result = array(
+		"id" => $content['items'][0]['id'],
+		"name" => $content['items'][0]['snippet']['localized']['title'],
+		"description" => strip_tags($content['items'][0]['snippet']['localized']['description']),
+		"lastpostedon" => 0, // this has to be got from getUploads()
+		"thumbnail" => $content['items'][0]['snippet']['thumbnails']['default']['url'],
+		"subscribers" => $content['items'][0]['statistics']['subscriberCount'],
+		"views" => $content['items'][0]['statistics']['viewCount'],
+		"videos" => $content['items'][0]['statistics']['videoCount'],
+		"playlists" => array(
+			"uploads" => $content['items'][0]['contentDetails']['relatedPlaylists']['uploads'],
+		)
+	);
+	return $result;
+}
+
+function youtube_v3_getUploads($playlist) {
+	global $youtube_apiKey;
+	if (strlen($playlist) == 0) { return 0; }
+
+	$url = "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=" . $playlist . "&key=" . $youtube_apiKey;
+	$text = file_get_contents($url);
+	if (substr($text, 0, 1) != "{") { 
+		return 0;
+	}
+	//$text = utf8_decode($text);
+	$content = json_decode($text, JSON_ASSOC);
+	$results = array();
+	foreach ($content['items'] as $item) {
+		$results[] = array(
+			"id" => $item['snippet']['resourceId']['videoId'],
+			"publishedOn" => $item['snippet']['publishedAt'],
+			"title" => $item['snippet']['title'],
+			"description" => strip_tags($item['snippet']['description']),
+			"thumbnail" => $item['snippet']['thumbnails']['standard']['url']
+		);
+	}
+	return $results;
+}
 
 
 

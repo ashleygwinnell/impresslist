@@ -138,6 +138,8 @@ if (!isset($_GET['endpoint'])) {
 		"/coverage/publication/save/",
 		"/coverage/publication/remove/",
 		"/coverage/youtuber/add/",
+		"/coverage/youtuber/save/",
+		"/coverage/youtuber/remove/",
 
 		
 		"/chat/online-users/",
@@ -294,11 +296,22 @@ if (!isset($_GET['endpoint'])) {
 				if ($publication_coverage[$i]['title'] == null) {
 					$publication_coverage[$i]['title'] = "Untitled Article";
 				}
+				$publication_coverage[$i]['type'] = "publication";
 			}
+
+			$youtuber_coverage = $db->query("SELECT * FROM youtuber_coverage WHERE removed = 0 ORDER BY utime DESC;");
+			$youtuber_coverage_coverage = count($youtuber_coverage);
+			for($i = 0; $i < $youtuber_coverage_coverage; $i++) { 
+				$youtuber_coverage[$i]['type'] = "youtuber";
+			}
+
+			$coverage = array_merge($publication_coverage, $youtuber_coverage);
+
+			usort($coverage, "sortByUtime");
 			
 			$result = new stdClass();
 			$result->success = true;
-			$result->coverage = $publication_coverage;
+			$result->coverage = $coverage;
 		}
 		else if ($endpoint == "/coverage/publication/add/") 
 		{
@@ -309,7 +322,7 @@ if (!isset($_GET['endpoint'])) {
 															  VALUES (NULL, 0, 		  	  0,        0,    :url, :title, :utime, :thanked, :removed); ");
 			$stmt->bindValue(":url", "http://coverage.com/", Database::VARTYPE_STRING); 
 			$stmt->bindValue(":title", "A massive article about your game project.", Database::VARTYPE_STRING); 
-			$stmt->bindValue(":utime", 0, Database::VARTYPE_INTEGER); 
+			$stmt->bindValue(":utime", time(), Database::VARTYPE_INTEGER); 
 			$stmt->bindValue(":thanked", 0, Database::VARTYPE_INTEGER); 
 			$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER); 
 			$stmt->execute();
@@ -317,6 +330,7 @@ if (!isset($_GET['endpoint'])) {
 			$coverageId = $db->lastInsertRowID();
 
 			$coverages = $db->query("SELECT * FROM publication_coverage WHERE id = {$coverageId};");
+			$coverages[0]['type'] = "publication";
 			$result = new stdClass();
 			$result->success = true;
 			$result->coverage = $coverages[0];
@@ -374,6 +388,7 @@ if (!isset($_GET['endpoint'])) {
 						$stmt->execute();
 						//echo $_GET['title'];
 						$coverages = $db->query("SELECT * FROM publication_coverage WHERE id = " . $_GET['id'] . ";");
+						$coverages[0]['type'] = "publication";
 						$result = new stdClass();
 						$result->success = true;
 						$result->coverage = $coverages[0];
@@ -395,6 +410,117 @@ if (!isset($_GET['endpoint'])) {
 			if (!$error) {
 
 				$stmt = $db->prepare(" UPDATE publication_coverage SET removed = 1 WHERE id = :id");
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
+				$stmt->execute();
+				
+				$result = new stdClass();
+				$result->success = true;
+			}
+		}
+
+
+		else if ($endpoint == "/coverage/youtuber/add/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$stmt = $db->prepare(" INSERT INTO youtuber_coverage  	 (id, 	youtuber,  person,  game,  url,  title,  thumbnail,  `utime`,  thanked, removed)
+															  VALUES (NULL, 0, 		   0,       :game, :url, :title, :thumbnail, :utime,  :thanked, :removed); ");
+			$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER); 
+			$stmt->bindValue(":url", "http://youtube.com/", Database::VARTYPE_STRING); 
+			$stmt->bindValue(":title", "An awesome video review of your game project.", Database::VARTYPE_STRING); 
+			$stmt->bindValue(":thumbnail", "http://www.youtube.com/yt/brand/media/image/YouTube-icon-full_color.png", Database::VARTYPE_STRING); 
+			$stmt->bindValue(":utime", time(), Database::VARTYPE_INTEGER); 
+			$stmt->bindValue(":thanked", 0, Database::VARTYPE_INTEGER); 
+			$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER); 
+			$stmt->execute();
+			
+			$coverageId = $db->lastInsertRowID();
+
+			$coverages = $db->query("SELECT * FROM youtuber_coverage WHERE id = {$coverageId};");
+			$coverages[0]['type'] = "youtuber";
+			$result = new stdClass();
+			$result->success = true;
+			$result->coverage = $coverages[0];
+		}
+		else if ($endpoint == "/coverage/youtuber/save/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer'),
+				array('name' => 'title', 'type' => 'textarea'),
+				array('name' => 'url', 'type' => 'url'),
+				array('name' => 'thanked', 'type' => 'boolean')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+
+				// validate person
+				$person = $_GET['person'];
+				if ($_GET['person'] != "" && !util_isInteger($person)) {
+					$result = api_error("person was not an integer");
+				} else { 
+
+					// validate publication
+					$youtuber = $_GET['youtuber'];
+					if ($_GET['youtuber'] != "" && !util_isInteger($youtuber)) {
+						$result = api_error("youtuber was not an integer");
+					} else { 
+
+						$title = "";
+						$thanked = ($_GET['thanked'] == "true")?1:0;
+						//die($_GET['thanked']);
+						$video_id = substr($_GET['url'], strrpos($_GET['url'], "=") + 1);
+						$thumbnail = ($video_id === FALSE)?"http://www.youtube.com/yt/brand/media/image/YouTube-icon-full_color.png":"https://i.ytimg.com/vi/{$video_id}/default.jpg";
+
+
+						$stmt = $db->prepare(" UPDATE youtuber_coverage 
+												SET
+													youtuber = :youtuber,  
+													person = :person, 
+													game = :game,  
+													url = :url, 
+													title = :title, 
+													thumbnail = :thumbnail,
+													utime = :utime,
+													thanked = :thanked
+												WHERE id = :id;");
+						$stmt->bindValue(":youtuber", $youtuber, Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":person", $person, Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":url", $_GET['url'], Database::VARTYPE_STRING); 
+						$stmt->bindValue(":title", strip_tags(stripslashes($_GET['title'])), Database::VARTYPE_STRING); 
+						$stmt->bindValue(":thumbnail", $thumbnail, Database::VARTYPE_STRING); 
+						$stmt->bindValue(":utime", $_GET['timestamp'], Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":thanked", $thanked, Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
+						$stmt->execute();
+						//echo $_GET['title'];
+						$coverages = $db->query("SELECT * FROM youtuber_coverage WHERE id = " . $_GET['id'] . ";");
+						$coverages[0]['type'] = "youtuber";
+						$result = new stdClass();
+						$result->success = true;
+						$result->coverage = $coverages[0];
+						//$result->test = $_GET['title'];
+					}
+				}
+			}
+		}
+		else if ($endpoint == "/coverage/youtuber/remove/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer')
+			);
+
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+
+				$stmt = $db->prepare(" UPDATE youtuber_coverage SET removed = 1 WHERE id = :id");
 				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
 				$stmt->execute();
 				
@@ -836,6 +962,7 @@ if (!isset($_GET['endpoint'])) {
 			if (!$error) {
 				$twitter = "youtube";
 				$twitter_followers = twitter_countFollowers($twitter);
+				if ($twitter_followers == "") { $twitter_followers = 0; }
 				$stmt = $db->prepare(" INSERT INTO youtuber (id, 	name,   description, email, channel,  priorities, iconurl,   subscribers, views, notes, twitter,   twitter_followers, 	lastpostedon, removed) 
 													VALUES  (NULL, 'Blank', '', 	 	 '', 	:channel, '', 		  '', 		 0, 		  0, 	 '', 	:twitter, :twitter_followers, 	 0, 		  	0);	");
 				$stmt->bindValue(":channel", $_GET['channel'], Database::VARTYPE_STRING);

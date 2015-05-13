@@ -32,6 +32,12 @@ if ($resetdb) {
 	$sql = "DROP TABLE publication_coverage;";
 	$db->exec($sql);
 
+	$sql = "DROP TABLE youtuber_coverage;";
+	$db->exec($sql);
+
+	$sql = "DROP TABLE youtuber;";
+	$db->exec($sql);
+
 	$sql = "DROP TABLE user;";
 	$db->exec($sql);
 
@@ -118,6 +124,8 @@ if ($resetdb) {
 // create youtubes
 $sql = "CREATE TABLE IF NOT EXISTS youtuber (
 			id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+			youtubeId VARCHAR(255) NOT NULL,
+			youtubeUploadsPlaylistId VARCHAR(255) NOT NULL,
 			name VARCHAR(255) NOT NULL,
 			description TEXT NOT NULL,
 			email VARCHAR(255) NOT NULL DEFAULT '',
@@ -132,7 +140,8 @@ $sql = "CREATE TABLE IF NOT EXISTS youtuber (
 			notes TEXT NOT NULL,
 			lastpostedon INTEGER NOT NULL,
 			lastpostedon_updatedon INTEGER NOT NULL DEFAULT 0,
-			removed INTEGER NOT NULL DEFAULT 0
+			removed INTEGER NOT NULL DEFAULT 0,
+			lastscrapedon INTEGER NOT NULL DEFAULT 0
 		);";
 // ALTER TABLE youtuber ADD COLUMN email VARCHAR(255) NOT NULL DEFAULT '';
 $db->exec($sql);
@@ -223,6 +232,21 @@ $sql = "CREATE TABLE IF NOT EXISTS publication_coverage (
 		);";
 $db->exec($sql);
 
+// track youtube coverage
+$sql = "CREATE TABLE IF NOT EXISTS youtuber_coverage (
+			id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+			youtuber INTEGER DEFAULT 0,
+			person INTEGER DEFAULT 0,  
+			game INTEGER DEFAULT 0, 
+			url VARCHAR(255) NOT NULL,
+			title TEXT NOT NULL,
+			thumbnail TEXT NOT NULL,
+			utime INTEGER NOT NULL DEFAULT 0,
+			thanked INTEGER NOT NULL DEFAULT 0,
+			removed INTEGER NOT NULL DEFAULT 0
+		);";
+$db->exec($sql);
+
 
 
 
@@ -255,7 +279,8 @@ echo "done database";
 // Set up accounts:
 // 	Email account on your server for the system.
 // 	Twitter app for pulling in data.
-
+//  YouTube data API thing.
+//		https://developers.google.com/youtube/v3/
 // 2. 
 // Fill in config.example.php and rename to config.php
 

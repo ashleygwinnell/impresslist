@@ -52,7 +52,7 @@ API.listPublications = function(fromInit) {
 			}
 			if (fromInit) { 
 				impresslist.refreshFilter(); 
-				API.listCoverage(); 
+				API.listCoverage(fromInit); 
 
 			}
 		})
@@ -396,6 +396,83 @@ API.savePublicationCoverage = function(coverage, publication, person, title, url
 }
 API.removePublicationCoverage = function(coverage) {
 	var url = "api.php?endpoint=/coverage/publication/remove/&id=" + encodeURIComponent(coverage.id);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Coverage removed.");
+			console.log(json);
+			impresslist.removeCoverage(coverage);
+		})
+		.fail(function() {
+			API.errorMessage("Could not remove Coverage.");
+		});
+}
+API.addYoutuberCoverage = function() {
+	var url = "api.php?endpoint=/coverage/youtuber/add/";
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Coverage added.");
+			console.log(json);
+
+			var coverage = new Coverage(json.coverage);
+			impresslist.addCoverage(coverage, false);
+		})
+		.fail(function() {
+			API.errorMessage("Could not add Coverage.");
+		});
+}
+API.saveYoutuberCoverage = function(coverage, youtuber, person, title, url, timestamp, thanked) {
+	var url = "api.php?endpoint=/coverage/youtuber/save/" +
+						"&id=" + encodeURIComponent(coverage.id) + 
+						"&youtuber=" + encodeURIComponent(youtuber) + 
+						"&person=" + encodeURIComponent(person) + 
+						"&title=" + encodeURIComponent(title) + 
+						"&url=" + encodeURIComponent(url) + 
+						"&timestamp=" + encodeURIComponent(timestamp) + 
+						"&thanked=" + encodeURIComponent(thanked);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Coverage saved.");
+			console.log(json);
+
+			coverage.init(json.coverage);
+			coverage.update();		
+		})
+		.fail(function() {
+			API.errorMessage("Could not add Coverage.");
+		});
+}
+API.removeYoutuberCoverage = function(coverage) {
+	var url = "api.php?endpoint=/coverage/youtuber/remove/&id=" + encodeURIComponent(coverage.id);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -859,9 +936,6 @@ Coverage = function(data) {
 		DBO.prototype.init.call(this, data);
 		this.id = this.field('id');
 	}
-	Coverage.prototype.onAdded = function() {
-		this.createItem();
-	}
 	Coverage.prototype.filter = function(text) {
 		var element = $("#coverage [data-coverage-id='" + this.id + "']");
 		if (this.search(text)) {
@@ -891,10 +965,10 @@ Coverage = function(data) {
 
 		return false;
 	}
-	Coverage.prototype.createItem = function() {
+	Coverage.prototype.createItem = function(fromInit) {
 		var url = ""; 
 		var iconurl = "images/favicon.png"; 
-		var pubname = "Unknown Publication";
+		//var pubname = "Unknown Publication";
 
 		if ("publication" in this.fields && this.fields['publication'] > 0) { 
 
@@ -903,38 +977,81 @@ Coverage = function(data) {
 			if (publication != null) {
 				url = publication.field('url');;
 				iconurl = publication.field('iconurl');;
-				pubname = publication.name;
+			//	pubname = publication.name;
 			} 
 		}
-		var html = "	<div data-coverage-id='" + this.field('id') + "' class='media'>	\
-							<div class='media-left'> \
-								<a href='" + url + "'><img class='media-object' width=16 src='" + iconurl + "' alt='Image'></a> \
-							</div> \
-							<div class='media-body'> \
-								<div class='fr' style='text-align:right;'>\
-									<p style='margin-bottom:5px;font-style:italic;'><span data-coverage-id='" + this.id + "' data-person-id='" + this.fields['person'] + "' data-field='person-name'></span> - <span data-coverage-id='" + this.id + "' data-field='utime' >" + impresslist.util.relativetime_contact(this.field('utime')) + "</span></p>\
-									<p data-coverage-id='" + this.id + "' data-field='thanked'></p>\
+		
+		var html;
+		var type = this.field('type');
+		if (type == "publication") { 
+			html = "		<div data-coverage-id='" + this.field('id') + "' data-coverage-type='" + this.field('type') + "' class='media'>	\
+								<div class='media-left' style='min-width:74px; width:74px;'> \
+									<a href='" + url + "' style='text-align:right;'><img class='media-object fr' style='width:16px;text-align:right;' src='" + iconurl + "' alt='Image'></a> \
 								</div> \
-								<h4 data-coverage-id='" + this.id + "' data-field='name' data-publication-id='" + this.fields['publication'] + "' class='media-heading' >" + pubname + "</h4> \
-								<p><a data-coverage-id='" + this.id + "' data-field='url' href='" + this.field('url') + "' target='new'>" + this.field('title') + "</a><br/>\
-							</div> \
-							<div class='media-right'> \
-								<button id='edit-coverage' class='btn btn-default btn-lg' data-coverage-id='" + this.field('id') + "'  data-toggle='modal' data-target='.coverage_modal' ><span class='glyphicon glyphicon-pencil'></span></button> \
-							</div> \
-						</div>";
-		$('#coverage').append(html);
+								<div class='media-body'> \
+									<div class='fr' style='text-align:right;'>\
+										<p style='margin-bottom:5px;font-style:italic;'><span data-coverage-id='" + this.id + "' data-person-id='" + this.fields['person'] + "' data-field='person-name'></span> - <span data-coverage-id='" + this.id + "' data-field='utime' >" + impresslist.util.relativetime_contact(this.field('utime')) + "</span></p>\
+										<p data-coverage-id='" + this.id + "' data-field='thanked'></p>\
+									</div> \
+									<h4 data-coverage-id='" + this.id + "' data-field='name' data-publication-id='" + this.fields['publication'] + "' class='media-heading' ></h4> \
+									<p><a data-coverage-id='" + this.id + "' data-field='url' href='" + this.field('url') + "' target='new'>" + this.field('title') + "</a><br/>\
+								</div> \
+								<div class='media-right'> \
+									<button id='edit-coverage' class='btn btn-default btn-lg' data-coverage-id='" + this.field('id') + "'  data-toggle='modal' data-target='.coverage_modal' ><span class='glyphicon glyphicon-pencil'></span></button> \
+								</div> \
+							</div>";
+		} else if (type == "youtuber") {
+			//var youtuber = impresslist.findYoutuberById( this.field('youtuber') );
+			iconurl = this.field('thumbnail');
+			//url = youtuber.field('url');;
+
+			html = "		<div data-youtube-coverage-id='" + this.field('id') + "' data-coverage-type='" + this.field('type') + "' class='media'>	\
+								<div class='media-left'> \
+									<a href='" + url + "'><img data-youtube-coverage-id='" + this.id + "' data-field='thumbnail' class='media-object' width=64 src='" + iconurl + "' alt='Image'></a> \
+								</div> \
+								<div class='media-body'> \
+									<div class='fr' style='text-align:right;'>\
+										<p style='margin-bottom:5px;font-style:italic;'><span data-youtube-coverage-id='" + this.id + "' data-field='utime' >" + impresslist.util.relativetime_contact(this.field('utime')) + "</span></p>\
+										<p data-youtube-coverage-id='" + this.id + "' data-field='thanked'></p>\
+									</div> \
+									<h4 data-youtube-coverage-id='" + this.id + "' data-field='name' data-youtuber-id='" + this.fields['youtuber'] + "' class='media-heading' >Unknown Youtuber</h4> \
+									<p><a data-youtube-coverage-id='" + this.id + "' data-field='url' href='" + this.field('url') + "' target='new'>" + this.field('title') + "</a><br/>\
+								</div> \
+								<div class='media-right'> \
+									<button id='edit-youtube-coverage' class='btn btn-default btn-lg' data-youtube-coverage-id='" + this.field('id') + "'  data-toggle='modal' data-target='.coverage_modal' ><span class='glyphicon glyphicon-pencil'></span></button> \
+								</div> \
+							</div>";
+		}
+		if (fromInit) { 
+			$('#coverage').append(html);
+		} else {
+			$('#coverage').prepend(html);
+		}
 		this.update();
 
-		var t = this;
-		$("#edit-coverage[data-coverage-id='" + this.id + "']").click(function() { t.open(); });
+
+		if (type == "publication") { 
+			var t = this;
+			$("#edit-coverage[data-coverage-id='" + this.id + "']").click(function() { t.open(); });
+		} else if (type == "youtuber") {
+			var t = this;
+			$("#edit-youtube-coverage[data-youtube-coverage-id='" + this.id + "']").click(function() { t.open(); });
+		}
+
 	}
 	Coverage.prototype.removeItem = function() {
-		$(".media[data-coverage-id='" + this.field('id') + "']").remove();
+		if (this.field('type') == 'publication') { 
+			$(".media[data-coverage-id='" + this.field('id') + "']").remove();
+		} else if (this.field('type') == 'youtuber') {
+			$(".media[data-youtube-coverage-id='" + this.field('id') + "']").remove();
+		}		
 	}
 	Coverage.prototype.getPersonName = function() {
 		var p = this.fields['person'];
 		if (p > 0) {
 			return impresslist.findPersonById(p).field('name');
+		} else if (this.fields['youtuber'] > 0) {
+			return "";
 		}
 		return "Unknown";
 	}
@@ -945,6 +1062,13 @@ Coverage = function(data) {
 		if (this.fields['publication'] > 0) {
 			publicationId = this.fields['publication'];
 			publicationName = impresslist.findPublicationById(publicationId).field('name');
+		}
+
+		var youtuberId = "";
+		var youtuberName = "";
+		if (this.fields['youtuber'] > 0) {
+			youtuberId = this.fields['youtuber'];
+			youtuberName = impresslist.findYoutuberById(youtuberId).field('name');
 		}
 
 		var personId = "";
@@ -959,7 +1083,7 @@ Coverage = function(data) {
 							<div class='modal-content' style='padding:5px;'> \
 								<div style='min-height:100px;padding:20px;'>";
 
-			html += "				<h3>Edit Coverage</h3>";
+			html += "				<h3>Edit Coverage (" + this.field('type') + ")</h3>";
 			html += "				<form role='form' class='oa' onsubmit='return false;'>	\
 										<div class='row'>\
 											<div class='form-group col-md-5'>\
@@ -971,25 +1095,45 @@ Coverage = function(data) {
 													</span>\
 												</div>\
 											</div>\
-										</div>\
-										<div class='row'>\
-											<div class='form-group col-md-2'>\
-												<label>Publication:&nbsp; </label> \
-												<input id='coverage-edit-publication-id' class='form-control' type='text' value='" + publicationId + "' style='width:100%;'/>\
-											</div>\
-											<div class='form-group col-md-4'>\
-												<label>&nbsp; </label> \
-												<input id='coverage-edit-publication-search' data-coverage-id='" + this.id + "' data-input-field='publication' class='form-control' type='text' value='" + publicationName + "' placeholder='Search...' />\
-											</div>\
-											<div id='coverage-edit-publication-results-container' class='form-group col-md-6' style='display:none;'>\
-												<label>Results:</label>\
-												<table class='table table-striped' style='margin-bottom:0px;'>\
-													<tbody id='coverage-edit-publication-results'> \
-													</tbody> \
-												</table>\
-											</div>\
-										</div>\
-										<div class='row'>\
+										</div>";
+			if (this.field('type') == 'publication') {
+				html += "					<div class='row'>\
+												<div class='form-group col-md-2'>\
+													<label>Publication:&nbsp; </label> \
+													<input id='coverage-edit-publication-id' class='form-control' type='text' value='" + publicationId + "' style='width:100%;'/>\
+												</div>\
+												<div class='form-group col-md-4'>\
+													<label>&nbsp; </label> \
+													<input id='coverage-edit-publication-search' data-coverage-id='" + this.id + "' data-input-field='publication' class='form-control' type='text' value='" + publicationName + "' placeholder='Search...' />\
+												</div>\
+												<div id='coverage-edit-publication-results-container' class='form-group col-md-6' style='display:none;'>\
+													<label>Results:</label>\
+													<table class='table table-striped' style='margin-bottom:0px;'>\
+														<tbody id='coverage-edit-publication-results'> \
+														</tbody> \
+													</table>\
+												</div>\
+											</div>";
+			} else if (this.field('type') == 'youtuber') {
+				html += "					<div class='row'>\
+												<div class='form-group col-md-2'>\
+													<label>Youtuber:&nbsp; </label> \
+													<input id='coverage-edit-youtuber-id' class='form-control' type='text' value='" + youtuberId + "' style='width:100%;'/>\
+												</div>\
+												<div class='form-group col-md-4'>\
+													<label>&nbsp; </label> \
+													<input id='coverage-edit-youtuber-search' data-youtube-coverage-id='" + this.id + "' data-input-field='youtuber' class='form-control' type='text' value='" + youtuberName + "' placeholder='Search...' />\
+												</div>\
+												<div id='coverage-edit-youtuber-results-container' class='form-group col-md-6' style='display:none;'>\
+													<label>Results:</label>\
+													<table class='table table-striped' style='margin-bottom:0px;'>\
+														<tbody id='coverage-edit-youtuber-results'> \
+														</tbody> \
+													</table>\
+												</div>\
+											</div>";
+			}
+			html += "					<div class='row'>\
 											<div class='form-group col-md-2'>\
 												<label>Person:</label> \
 												<input id='coverage-edit-person-id' class='form-control' type='text' value='" + personId + "' style='width:100%;'/>\
@@ -1009,7 +1153,7 @@ Coverage = function(data) {
 										<div class='row'>\
 											<div class='form-group col-md-12'>\
 												<label>Title:</label> \
-												<input id='coverage-edit-title' data-coverage-id='" + this.id + "' data-input-field='title' class='form-control' type='text' value='" + this.field('title') + "' />\
+												<input id='coverage-edit-title' data-coverage-id='" + this.id + "' data-input-field='title' class='form-control' type='text' value='' />\
 											</div>\
 										</div>\
 										<div class='row'>\
@@ -1037,10 +1181,12 @@ Coverage = function(data) {
 					</div>";
 		$('#modals').html(html);
 
+		$('#coverage-edit-title').attr('value', this.field('title'));
+
 		var coverageItem = this;
 		$("#save_coverageId" + this.id).click(function() { coverageItem.save(); });
 		$("#close_coverageId" + this.id).click(function() { coverageItem.close(); });
-		$("#delete_coverageId" + this.id).click(function() { API.removePublicationCoverage(coverageItem); });
+		$("#delete_coverageId" + this.id).click(function() { coverageItem.remove(); });
 
 		var utime = this.field('utime');
 		if (utime == 0) {
@@ -1053,37 +1199,71 @@ Coverage = function(data) {
 		
 
 		// Edit publication binds
-		$("#coverage-edit-publication-search").keyup(function() {
-			var searchfield = $(this);
-			var text = $(this).val().toLowerCase();
-			if (text.length == 0) {
-				$("#coverage-edit-publication-results").html("");
-				$('#coverage-edit-publication-results-container').hide();
-				return;
-			}
-			var html = "";
-			for(var i = 0; i < impresslist.publications.length; i++) { 
-				var include = impresslist.publications[i].search(text);
-				if (include) {
-					html += "	<tr class='table-list' data-publication-id='" + impresslist.publications[i].id + "' data-coverage-edit-publication-result='true' >\
-									<td>" + impresslist.publications[i].name + "</td> \
-								</tr>";
+		if (this.field('type') == 'publication') { 
+			$("#coverage-edit-publication-search").keyup(function() {
+				var searchfield = $(this);
+				var text = $(this).val().toLowerCase();
+				if (text.length == 0) {
+					$("#coverage-edit-publication-results").html("");
+					$('#coverage-edit-publication-results-container').hide();
+					return;
 				}
-			}
-			if (html.length == 0) { 
-				html += "	<tr> <td colspan='2'>No Results</td> </tr>";
-			}
-			$("#coverage-edit-publication-results").html(html);
-			$('#coverage-edit-publication-results-container').show();
+				var html = "";
+				for(var i = 0; i < impresslist.publications.length; i++) { 
+					var include = impresslist.publications[i].search(text);
+					if (include) {
+						html += "	<tr class='table-list' data-publication-id='" + impresslist.publications[i].id + "' data-coverage-edit-publication-result='true' >\
+										<td>" + impresslist.publications[i].name + "</td> \
+									</tr>";
+					}
+				}
+				if (html.length == 0) { 
+					html += "	<tr> <td colspan='2'>No Results</td> </tr>";
+				}
+				$("#coverage-edit-publication-results").html(html);
+				$('#coverage-edit-publication-results-container').show();
 
-			$("[data-coverage-edit-publication-result='true']").click(function() {
-				var pubId = $(this).attr("data-publication-id");
-				$('#coverage-edit-publication-id').val("" + pubId);
-				$("#coverage-edit-publication-search").val( $(this).find('td').html() );
-				$("#coverage-edit-publication-results").html("");
-				$('#coverage-edit-publication-results-container').hide();
+				$("[data-coverage-edit-publication-result='true']").click(function() {
+					var pubId = $(this).attr("data-publication-id");
+					$('#coverage-edit-publication-id').val("" + pubId);
+					$("#coverage-edit-publication-search").val( $(this).find('td').html() );
+					$("#coverage-edit-publication-results").html("");
+					$('#coverage-edit-publication-results-container').hide();
+				});
 			});
-		});
+		} else if (this.field('type') == 'youtuber') {
+			$("#coverage-edit-youtuber-search").keyup(function() {
+				var searchfield = $(this);
+				var text = $(this).val().toLowerCase();
+				if (text.length == 0) {
+					$("#coverage-edit-youtuber-results").html("");
+					$('#coverage-edit-youtuber-results-container').hide();
+					return;
+				}
+				var html = "";
+				for(var i = 0; i < impresslist.youtubers.length; i++) { 
+					var include = impresslist.youtubers[i].search(text);
+					if (include) {
+						html += "	<tr class='table-list' data-youtuber-id='" + impresslist.youtubers[i].id + "' data-coverage-edit-youtuber-result='true' >\
+										<td>" + impresslist.youtubers[i].name + "</td> \
+									</tr>";
+					}
+				}
+				if (html.length == 0) { 
+					html += "	<tr> <td colspan='2'>No Results</td> </tr>";
+				}
+				$("#coverage-edit-youtuber-results").html(html);
+				$('#coverage-edit-youtuber-results-container').show();
+
+				$("[data-coverage-edit-youtuber-result='true']").click(function() {
+					var ytId = $(this).attr("data-youtuber-id");
+					$('#coverage-edit-youtuber-id').val("" + ytId);
+					$("#coverage-edit-youtuber-search").val( $(this).find('td').html() );
+					$("#coverage-edit-youtuber-results").html("");
+					$('#coverage-edit-youtuber-results-container').hide();
+				});
+			});
+		}
 
 		// Edit perosn binds
 		$("#coverage-edit-person-search").keyup(function() {
@@ -1120,53 +1300,95 @@ Coverage = function(data) {
 
 	}
 	Coverage.prototype.update = function() {
+		var selector = "data-coverage-id";
 		var publicationName = "Unknown Publication";
 		if (this.fields['publication'] > 0) {
 			publicationName = impresslist.findPublicationById(this.fields['publication']).name;
+		} 
+
+		if (this.field('type') == 'youtuber') {
+			publicationName = "Unknown Youtuber";
+			if (this.fields['youtuber'] > 0) {
+				publicationName = impresslist.findYoutuberById(this.fields['youtuber']).name;
+			}
+
+			selector = "data-youtube-coverage-id";
+
+			$("[" + selector + "='" + this.id + "'][data-field='thumbnail']").attr('src', this.field('thumbnail'));
 		}
-		$("[data-coverage-id='" + this.id + "'][data-field='name']").html(publicationName);
-		$("[data-coverage-id='" + this.id + "'][data-field='url']").attr('href', this.field('url'));
-		$("[data-coverage-id='" + this.id + "'][data-field='url']").html(this.field('title'));
-		$("[data-coverage-id='" + this.id + "'][data-field='utime']").html( impresslist.util.relativetime_contact(this.field('utime')) );
+
+		$("[" + selector + "='" + this.id + "'][data-field='name']").html(publicationName);
+		$("[" + selector + "='" + this.id + "'][data-field='url']").attr('href', this.field('url'));
+		$("[" + selector + "='" + this.id + "'][data-field='url']").html(this.field('title'));
+		$("[" + selector + "='" + this.id + "'][data-field='utime']").html( impresslist.util.relativetime_contact(this.field('utime')) );
 		
 		var thanked = this.field('thanked');
 		if (thanked == 1) {
-			$("[data-coverage-id='" + this.id + "'][data-field='thanked']").html("<span style='color:green;font-style:italic;'>Thanked!</span>");	
+			$("[" + selector + "='" + this.id + "'][data-field='thanked']").html("<span style='color:green;font-style:italic;'>Thanked!</span>");	
 		} else {
-			$("[data-coverage-id='" + this.id + "'][data-field='thanked']").html("<span style='color:red;font-style:italic;'>Not thanked...</span>");	
+			$("[" + selector + "='" + this.id + "'][data-field='thanked']").html("<span style='color:red;font-style:italic;'>Not thanked...</span>");	
 		}
 
-
-		var selector = "[data-coverage-id='" + this.id + "'][data-field='person-name']";
+		var selector = "[" + selector + "='" + this.id + "'][data-field='person-name']";
 		$(selector).html( this.getPersonName() );
 		
 	}
-	Coverage.prototype.onAdded = function() {
-		this.createItem();
+	Coverage.prototype.onAdded = function(fromInit) {
+		this.createItem(fromInit);
 	}
 	Coverage.prototype.onRemoved = function() {
 		this.removeItem();
 		this.close();
 	}
 	Coverage.prototype.save = function() {
-		var title = $('#coverage-edit-title').val();
-		var url = $('#coverage-edit-url').val();
-		var timestamp = moment($('#coverage-edit-timestamp').val(), "L h:mma").format("X");
-		var publication = $('#coverage-edit-publication-id').val();
-		var person = $('#coverage-edit-person-id').val();
-		var thanked = $('#coverage-edit-thanked').is(':checked');
+		if (this.field('type') == 'publication') { 
 
-		console.log("----");
-		console.log(this);
-		//console.log("url: " + url);
-		//console.log("timestamp: " + timestamp);
-		//console.log("publication: " + publication);
-		//console.log("person: " + person);
-		//console.log("thanked: " + thanked);
-		API.savePublicationCoverage(this, publication, person, title, url, timestamp, thanked);
+			var title = $('#coverage-edit-title').val();
+			var url = $('#coverage-edit-url').val();
+			var timestamp = moment($('#coverage-edit-timestamp').val(), "L h:mma").format("X");
+			var publication = $('#coverage-edit-publication-id').val();
+			var person = $('#coverage-edit-person-id').val();
+			var thanked = $('#coverage-edit-thanked').is(':checked');
+
+			//console.log("----");
+			//console.log(this);
+			//console.log("title: " + title);
+			//console.log("url: " + url);
+			//console.log("timestamp: " + timestamp);
+			//console.log("publication: " + publication);
+			//console.log("person: " + person);
+			//console.log("thanked: " + thanked);
+			API.savePublicationCoverage(this, publication, person, title, url, timestamp, thanked);
+		} else if (this.field('type') == 'youtuber') { 
+			var title = $('#coverage-edit-title').val();
+			var url = $('#coverage-edit-url').val();
+			var timestamp = moment($('#coverage-edit-timestamp').val(), "L h:mma").format("X");
+			var youtuber = $('#coverage-edit-youtuber-id').val();
+			var person = $('#coverage-edit-person-id').val();
+			var thanked = $('#coverage-edit-thanked').is(':checked');
+
+			/*console.log("youtube coverage save");
+			console.log("----");
+			console.log(this);
+			console.log("title: " + title);
+			console.log("url: " + url);
+			console.log("timestamp: " + timestamp);
+			console.log("youtuber: " + youtuber);
+			console.log("person: " + person);
+			console.log("thanked: " + thanked);*/
+			API.saveYoutuberCoverage(this, youtuber, person, title, url, timestamp, thanked);
+		}
+
 	}
 	Coverage.prototype.close = function() {
 		$('.coverage_modal').modal('hide');
+	}
+	Coverage.prototype.remove = function() {
+		if (this.field('type') == 'publication') { 
+			API.removePublicationCoverage(this);
+		} else if (this.field('type') == 'youtuber') {
+			API.removeYoutuberCoverage(this);
+		}
 	}
 
 Game = function(data) {
@@ -2328,6 +2550,7 @@ var impresslist = {
 		$('#nav-add-publication').click(API.addPublication);
 		$('#nav-add-youtuber').click(API.addYoutuber);
 		$('#nav-add-coverage-publication').click(API.addPublicationCoverage);
+		$('#nav-add-coverage-youtuber').click(API.addYoutuberCoverage);
 		$('#nav-user-changepassword').click(function() { thiz.findUserById(thiz.config.user.id).openChangePassword(); });
 		$('#nav-home').click(this.changePage);
 		$('#nav-coverage').click(this.changePage);
@@ -2443,7 +2666,7 @@ var impresslist = {
 		this.games.push(obj);
 	},
 	addCoverage: function(obj, fromInit) {
-		obj.onAdded();
+		obj.onAdded(fromInit);
 		this.coverage.push(obj);
 	},
 	removePerson: function(obj) {

@@ -13,6 +13,7 @@ $cache = Cache::getInstance();
 
 // Sorts
 function sortByName($a, $b) { return $a['name'] > $b['name']; }
+function sortByUtime($a, $b) { return $a['utime'] < $b['utime']; }
 
 //if (!is_ssl()) {
 //	header("Location: " . "https://" . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
