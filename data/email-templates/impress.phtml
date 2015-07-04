@@ -1,0 +1,84 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<meta http-equiv="Content-Language" content="en-us">
+	</head>
+	<body>
+
+		<div align="center">
+
+			<table cellspacing="15" cellpadding="0" border="0" bgcolor="#eeeeee" width="701" class="main" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; font-size: 13px; line-height: 18px;">
+				<tr>
+					<td bgcolor="#eeeeee" class="header" style="vertical-align: top;" valign="top">
+						<table cellspacing="0" cellpadding="0" border="0" width="100%" height="50">
+							<tr>
+								<!-- <td width="70%" height="50" align="left" style="vertical-align: top;" valign="top"><a class="logo" href="#" title="{{COMPANY_NAME}}" style="width: 328px; height: 50px; display: block;"><img class="header-logo" src="{{HTTP_HOST}}/images/email-logo.png" width="328" height="50" border="0" alt="{{COMPANY_NAME}}"></a></td>
+								
+								<td width="30%" height="50" align="right" style="vertical-align: top;" valign="top">
+								</td>-->
+                <td width="100%" height="50" align="left" style="vertical-align: top;" valign="top">
+                  <h1 style="margin-top: 15px; margin-bottom: 15px;">impress[]</h1>
+                </td>
+							</tr>
+						</table>
+					</td>
+				</tr>
+				<tr>
+					<td bgcolor="#ffffff" class="body" style="vertical-align: top;" valign="top">
+						<div class="body-borders" style="height: 4px; background-color: #666666;"></div>
+						<table cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff" width="100%">
+							<tr>
+								<td width="100%" align="left" style="vertical-align: top; padding: 15px 15px 0 15px; background: #ffffff;" valign="top" bgcolor="#fff">
+
+                {{EMAIL_CONTENTS_HTML}}
+
+								</td>
+							</tr>
+						</table>
+						<div class="body-borders" style="height: 4px; background-color: #666666;"></div>
+					</td>
+				</tr>
+        {{INCLUDE_FOOTER_BEGIN}}
+				<tr>
+					<td bgcolor="#eeeeee" class="footer" style="vertical-align: top;" valign="top">
+						<table cellspacing="0" cellpadding="0" border="0" width="100%" height="40">
+							<tr>
+								<td width="50%" height="40" align="left" style="vertical-align: top;" valign="top">
+									<a href="{{COMPANY_TWITTER}}" class="social" style="text-decoration: none; float: left; width: 40px; margin-right: 15px; display: block;"><img style="border: none;" src="{{HTTP_HOST}}/images/email-twitter.png"></a>
+									<a href="{{COMPANY_FACEBOOK}}" class="social" style="text-decoration: none; float: left; width: 40px; margin-right: 15px; display: block;"><img style="border: none;" src="{{HTTP_HOST}}/images/email-facebook.png"></a>
+								</td>
+								<td width="50%" height="40" align="right" style="vertical-align: top;" valign="top">
+									<p style="letter-spacing: .01em; color: #333; font-size: 11px; line-height: 1.5em; margin: 0; padding: 0;">
+										If you would like to stop receiving emails from {{COMPANY_NAME}},<br>please send an e-mail to <a href='mailto:{{COMPANY_EMAIL}}'>{{COMPANY_EMAIL}}</a>.
+									</p>
+									<p style="letter-spacing: .01em; color: #333; font-size: 11px; line-height: 1.5em; margin: 0; padding: 16px 0 0;">
+										{{COMPANY_ADDRESS_LINE}}
+									</p>
+
+
+								</td>
+							</tr>
+						</table>
+					</td>
+				</tr>
+        {{INCLUDE_FOOTER_END}}
+			</table>
+
+		</div>
+
+<!-- 	
+<style type="text/css">
+.header a.avatar:hover img { border-color: #ff3fac !important; }
+.body a:hover { color: #000 !important; }
+.thumbnail a:hover img { border-color: #ff3fac !important; }
+.footer a:hover { color: #ff3fac !important; }
+</style>
+-->
+
+{{INCLUDE_TRACKINGPIXEL_BEGIN}}
+<img src="{{HTTP_HOST}}/tracking-pixel" alt="" width="1" height="1" border="0" style="height:1px !important;width:1px !important;border-width:0 !important;margin-top:0 !important;margin-bottom:0 !important;margin-right:0 !important;margin-left:0 !important;padding-top:0 !important;padding-bottom:0 !important;padding-right:0 !important;padding-left:0 !important;"/>
+{{INCLUDE_TRACKINGPIXEL_END}}
+
+</body>
+</html>

@@ -167,6 +167,7 @@ $sql = "CREATE TABLE IF NOT EXISTS user (
 			emailGmailIndex INTEGER NOT NULL,
 			password VARCHAR(32) NOT NULL,
 			currentGame INTEGER NOT NULL,
+			coverageNotifications INTEGER NOT NULL DEFAULT 1,
 			color VARCHAR(10) NOT NULL DEFAULT '#000000',
 			admin INTEGER NOT NULL DEFAULT 0,
 			lastactivity INTEGER NOT NULL DEFAULT 0
@@ -181,6 +182,18 @@ if (count($users) == 0) {
 //	
 //	$db->exec("INSERT INTO user VALUES (NULL, 'Nick', 	'Dymond', 	 'nick@forceofhab.it', 			 '1', '" . md5("password") . "', 1, '#000000', 1, 0); "); 
 // }
+
+// Email queue system
+$sql = "CREATE TABLE IF NOT EXISTS emailqueue (
+			id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+			subject VARCHAR(255) NOT NULL,
+			to_address VARCHAR(255) NOT NULL,
+			headers TEXT NOT NULL,
+			message TEXT NOT NULL,
+			`timestamp` INTEGER NOT NULL,
+			sent INTEGER NOT NULL DEFAULT 0
+		);";
+$db->exec($sql);
 
 // create email boxes
 $sql = "CREATE TABLE IF NOT EXISTS email (

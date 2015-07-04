@@ -954,12 +954,23 @@ Coverage = function(data) {
 		ret = this.field('url').toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
-		// Search all publications too.
-		for(var i = 0; i < impresslist.publications.length; ++i) {
-			if (impresslist.publications[i].field('id') == this.field('publication')) {
-				var pub = impresslist.findPublicationById( this.field('publication') );
-				ret = pub.search(text);
-				if (ret) { return ret; }
+		if (this.field('type') == "publication") { 
+			// Search all publications too.
+			for(var i = 0; i < impresslist.publications.length; ++i) {
+				if (impresslist.publications[i].field('id') == this.field('publication')) {
+					var pub = impresslist.findPublicationById( this.field('publication') );
+					ret = pub.search(text);
+					if (ret) { return ret; }
+				}
+			}
+		} else if (this.field('type') == "youtuber") {
+			// Search all YOuTubers too.
+			for(var i = 0; i < impresslist.youtubers.length; ++i) {
+				if (impresslist.youtubers[i].field('id') == this.field('youtuber')) {
+					var pub = impresslist.findYoutuberById( this.field('youtuber') );
+					ret = pub.search(text);
+					if (ret) { return ret; }
+				}
 			}
 		}
 

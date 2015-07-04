@@ -245,7 +245,7 @@ function youtube_getInformation($channel) {
 	
 	$url = "http://gdata.youtube.com/feeds/api/users/" . $channel . "?alt=json";
 	$text = file_get_contents($url);
-	if (substr($text, 0, 1) != "{") { 
+	if (substr($text, 0, 1) != "{") {
 		return 0;
 	}
 	$content = json_decode($text, JSON_ASSOC);
@@ -286,8 +286,9 @@ function youtube_v3_getInformation($channel) {
 		"id" => $content['items'][0]['id'],
 		"name" => $content['items'][0]['snippet']['localized']['title'],
 		"description" => strip_tags($content['items'][0]['snippet']['localized']['description']),
-		"lastpostedon" => 0, // this has to be got from getUploads()
+		"lastpostedon" => 0, // this has to be got from _v3_getUploads()
 		"thumbnail" => $content['items'][0]['snippet']['thumbnails']['default']['url'],
+		"iconurl" => $content['items'][0]['snippet']['thumbnails']['default']['url'],
 		"subscribers" => $content['items'][0]['statistics']['subscriberCount'],
 		"views" => $content['items'][0]['statistics']['viewCount'],
 		"videos" => $content['items'][0]['statistics']['videoCount'],
@@ -323,7 +324,74 @@ function youtube_v3_getUploads($playlist) {
 }
 
 
+function get_impress_email_template($include_footer = false, $include_trackingpixel = false) {
+	global $impresslist_company_name;
+	global $impresslist_company_addressLine;
+	global $impresslist_company_emailAddress;
+	global $impresslist_company_twitter;
+	global $impresslist_company_facebook;
 
+	ob_start();
+	include_once($_SERVER['DOCUMENT_ROOT'] . "/data/email-templates/impress.phtml");
+	$message = ob_get_contents();
+	ob_end_clean();
+
+	$message = str_replace("{{HTTP_HOST}}", $_SERVER['HTTP_HOST'], $message);
+	$message = str_replace("{{COMPANY_NAME}}", $impresslist_company_name, $message);
+	$message = str_replace("{{COMPANY_ADDRESS_LINE}}", $impresslist_company_addressLine, $message);
+	$message = str_replace("{{COMPANY_EMAIL}}", $impresslist_company_emailAddress, $message);
+	$message = str_replace("{{COMPANY_TWITTER}}", $impresslist_company_twitter, $message);
+	$message = str_replace("{{COMPANY_FACEBOOK}}", $impresslist_company_facebook, $message);
+
+	$message = str_replace("{{INCLUDE_FOOTER_BEGIN}}", ($include_footer)?"":"<!--", $message);
+	$message = str_replace("{{INCLUDE_FOOTER_END}}", ($include_footer)?"":"-->", $message);
+
+	$message = str_replace("{{INCLUDE_TRACKINGPIXEL_BEGIN}}", ($include_trackingpixel)?"":"<!--", $message);
+	$message = str_replace("{{INCLUDE_TRACKINGPIXEL_END}}", ($include_trackingpixel)?"":"-->", $message);
+
+	return $message;
+}
+function email_new_youtube_coverage($youtuberName, $url, $time) {
+	global $impresslist_emailAddress;
+	global $db;
+	
+	// email queue. 
+	$reply_to = "no-reply" . substr($impresslist_emailAddress, strpos($impresslist_emailAddress, "@"));
+	$headers  = "MIME-Version: 1.0" . "\r\n";
+	$headers .= "Content-type: text/html; charset=iso-8859-1" . "\r\n";
+	$headers .= "From: impress[] <{$impresslist_emailAddress}>" . "\r\n";
+	$headers .= "Reply-To: {$reply_to}" . "\r\n";
+	$headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
+
+	$message = get_impress_email_template(false, false);
+
+	$contents = "	<h2 style='margin-top: 0; margin-bottom: 15px;'>Coverage Alert!</h2>
+					<p style='margin-top: 0; margin-bottom: 15px;'>
+						Wahoo! You have new coverage from <strong>" . $youtuberName . "</strong>.
+					</p>
+					<p style='margin-top: 0; margin-bottom: 15px;'>
+						Check it out <a style='color: #2f7f6f;text-decoration:none' href='" . $url . "'>here</a>, and be sure to send them a message of thanks!
+					</p>";
+	$message = str_replace("{{EMAIL_CONTENTS_HTML}}", $contents, $message);
+
+	// Get users who have coverage alerts on.
+	$users = $db->query("SELECT * FROM user WHERE coverageNotifications = 1;");
+	for($i = 0; $i < count($users); $i++) 
+	{
+		// insert into e-mail queue. 
+		$stmt = $db->prepare("INSERT INTO emailqueue (id, subject, to_address, headers, message, `timestamp`, sent) 
+											VALUES (NULL, :subject, :to_address, :headers, :message, :utime, 0 ); ");
+		$stmt->bindValue(":subject", "impress[] - Coverage Alert!", Database::VARTYPE_STRING); 
+		$stmt->bindValue(":to_address", $users[$i]['email'], Database::VARTYPE_STRING); 
+		$stmt->bindValue(":headers", $headers, Database::VARTYPE_STRING); 
+		$stmt->bindValue(":message", $message, Database::VARTYPE_STRING); 
+		$stmt->bindValue(":utime", $time, Database::VARTYPE_INTEGER); 
+		$stmt->execute();
+	}
+
+	
+	
+}
 
 
 // email
@@ -357,6 +425,57 @@ function mail_attachment($filename, $path, $mailto, $from_mail, $from_name, $rep
     } else {
         echo "mail send ... ERROR!";
     }
+}
+
+
+
+function slack_incomingWebhook($data) {
+	global $slack_enabled; 
+	global $slack_apiUrl;
+
+	if (!$slack_enabled) { return ""; }
+
+	$fields = array("payload" => urlencode(json_encode($data)));
+	foreach($fields as $key => $value) { 
+		$fields_string .= $key . '=' . $value . '&'; 
+	}
+	rtrim($fields_string, '&');
+
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL, $slack_apiUrl);
+	curl_setopt($ch, CURLOPT_POST, count($fields));
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $fields_string);
+
+	$result = curl_exec($ch);
+	return $result;
+}
+
+function slack_coverageAlert($fromName, $coverageTitle, $url) {
+	global $slack_enabled;
+	if (!$slack_enabled) { return ""; }
+
+	$data = array(
+		"text" => "*Coverage Alert!*",
+		"username" => "impress[]",
+		"icon_emoji" => "thumbsup",
+		"unfurl_links" => true,
+		"attachments" => array(
+			array(
+				"fallback" => $url,
+				//"pretext" => "*Coverage Alert!*",
+				"color" => "#eeeeee",
+				"fields" => array(
+					array(
+						"title" => $fromName,
+						"value" => "<" . $url . "|" . $coverageTitle . ">",
+						"short" => false
+					)
+				)
+			)
+		)
+	);
+	return slack_incomingWebhook($data);	
 }
 
 

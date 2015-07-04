@@ -993,7 +993,7 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				$youtuber = youtube_getInformation($_GET['channel']);
+				$youtuber = youtube_v3_getInformation($_GET['channel']);
 				if ($youtuber == 0) { 
 					$result = api_error("Youtube channel '" . $_GET['channel'] . "' not found.");
 				} else { 

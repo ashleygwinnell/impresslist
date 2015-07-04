@@ -47,6 +47,10 @@ function tryAddYoutubeCoverage($youtuberId, $youtuberName, $gameId, $title, $url
 		$stmt->bindValue(":thumbnail", $thumbnail, Database::VARTYPE_STRING); 
 		$stmt->bindValue(":utime", $time, Database::VARTYPE_INTEGER); 
 		$stmt->execute();
+
+		@email_new_youtube_coverage($youtuberName, $url, $time);
+		@slack_coverageAlert($youtuberName, $title, $url);
+
 	} else {
 		echo $existingCoverage[0]['url'] . "<br/>\n";
 		echo "<i>It was already in the database.</i><br/>\n";

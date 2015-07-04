@@ -21,9 +21,13 @@ for($i = 0; $i < $num_youtubeChannels; $i++)
 	// echo $youtubeChannel;
 	if (strlen($youtubeChannel) > 0) 
 	{
-		$youtubeDetails = youtube_getInformation($youtubeChannel);
-		if ($youtubeDetails != 0) { 
-			echo "updated " . $content['entry']['title']['$t'] . "<br/>";
+		$youtubeDetails = youtube_v3_getInformation($youtubeChannel);
+		$youtubeUploads = youtube_v3_getUploads($youtubeChannels[$i]['youtubeUploadsPlaylistId']);
+
+		//echo $youtubeDetails . " | " . $youtubeUploads . "<br/>";
+
+		if ($youtubeDetails != 0 && $youtubeUploads != 0) { 
+			/*echo "updated " . $content['entry']['title']['$t'] . "<br/>";
 			$result = array(
 				"name" => $content['entry']['title']['$t'],
 				"description" => strip_tags($content['entry']['content']['$t']),
@@ -31,11 +35,20 @@ for($i = 0; $i < $num_youtubeChannels; $i++)
 				"iconurl" => $content['entry']['media$thumbnail']['url'],
 				"subscribers" => $content['entry']['yt$statistics']['subscriberCount'],
 				"views" => $content['entry']['yt$statistics']['totalUploadViews']
-			);
+			);*/
+
+			$lastPostedOn = 0;
+			foreach($youtubeUploads as $video) {
+				$postedOn = strtotime($video['publishedOn']);
+				if ($postedOn > $lastPostedOn) {
+					$lastPostedOn = $postedOn;
+				}
+			}
+
 
 			$db->exec("UPDATE youtuber 
 							SET 
-								lastpostedon = '" . $youtubeDetails['lastpostedon'] . "', 
+								lastpostedon = '" . $lastPostedOn . "', 
 								lastpostedon_updatedon = '" . time() . "', 
 								subscribers = '" . $youtubeDetails['subscribers'] . "', 
 								views = '" . $youtubeDetails['views'] . "' 

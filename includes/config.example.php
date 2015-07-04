@@ -1,10 +1,15 @@
 <?php
 
-if ($_SERVER['HTTP_HOST'] == "localhost") { 
-	// .. Local settings.
-}
-
+// -----------------------
 // Rename me to config.php
+// -----------------------
+
+$impresslist_company_name = "Company Name";
+$impresslist_company_addressLine = "Company Name, 1 Tree Hill, City, Country.";
+$impresslist_company_emailAddress = "contact@yourwebdomain.com";
+$impresslist_company_twitter = "http://twitter.com/company_name";
+$impresslist_company_facebook = "http://facebook.com/company_name";
+
 $impresslist_emailIMAPHost = "imap.yourwebsolution.com";
 $impresslist_emailAddress = "inbox@subdomain.yourwebdomain.com";
 $impresslist_emailPassword = "password";
@@ -29,5 +34,16 @@ $twitter_consumerKey = "consumer_key";
 $twitter_consumerSecret = "consumer_secret";
 $twitter_oauthToken = "oauth_token";
 $twitter_oauthSecret = "oauth_secret";
+
+$youtube_apiKey = "youtube_api_key";
+
+$slack_enabled = true;
+$slack_apiUrl = "https://hooks.slack.com/services/GENERATE/THIS/URL";
+
+// Local/development settings might be different.
+if ($_SERVER['HTTP_HOST'] == "localhost") { 
+	
+}
+
 
 ?>

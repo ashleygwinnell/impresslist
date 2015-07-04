@@ -140,76 +140,103 @@
 				</div>
 			</div><br/>	
 			
-			
-			<!-- People -->
-			<div id='people-container' class='container mycontainer'>
-				<div class="panel panel-default">
-	  				<div class="panel-heading oa"><span class='fl'>People</span><span id='people-count' class='fr'>(0)</div>
-					<table class='table table-striped sortable' >
-						<thead>
-							<tr>
-								<!-- <th data-defaultsort="desc">ID</th> -->
-								<th data-defaultsort="asc">Name</th>
-								<th>Priority</th>
-								<th>Twitter</th>
-								<th>Last Contacted</th>
-							</tr>
-						</thead>
-						<tbody id='people'>
-							
-						</tbody>
-						<tfoot id='people-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
-					</table>
+			<div class='container mycontainer'>
+				<ul class="nav nav-pills" role='tablist'>
+					<li role="presentation" class="active"><a href="#people-pill" aria-controls="people-pill" role="tab" data-toggle="pill">People</a></li>
+					<li role="presentation"><a href="#publications-pill" aria-controls="publications-pill" role="tab" data-toggle="pill">Publications</a></li>
+					<li role="presentation"><a href="#youtubers-pill" aria-controls="youtubers-pill" role="tab" data-toggle="pill">YouTubers</a></li>
+				</ul><br/>
+				
+				<div class="tab-content">
+					<div role="tabpanel" class="tab-pane active" id="people-pill">
+
+						<!-- People -->
+						<div id='people-container'>
+							<div class="panel panel-default">
+				  				<div class="panel-heading oa"><span class='fl'>People</span><span id='people-count' class='fr'>(0)</div>
+								<table class='table table-striped sortable' >
+									<thead>
+										<tr>
+											<!-- <th data-defaultsort="desc">ID</th> -->
+											<th data-defaultsort="asc">Name</th>
+											<th>Priority</th>
+											<th>Twitter</th>
+											<th>Last Contacted</th>
+										</tr>
+									</thead>
+									<tbody id='people'>
+										
+									</tbody>
+									<tfoot id='people-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+								</table>
+							</div>
+						</div>
+
+					</div>
+					<div role="tabpanel" class="tab-pane" id="publications-pill">
+
+						<!-- Publications / Sites -->
+						<div id='publications-container' >
+							<div class="panel panel-default">
+				  				<div class="panel-heading oa"><span class='fl'>Publications / Sites</span><span id='publication-count' class='fr'>(0)</span></div>
+								<table class='table table-striped sortable' >
+									<thead>
+										<tr>
+											<!-- <th data-defaultsort="asc">ID</th> -->
+											<th data-defaultsort="asc">Name</th>
+											<th>Priority</th>
+											<th>Url</th>
+											<th>Twitter</th>
+											<th>Last Posted On</th>
+										</tr>
+									</thead>
+									<tbody id='publications'>
+										
+									</tbody>
+									<tfoot id='publications-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+								</table>
+							</div>
+						</div><br/>
+
+					</div>
+					<div role="tabpanel" class="tab-pane" id="youtubers-pill">
+
+
+
+						<!-- Youtubers -->
+						<div id='youtubers-container'>
+							<div class="panel panel-default">
+				  				<div class="panel-heading oa"><span class='fl'>YouTubers</span><span id='youtuber-count' class='fr'>(0)</span></div>
+								<table class='table table-striped sortable' >
+									<thead>
+										<tr>
+											<!-- <th data-defaultsort="asc">ID</th> -->
+											<th data-defaultsort="asc">Channel Name</th>
+											<th>Priority</th>
+											<th>Subscribers</th>
+											<th>Views</th>
+											<th>Twitter</th>
+											<th>Last Uploaded On</th>
+										</tr>
+									</thead>
+									<tbody id='youtubers'>
+										
+									</tbody>
+									<tfoot id='youtubers-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+								</table>
+							</div>
+						</div><br/>
+
+
+					</div>
 				</div>
 			</div>
 
-		
-			<!-- Publications / Sites -->
-			<div id='publications-container' class='container mycontainer'>
-				<div class="panel panel-default">
-	  				<div class="panel-heading oa"><span class='fl'>Publications / Sites</span><span id='publication-count' class='fr'>(0)</span></div>
-					<table class='table table-striped sortable' >
-						<thead>
-							<tr>
-								<!-- <th data-defaultsort="asc">ID</th> -->
-								<th data-defaultsort="asc">Name</th>
-								<th>Priority</th>
-								<th>Url</th>
-								<th>Twitter</th>
-								<th>Last Posted On</th>
-							</tr>
-						</thead>
-						<tbody id='publications'>
-							
-						</tbody>
-						<tfoot id='publications-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
-					</table>
-				</div>
-			</div><br/>
+			
 
-			<!-- Youtubers -->
-			<div id='youtubers-container' class='container mycontainer'>
-				<div class="panel panel-default">
-	  				<div class="panel-heading oa"><span class='fl'>YouTubers</span><span id='youtuber-count' class='fr'>(0)</span></div>
-					<table class='table table-striped sortable' >
-						<thead>
-							<tr>
-								<!-- <th data-defaultsort="asc">ID</th> -->
-								<th data-defaultsort="asc">Channel Name</th>
-								<th>Priority</th>
-								<th>Subscribers</th>
-								<th>Views</th>
-								<th>Twitter</th>
-								<th>Last Uploaded On</th>
-							</tr>
-						</thead>
-						<tbody id='youtubers'>
-							
-						</tbody>
-						<tfoot id='youtubers-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
-					</table>
-				</div>
-			</div><br/>
+		
+			
+
 
 		</div>
 
