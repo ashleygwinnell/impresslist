@@ -351,6 +351,9 @@ function get_impress_email_template($include_footer = false, $include_trackingpi
 
 	return $message;
 }
+function email_new_coverage($fromName, $url, $time) {
+	return email_new_youtube_coverage($fromName, $url, $time);
+}
 function email_new_youtube_coverage($youtuberName, $url, $time) {
 	global $impresslist_emailAddress;
 	global $db;
@@ -389,7 +392,7 @@ function email_new_youtube_coverage($youtuberName, $url, $time) {
 		$stmt->execute();
 	}
 
-	
+	return true;
 	
 }
 
