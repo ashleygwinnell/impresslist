@@ -60,7 +60,8 @@ if ($db->type == Database::TYPE_MYSQL) {
 // create persons
 $sql = "CREATE TABLE IF NOT EXISTS person (
 			id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
-			name VARCHAR(255) NOT NULL,
+			firstname VARCHAR(255) NOT NULL,
+			surnames VARCHAR(255) NOT NULL,
 			email VARCHAR(255) NOT NULL,
 			priorities VARCHAR(255) NOT NULL,
 			assigned INTEGER NOT NULL DEFAULT 0, 

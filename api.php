@@ -536,15 +536,17 @@ if (!isset($_GET['endpoint'])) {
 			include_once("init.php");
 
 			$required_fields = array(
-				array('name' => 'name', 'type' => 'alphanumericspaces'),
+				array('name' => 'firstname', 'type' => 'alphanumericspaces'),
+				array('name' => 'surnames', 'type' => 'alphanumericspaces'),
 				//array('name' => 'email', 'type' => 'email'),
 				//array('name' => 'twitter', 'type' => 'alphanumeric'),
 				//array('name' => 'notes', 'type' => 'textarea')
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
-				$stmt = $db->prepare(" INSERT INTO person  (id,   name,  email, priorities,   twitter, twitter_followers,   notes, lastcontacted, lastcontactedby, removed)  
-													VALUES (NULL, :name, :email, :priorities, :twitter, :twitter_followers, :notes, :lastcontacted, :lastcontactedby, :removed); ");
+				$stmt = $db->prepare(" INSERT INTO person  (id,   firstname, name,  email, priorities,   twitter, twitter_followers,   notes, lastcontacted, lastcontactedby, removed)  
+													VALUES (NULL, :firstname, :name, :email, :priorities, :twitter, :twitter_followers, :notes, :lastcontacted, :lastcontactedby, :removed); ");
+				$stmt->bindValue(":firstname", $_GET['firstname'], Database::VARTYPE_STRING); 
 				$stmt->bindValue(":name", $_GET['name'], Database::VARTYPE_STRING); 
 				$stmt->bindValue(":email", "", Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter", "", Database::VARTYPE_STRING);
@@ -570,7 +572,8 @@ if (!isset($_GET['endpoint'])) {
 
 			$required_fields = array(
 				array('name' => 'id', 'type' => 'integer'),
-				array('name' => 'name', 'type' => 'alphanumericspaces'),
+				array('name' => 'firstname', 'type' => 'alphanumericspaces'),
+				//array('name' => 'surnames', 'type' => 'alphanumericspaces'),
 				array('name' => 'email', 'type' => 'email'),
 				array('name' => 'notes', 'type' => 'textarea'),
 				array('name' => 'twitter', 'type' => 'alphanumericunderscores')
@@ -578,12 +581,18 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
+				$surname = "";
+				if ($_GET['surnames'] != "") {
+					$surname = $_GET['surnames'];
+				}
+
 				$twitter_followers = twitter_countFollowers($_GET['twitter']);
 				if ($twitter_followers == "") { $twitter_followers = 0; }
 				$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
 
-				$stmt = $db->prepare(" UPDATE person SET name = :name, email = :email, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes WHERE id = :id ");
-				$stmt->bindValue(":name", $_GET['name'], Database::VARTYPE_STRING);
+				$stmt = $db->prepare(" UPDATE person SET firstname = :firstname, surnames = :surnames, email = :email, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes WHERE id = :id ");
+				$stmt->bindValue(":firstname", $_GET['firstname'], Database::VARTYPE_STRING);
+				$stmt->bindValue(":surnames", $surname, Database::VARTYPE_STRING);
 				$stmt->bindValue(":email", strtolower(trim($_GET['email'])), Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter", $_GET['twitter'], Database::VARTYPE_STRING);
 				if ($twitter_followers > 0) { 

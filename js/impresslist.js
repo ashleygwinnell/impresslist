@@ -189,11 +189,12 @@ API.listCoverage = function(fromInit) {
 }
 
 API.addPerson = function() {
-	var name = "Blank";
+	var firstname = "Blank";
+	var surnames = "Surname";
 	var email = "blank@blank.com";
 	var twitter = "";
 	var notes = "";
-	var url = "api.php?endpoint=/person/add/&name=" + encodeURIComponent(name) + "&email=" + encodeURIComponent(email) + "&twitter=" + encodeURIComponent(twitter) + "&notes=" + encodeURIComponent(notes);
+	var url = "api.php?endpoint=/person/add/&firstname=" + encodeURIComponent(firstname) + "&surnames=" + encodeURIComponent(surnames) + "&email=" + encodeURIComponent(email) + "&twitter=" + encodeURIComponent(twitter) + "&notes=" + encodeURIComponent(notes);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -544,11 +545,12 @@ API.setPersonAssignment = function(person, user, gameId) {
 			API.errorMessage("Could not set user-assignment on Person.");
 		});
 }
-API.savePerson = function(person, name, email, twitter, notes) {
+API.savePerson = function(person, firstname, surnames, email, twitter, notes) {
 
 	var url = "api.php?endpoint=/person/save/" + 
 					"&id=" + encodeURIComponent(person.id) + 
-					"&name=" + encodeURIComponent(name) + 
+					"&firstname=" + encodeURIComponent(firstname) + 
+					"&surnames=" + encodeURIComponent(surnames) + 
 					"&email=" + encodeURIComponent(email) + 
 					"&twitter=" + encodeURIComponent(twitter) + 
 					"&notes=" + encodeURIComponent(notes);
@@ -1765,17 +1767,18 @@ Person = function(data) {
 		
 	}
 	Person.prototype.update = function() {
-		$("[data-person-id='" + this.id + "'][data-field='name']").html(this.name);
+		$("[data-person-id='" + this.id + "'][data-field='name']").html(this.fullname());
 		$("[data-person-id='" + this.id + "'][data-field='priority']").html(Priority.name(this.priority()));
 		$("[data-person-id='" + this.id + "'][data-field='twitter_followers']").html( this.twitterCell() );		
 	},
 	Person.prototype.save = function() {
-		var name = $("[data-person-id=" + this.id + "][data-input-field='name']").val();
+		var firstname = $("[data-person-id=" + this.id + "][data-input-field='firstname']").val();
+		var surnames = $("[data-person-id=" + this.id + "][data-input-field='surnames']").val();
 		var email = $("[data-person-id=" + this.id + "][data-input-field='email']").val();
 		var twitter = $("[data-person-id=" + this.id + "][data-input-field='twitter']").val();
 		var notes = $("[data-person-id=" + this.id + "][data-input-field='notes']").val();
 		
-		API.savePerson(this, name, email, twitter, notes);
+		API.savePerson(this, firstname, surnames, email, twitter, notes);
 	}
 	Person.prototype.savePriority = function() {
 		var priority = $("[data-person-id='" + this.id + "'][data-input-field='priority']").val();
@@ -1795,7 +1798,7 @@ Person = function(data) {
 		html += "				<div style='min-height:100px;padding:20px;'>";
 		
 		html += "	<div style='min-height:45px;'> \
-						<h3 class='fl' data-person-id='" + this.id + "' data-field='name'>" + this.field('name') + "</h3> \
+						<h3 class='fl' data-person-id='" + this.id + "' data-field='name'>" + this.fullname() + "</h3> \
 						\
 						<div class='fr'>\
 						<!-- Single button -->\
@@ -1851,9 +1854,13 @@ Person = function(data) {
 				html += "	<div role='tabpanel' class='tab-pane active pady' data-tab='person_profile'>\
 								<form role='form' class='oa' onsubmit='return false;'>	\
 									<div class='row'>\
-										<div class='form-group col-md-6'>\
-											<label for='name'>Name:&nbsp; </label> \
-											<input data-person-id='" + this.id + "' data-input-field='name' class='form-control' type='text' value='" + this.field('name') + "' />\
+										<div class='form-group col-md-3'>\
+											<label for='name'>First Name:&nbsp; </label> \
+											<input data-person-id='" + this.id + "' data-input-field='firstname' class='form-control' type='text' value='" + this.field('firstname') + "' />\
+										</div>\
+										<div class='form-group col-md-3'>\
+											<label for='name'>Surname/s:&nbsp; </label> \
+											<input data-person-id='" + this.id + "' data-input-field='surnames' class='form-control' type='text' value='" + this.field('surnames') + "' />\
 										</div>";
 				html += "				<div class='form-group col-md-3'>\
 											<label for='email'>Assignment:</label>";
@@ -2175,6 +2182,9 @@ Person = function(data) {
 		this.removeTableRow();
 		this.close();
 	}
+	Person.prototype.fullname = function() {
+		return this.field("firstname") + " " + this.field("surnames");
+	}
 	Person.prototype.createTableRow = function() {
 		var lastcontactedbytemp = this.field('lastcontactedby');
 		var lastcontactedbystring = "";
@@ -2185,7 +2195,7 @@ Person = function(data) {
 
 		var html = "	<tr data-person-id='" + this.field('id') + "' data-person-tablerow='true' class='table-list' data-toggle='modal' data-target='.person_modal'> \
 							<!-- <td data-person-id='" + this.field('id') + "' data-field='id' data-value='" + this.field('id') + "'>" + this.field('id') + "</td> -->\
-							<td data-person-id='" + this.field('id') + "' data-field='name' data-value='" + this.field('name') + "'>" + this.field('name') + "</td> \
+							<td data-person-id='" + this.field('id') + "' data-field='name' data-value='" + this.fullname() + "'>" + this.fullname() + "</td> \
 							<td data-person-id='" + this.field('id') + "' data-field='priority' data-value='" + this.priority() + "'>" + Priority.name(this.priority()) + "</td> \
 							<td data-person-id='" + this.field('id') + "' data-field='twitter_followers' data-value='" + this.field('twitter_followers') + "'>" + this.twitterCell() + "</td> \
 							<td data-person-id='" + this.field('id') + "' data-field='last_contacted' data-value='" + this.field('lastcontacted') + "'>" + impresslist.util.relativetime_contact(this.field('lastcontacted')) + " " + lastcontactedbystring + "</td> \
