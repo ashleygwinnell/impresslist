@@ -1062,7 +1062,7 @@ Coverage = function(data) {
 	Coverage.prototype.getPersonName = function() {
 		var p = this.fields['person'];
 		if (p > 0) {
-			return impresslist.findPersonById(p).field('name');
+			return impresslist.findPersonById(p).fullname();
 		} else if (this.fields['youtuber'] > 0) {
 			return "";
 		}
