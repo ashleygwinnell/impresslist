@@ -79,9 +79,10 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 				continue;
 			} else if ($count_recipients_1 == 0 && $count_recipients_2 == 0) {
 				echo "ADD RECIPIENT TO DATABASE<br/>";
-				$stmt4 = $db->prepare("INSERT INTO person (id, 	name,  email,  priorities,  twitter,  twitter_followers,  notes,  lastcontacted, lastcontactedby, removed)
-												  VALUES (NULL, :name, :email, :priorities, :twitter, :twitter_followers, :notes, :lastcontacted, :lastcontactedby, :removed);");
-				$stmt4->bindValue(":name", $to, Database::VARTYPE_STRING);
+				$stmt4 = $db->prepare("INSERT INTO person (id, 	firstname,  surnames, email,  priorities,  twitter,  twitter_followers,  notes,  lastcontacted, lastcontactedby, removed)
+												  VALUES (NULL, :firstname, :surnames, :email, :priorities, :twitter, :twitter_followers, :notes, :lastcontacted, :lastcontactedby, :removed);");
+				$stmt4->bindValue(":firstname", $to, Database::VARTYPE_STRING);
+				$stmt4->bindValue(":surnames", "", Database::VARTYPE_STRING);
 				$stmt4->bindValue(":email", $to, Database::VARTYPE_STRING);
 				$stmt4->bindValue(":priorities", db_defaultPrioritiesString($db), Database::VARTYPE_STRING);
 				$stmt4->bindValue(":twitter", "", Database::VARTYPE_STRING);

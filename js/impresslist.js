@@ -2297,7 +2297,7 @@ Person = function(data) {
 
 		if (text.length == 0) { return ret; }
 
-		ret = this.name.toLowerCase().indexOf(text) != -1;
+		ret = this.fullname().toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
 		ret = this.field('notes').toLowerCase().indexOf(text) != -1;
