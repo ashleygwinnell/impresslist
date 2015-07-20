@@ -4,6 +4,7 @@ API = function() {
 API.prototype = {
 
 }
+
 API.listPeople = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 	
@@ -52,8 +53,6 @@ API.listPublications = function(fromInit) {
 			}
 			if (fromInit) { 
 				impresslist.refreshFilter(); 
-				API.listCoverage(fromInit); 
-
 			}
 		})
 		.fail(function() {
@@ -113,6 +112,7 @@ API.listPersonYoutubeChannels = function(fromInit) {
 API.listYoutubeChannels = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
+	impresslist.loading.set('youtubeChannels', true); 
 	var url = "api.php?endpoint=/youtuber/list/";
 	$.ajax( url )
 		.done(function(result) {
@@ -129,7 +129,11 @@ API.listYoutubeChannels = function(fromInit) {
 				var youtuber = new Youtuber(json.youtubechannels[i]);
 				impresslist.addYoutuber(youtuber, fromInit);
 			}
-			if (fromInit) { impresslist.refreshFilter(); }
+			if (fromInit) { 
+				impresslist.refreshFilter(); 
+				API.listCoverage(fromInit); 
+			}
+			impresslist.loading.set('youtubeChannels', false); 
 		})
 		.fail(function() {
 			API.errorMessage("Could not list Youtubers.");
@@ -208,9 +212,11 @@ API.addPerson = function() {
 				return;
 			}
 			API.successMessage("Person added.");
+			console.log(json);
 
 			var person = new Person(json.person);
 			impresslist.addPerson(person, false);
+			$(person.openSelector()).click();
 		})
 		.fail(function() {
 			API.errorMessage("Could not add Person.");
@@ -616,6 +622,7 @@ API.addPublication = function() {
 
 			var publication = new Publication(json.publication);
 			impresslist.addPublication(publication, false);
+			$(publication.openSelector()).click();
 		})
 		.fail(function() {
 			API.errorMessage("Could not add Publication.");
@@ -719,6 +726,7 @@ API.addYoutuber = function() {
 
 			var youtuber = new Youtuber(json.youtubechannel);
 			impresslist.addYoutuber(youtuber, false);
+			$(youtuber.openSelector()).click();
 		})
 		.fail(function() {
 			API.errorMessage("Could not add Youtuber.");
@@ -1494,10 +1502,14 @@ Youtuber = function(data) {
 		$('#youtubers').append(html);
 		
 		var youtuber = this;
-		$("#youtubers [data-youtuber-tablerow='true'][data-youtuber-id='" + this.id + "']").click(function() {
+		$(this.openSelector()).click(function() {
 			youtuber.open();
 		});
 	};
+	Youtuber.prototype.openSelector = function() {
+		return "#youtubers [data-youtuber-tablerow='true'][data-youtuber-id='" + this.id + "']";
+	};
+
 	Youtuber.prototype.removeTableRow = function() {
 		$("#youtubers [data-youtuber-tablerow='true'][data-youtuber-id='" + this.id + "']").remove();
 	}
@@ -1760,7 +1772,7 @@ Person = function(data) {
 		DBO.prototype.init.call(this, data);
 
 		this.id = this.field('id');
-		this.name = this.field('name');
+		this.name = this.field('firstname');
 		//this.publications = [];
 
 		this.initPriorities('priorities');
@@ -2203,10 +2215,13 @@ Person = function(data) {
 		$('#people').append(html);
 		
 		var person = this;
-		$("#people [data-person-tablerow='true'][data-person-id='" + this.id + "']").click(function() {
+		$(this.openSelector()).click(function() {
 			person.open();
 		});
 	},
+	Person.prototype.openSelector = function() {
+		return "#people [data-person-tablerow='true'][data-person-id='" + this.id + "']";
+	};
 	Person.prototype.removeTableRow = function() {
 		$("#people [data-person-tablerow='true'][data-person-id='" + this.id + "']").remove();
 
@@ -2453,10 +2468,13 @@ Publication = function(data) {
 		$('#publications').append(html);
 
 		var publication = this;
-		$("#publications [data-publication-tablerow='true'][data-publication-id='" + this.id + "']").click(function() {
+		$(this.openSelector()).click(function() {
 			publication.open();
 		});
 	}
+	Publication.prototype.openSelector = function() {
+		return "#publications [data-publication-tablerow='true'][data-publication-id='" + this.id + "']";
+	};
 	Publication.prototype.removeTableRow = function() {
 		$("#publications [data-publication-tablerow='true'][data-publication-id='" + this.id + "']").remove();
 	}
@@ -2540,6 +2558,7 @@ var impresslist = {
 		publications: false,
 		personPublications: false,
 		personYoutubeChannels: false,
+		youtubeChannels: false,
 		emails: false,
 		users: false,
 		games: false,
@@ -2555,6 +2574,7 @@ var impresslist = {
 		}
 	},
 	init: function() {
+		//API.listJobs();
 		API.listPeople();
 		API.listPublications();
 		API.listPersonPublications();
@@ -2596,6 +2616,9 @@ var impresslist = {
 
 		// Chat functionality
 		this.chat.init();
+
+		// TODO functionality
+		this.jobs.init();
 		
 		this.refreshFilter();
 	},
@@ -2815,6 +2838,76 @@ var impresslist = {
 	}
 
 
+};
+
+impresslist.jobs = {
+	selectors: {
+		text: "#jobs-textarea",
+		button: "#jobs-save-all"
+	},
+	init: function(fromInit) {
+		this.update(fromInit);
+
+		var thiz = this;
+		$(this.selectors.button).click(function() {
+			var message = $(thiz.selectors.text).val();
+			if (message.trim().length > 0) { 
+				thiz.save(message);
+			}
+		});
+	},
+	update: function(fromInit) {
+		var thiz = this;
+		var url = "api.php?endpoint=/job/list/";
+		$.ajax( url )
+			.done(function(result) {
+				if (result.substr(0, 1) != '{') { 
+					API.errorMessage(result);
+					return;
+				}
+				var json = JSON.parse(result);
+				if (!json.success) {
+					API.errorMessage(json.message);
+					return;
+				}
+				thiz.populate(json.jobs);
+				$(thiz.selectors.button).removeAttr('disabled');
+				
+			})
+			.fail(function() {
+				API.errorMessage("Could not list Jobs.");
+			});
+	},
+	save: function(message) {
+		var thiz = this;
+		var url = "api.php?endpoint=/job/save-all/&jobs=" + encodeURIComponent(message);
+		$.ajax( url )
+			.done(function(result) {
+				if (result.substr(0, 1) != '{') { 
+					API.errorMessage(result);
+					return;
+				}
+				var json = JSON.parse(result);
+				if (!json.success) { API.errorMessage(json.message); return; }
+				
+				thiz.populate(json.jobs);
+				API.successMessage("Jobs saved");
+			})
+			.fail(function() {
+				API.errorMessage("Could not save Jobs.");
+			});
+	},
+	populate: function(jobs) {
+		var jobsString = "";
+		for(var i = 0; i < jobs.length; ++i) {
+			jobsString += jobs[i];
+			if (i < jobs.length - 1) {
+				jobsString += "\n";
+			}
+		}
+		console.log(jobsString);
+		$(this.selectors.text).html(jobsString);
+	} 
 };
 
 

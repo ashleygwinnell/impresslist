@@ -449,6 +449,8 @@ function slack_incomingWebhook($data) {
 	curl_setopt($ch, CURLOPT_URL, $slack_apiUrl);
 	curl_setopt($ch, CURLOPT_POST, count($fields));
 	curl_setopt($ch, CURLOPT_POSTFIELDS, $fields_string);
+	curl_setopt($ch, CURLOPT_MUTE, 1);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 
 	$result = curl_exec($ch);
 	return $result;
@@ -472,6 +474,34 @@ function slack_coverageAlert($fromName, $coverageTitle, $url) {
 					array(
 						"title" => $fromName,
 						"value" => "<" . $url . "|" . $coverageTitle . ">",
+						"short" => false
+					)
+				)
+			)
+		)
+	);
+	return slack_incomingWebhook($data);	
+}
+function slack_jobsChanged($arr, $fromUser) {
+	global $slack_enabled;
+	if (!$slack_enabled) { return ""; }
+
+	$str = implode("\n", $arr);
+
+	$data = array(
+		"text" => "*Jobs Updated!*",
+		"username" => "impress[]",
+		"icon_emoji" => "thumbsup",
+		"unfurl_links" => true,
+		"attachments" => array(
+			array(
+				"fallback" => $url,
+				//"pretext" => "*Coverage Alert!*",
+				"color" => "#eeeeee",
+				"fields" => array(
+					array(
+						"title" => "by " . $fromUser,
+						"value" => $str,
 						"short" => false
 					)
 				)

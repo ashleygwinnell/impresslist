@@ -103,6 +103,8 @@ if (!isset($_GET['endpoint'])) {
 	$endpoints = array(
 		"/backup/",
 		"/backup-sql/",
+		"/job/list/",
+		"/job/save-all/",
 		"/person/list/",
 		"/person/add/",
 		"/person/save/",
@@ -193,6 +195,57 @@ if (!isset($_GET['endpoint'])) {
 		} 
 
 
+
+		else if ($endpoint == "/job/list/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$results = $db->query("SELECT * FROM settings WHERE `key` = 'todolist';");
+			if (count($results) == 0) {
+				$result = api_error("Jobs unavailable. Database error.");
+	 	 	} else { 
+				$arr = explode("\n", $results[0]['value']);
+				if (count($arr) == 0) {
+					$arr = $results[0]['value'];
+				}
+				$result = new stdClass();
+				$result->success = true;
+				$result->jobs = $arr;
+			}
+
+		}
+		else if ($endpoint == "/job/save-all/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'jobs', 'type' => 'textarea')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+
+				$jobs = $_GET['jobs'];
+
+				$stmt = $db->prepare("UPDATE settings SET `value` = :value WHERE `key` = :key;");
+				$stmt->bindValue(":key", 'todolist', Database::VARTYPE_STRING); 
+				$stmt->bindValue(":value", $jobs, Database::VARTYPE_STRING); 
+				$stmt->execute();
+
+				$arr = explode("\n", $jobs);
+				if (count($arr) == 0) { $arr = $jobs; }
+				
+				$result = new stdClass();
+				$result->success = true;
+				$result->jobs = $arr;
+
+				@slack_jobsChanged($arr, $user['forename'] . " " . $user['surname']);
+			}
+
+
+			
+		}
 
 		else if ($endpoint == "/person/list/") 
 		{
@@ -544,10 +597,10 @@ if (!isset($_GET['endpoint'])) {
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
-				$stmt = $db->prepare(" INSERT INTO person  (id,   firstname, name,  email, priorities,   twitter, twitter_followers,   notes, lastcontacted, lastcontactedby, removed)  
-													VALUES (NULL, :firstname, :name, :email, :priorities, :twitter, :twitter_followers, :notes, :lastcontacted, :lastcontactedby, :removed); ");
+				$stmt = $db->prepare(" INSERT INTO person  (id,   firstname, surnames,  email, priorities,   twitter, twitter_followers,   notes, lastcontacted, lastcontactedby, removed)  
+													VALUES (NULL, :firstname, :surnames, :email, :priorities, :twitter, :twitter_followers, :notes, :lastcontacted, :lastcontactedby, :removed); ");
 				$stmt->bindValue(":firstname", $_GET['firstname'], Database::VARTYPE_STRING); 
-				$stmt->bindValue(":name", $_GET['name'], Database::VARTYPE_STRING); 
+				$stmt->bindValue(":surnames", $_GET['surnames'], Database::VARTYPE_STRING); 
 				$stmt->bindValue(":email", "", Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter", "", Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter_followers", 0, Database::VARTYPE_INTEGER);
