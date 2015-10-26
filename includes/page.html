@@ -58,6 +58,8 @@
 				    			<li class="divider"></li>
 								<li><a id='nav-add-coverage-publication' href="javascript:;">Coverage (Publication)</a></li>
 								<li><a id='nav-add-coverage-youtuber' href="javascript:;">Coverage (Youtuber)</a></li>
+								<li class="divider"></li>
+								<li><a id='nav-importtool' data-nav-page="importtool" href="javascript:;">Import</a></li>
 								<!-- <li><a id='nav-add-coverage-youtuber' href="javascript:;">Coverage (Youtuber)</a></li> -->
 				    			
 				    		</ul>
@@ -345,6 +347,47 @@
 			</div>
 			<br/><br/>
 
+		</div>
+
+		<!-- Import tool -->
+		<div id='importtool-page' data-type-page='true' data-page='importtool'>
+			<div class='container mycontainer'>
+				<p><b>Import</b></p>
+				<div id='importtool-type-container'>
+					<!-- <input type='radio' name='importtype' value='imp'/> SQL (impress[] export) &nbsp; --> 
+					<input id='importtool-type-csv' type='radio' name='importtool-type' value='csv'/> CSV (Comma separated values) &nbsp; 
+					<input id='importtool-type-tsv' type='radio' name='importtool-type' value='tsv'/> TSV (Tab separated values)
+				</div>
+				<textarea id='importtool-maintext' class='messages form-control' style='margin-top:10px;margin-bottom:10px;min-height:100px; overflow:scroll;' placeholder="Paste contents here..."></textarea>
+				<p><b><i>Please specify input format:</i></b></p>
+
+				<select id='importtool-fieldselect' class='form-control' style='margin-bottom:10px;'>
+					<option value='---'>---</option>
+					<option value='person_firstname'>Person - First Name</option>
+					<option value='person_surname'>Person - Surname</option>
+					<option value='person_email'>Person - Email</option>
+					<option value='person_twitter'>Person - Twitter</option>
+					<option value='person_notes'>Person - Notes</option>
+					<option value='person_unknown'>Person - Unlisted field</option>
+					<option value='publication_name'>Publication - Name</option>
+					<option value='publication_website'>Publication - Website</option>
+					<option value='publication_rssfeed'>Publication - RSS URL</option>
+					<option value='publication_twitter'>Publication - Twitter</option>
+					<option value='publication_notes'>Publication - Notes</option>
+					<option value='publication_unknown'>Publication - Unlisted field</option>
+				</select>
+
+				<div id='importtool-order' style='margin-bottom:10px;'>
+					
+				</div>
+
+				<!-- <select id='importtool-selectorder' multiple type="text" class='form-control' data-role="tagsinput">
+				</select> -->
+
+				<button id='importtool-submit' class='btn btn-primary'>Import</button>
+				
+
+			</div>
 		</div>
 
 		<!-- Admin panel -->

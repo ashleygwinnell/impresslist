@@ -45,3 +45,38 @@ h3 {
 #coverage-page { display:none; }
 #admin-page { display:none; }
 #help-page { display:none; }
+#importtool-page { display:none; }
+
+/* Override text input for tags */
+.bootstrap-tagsinput { 
+	min-height:34px;
+	/*height:34px;*/
+	display:none;
+}
+.bootstrap-tagsinput input {
+	user-select:none;
+	-webkit-user-select:none;
+	display:none;
+}
+.bootstrap-tagsinput[disabled] {
+	cursor: not-allowed;
+    background-color: #eee;
+    opacity: 1
+}
+.bootstrap-tagsinput[disabled] span[data-role="remove"] {
+	display:none;
+}
+
+/* OK. That jquery plugin was naff. Roll your own simple solution. */
+.tag {
+	display:inline;
+	margin-right:5px;
+	background-color: #5bc0de;
+	border-radius: .25em;
+	color:white;
+	font-size:75%;
+	padding:.2em .6em .3em;
+	font-weight:bold;
+}
+.tag a { color:white; }
+

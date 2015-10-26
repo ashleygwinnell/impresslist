@@ -105,6 +105,7 @@ if (!isset($_GET['endpoint'])) {
 		"/backup-sql/",
 		"/job/list/",
 		"/job/save-all/",
+		"/import/",
 		"/person/list/",
 		"/person/add/",
 		"/person/save/",
@@ -243,6 +244,79 @@ if (!isset($_GET['endpoint'])) {
 				@slack_jobsChanged($arr, $user['forename'] . " " . $user['surname']);
 			}
 
+
+			
+		}
+
+		else if ($endpoint == "/import/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$importData = $_GET['data'];
+			$importType = $_GET['type'];
+			$importOrder = $_GET['order'];
+			$importOrderLength = count(explode(",", $importOrder));
+
+			if (strlen($importData) == 0) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = "Import data was empty.";
+			} else if ($importType != 'csv' && $importType != 'tsv') {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = "Invalid import type. Please select CSV or TSV.";	
+			} else {
+
+				$list = array(); 
+				$lines = str_getcsv($importData, "\n");
+
+				if (count($lines) == 0) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = "No import lines found.";
+				} else { 
+
+					$importerror = false;
+					$importerrorint = -1;
+					$importerrorcount = 0;
+
+					$i = 1;
+					$delimiter = ($importType == 'csv')?",":"\t";
+					$enclosure = ($importType == 'csv')?'"':"";
+					foreach($lines as $line) {
+						if (strlen($line) == 0) { continue; }
+						$csv = str_getcsv($line, $delimiter, $enclosure);
+
+						print_r($csv);
+						if (count($csv) != $importOrderLength) {
+							$importerror = true;
+							$importerrorint = $i;
+							$importerrorcount = count($csv);
+							break;
+						}
+
+						$list[] = $csv;
+						$i++;
+					}
+
+					if ($importerror) {
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = "Import line (" . ($importerrorint) . ") did not match length of order specified (" . $importerrorcount . " vs " . $importOrderLength . "). import type (" . $importType . ").";
+					} else {
+
+						$result = new stdClass();
+						$result->success = true;
+						$result->data = $list;
+						$result->order = $importOrder;
+
+					}
+					
+					
+				}
+
+			}
 
 			
 		}

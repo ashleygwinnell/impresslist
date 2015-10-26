@@ -14,7 +14,7 @@ for($i = 0; $i < $num_publications; ++$i) {
 	$rss = $publications[$i]['rssfeedurl'];
 	if (strlen($rss) > 0) {
 		//echo $rss . "<Br/>";
-		$rsscontent = file_get_contents($rss);
+		$rsscontent = url_get_contents($rss);
 		$latestArticleTimestamp = 0;
 		$offset = 0;
 		while(true) { 

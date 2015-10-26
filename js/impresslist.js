@@ -2596,6 +2596,7 @@ var impresslist = {
 		$('#nav-home').click(this.changePage);
 		$('#nav-coverage').click(this.changePage);
 		$('#nav-admin').click(this.changePage);
+		$('#nav-importtool').click(this.changePage);
 		$('#nav-help').click(this.changePage);
 		$('#nav-feedback').attr("href", impresslist.util.mailtoClient("ashley@forceofhab.it", "impresslist feedback", ""));
 		$('#sql-query-submit').click(function() { API.sqlQuery( $('#sql-query-text').val() ); });
@@ -2613,6 +2614,73 @@ var impresslist = {
 		$('#filter-email-attached').change(this.refreshFilter);
 		$('#filter-assigned-self').change(this.refreshFilter);
 
+		// Import tool
+		$('#importtool-fieldselect').change(function() {
+			var val = $(this).val();
+			if (val == '---') { return; }
+			var html = "<div class='tag' data-tag='" + val + "'>" + val + " &nbsp; <a href='javascript:;' data-remove-tag='" + val + "'>x</a></div>";
+			$('#importtool-order').append(html);
+			$('#importtool-fieldselect').val('---');
+
+			$('a[data-remove-tag="'+ val +'"]').click(function(){
+				$('.tag[data-tag="'+ val +'"]').remove();
+			});
+		});
+		$('#importtool-submit').click(function() {
+
+			var importtool_disableForm = function(boo) {
+				$('#importtool-type-csv').attr('disabled', boo);
+				$('#importtool-type-tsv').attr('disabled', boo);
+				$('#importtool-maintext').attr("disabled", boo);
+				$('#importtool-fieldselect').attr("disabled", boo);
+				//$('#importtool-selectorder').attr("disabled", boo);
+				$('#importtool-submit').attr("disabled", boo);
+				$('.bootstrap-tagsinput').attr('disabled',boo);
+			}
+			importtool_disableForm(true);
+			
+			var importString = $('#importtool-maintext').val();
+
+			var importType = $('input[name="importtool-type"]:checked').val();
+			if (importType == undefined) { 
+				importtool_disableForm(false); 
+				API.errorMessage("Invalid import type. Please select CSV or TSV."); 
+				return; 
+			}
+			console.log(importType);
+
+			var importOrder = []
+			var importTags = $('#importtool-order .tag');
+			for(var i = 0; i < importTags.length; i++) {
+				importOrder.push( $(importTags[i]).attr('data-tag') );
+			}
+			console.log(importOrder);
+
+			var url = "api.php?endpoint=/import/";
+			url += "&data=" + encodeURIComponent(importString);
+			url += "&type=" + encodeURIComponent(importType);
+			url += "&order=" + encodeURIComponent(importOrder.join());
+			$.ajax( url )
+				.done(function(result) {
+					importtool_disableForm(false);
+					if (result.substr(0, 1) != '{') { 
+						API.errorMessage(result);
+						return;
+					}
+					var json = JSON.parse(result);
+					if (!json.success) {
+						API.errorMessage(json.message);
+						return;
+					}
+					alert(result);
+					
+				})
+				.fail(function() {
+					API.errorMessage("Could not import list.");
+					importtool_disableForm(false);
+				});
+
+		})
 
 		// Chat functionality
 		this.chat.init();

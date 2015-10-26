@@ -237,6 +237,29 @@ function twitter_countFollowers($username)
 	return $twitter_content[0]->followers_count;
 }
 
+function url_get_contents($url) {
+
+	$ch = curl_init();
+	curl_setopt ($ch, CURLOPT_URL, $url);
+	curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, 5);
+	curl_setopt ($ch, CURLOPT_RETURNTRANSFER, true);
+	$contents = curl_exec($ch);
+	if (curl_errno($ch)) {
+		//echo curl_error($ch);
+		//echo "\n<br />";
+		$contents = '';
+	} else {
+		curl_close($ch);
+	}
+
+	if (!is_string($contents) || !strlen($contents)) {
+		//echo "Failed to get contents.";
+		$contents = '';
+	}
+
+	return $contents;
+}
+
 // ----------------------------------------------------------------------------
 // Youtube
 // ----------------------------------------------------------------------------
@@ -277,7 +300,7 @@ function youtube_v3_getInformation($channel) {
 	if (strlen($channel) == 0) { return 0; }
 
 	$url = "https://www.googleapis.com/youtube/v3/channels?forUsername=" .$channel . "&key=" . $youtube_apiKey . "&part=contentDetails,snippet,statistics&maxResults=50";
-	$text = file_get_contents($url);
+	$text = url_get_contents($url);
 	if (substr($text, 0, 1) != "{") { 
 		return 0;
 	}
@@ -304,7 +327,7 @@ function youtube_v3_getUploads($playlist) {
 	if (strlen($playlist) == 0) { return 0; }
 
 	$url = "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=" . $playlist . "&key=" . $youtube_apiKey;
-	$text = file_get_contents($url);
+	$text = url_get_contents($url);
 	if (substr($text, 0, 1) != "{") { 
 		return 0;
 	}
