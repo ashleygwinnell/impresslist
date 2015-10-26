@@ -1712,7 +1712,7 @@ PersonPublication = function(data) {
 
 
 PersonYoutubeChannel = function(data) {
-	DBO.call(this, data); 
+	DBO.call(this, data);
 }
 	PersonYoutubeChannel.prototype = Object.create(DBO.prototype);
 	PersonYoutubeChannel.prototype.constructor = PersonYoutubeChannel;
@@ -1801,6 +1801,9 @@ Person = function(data) {
 		API.setPersonAssignment(this, assignment);
 	}
 	
+	Person.prototype.preventOpen = function() {
+		$('#modals').html("");
+	}
 	Person.prototype.open = function() {
 
 		var html = "<div class='modal fade person_modal' tabindex='-1' role='dialog'> \
@@ -2207,18 +2210,71 @@ Person = function(data) {
 
 		var html = "	<tr data-person-id='" + this.field('id') + "' data-person-tablerow='true' class='table-list' data-toggle='modal' data-target='.person_modal'> \
 							<!-- <td data-person-id='" + this.field('id') + "' data-field='id' data-value='" + this.field('id') + "'>" + this.field('id') + "</td> -->\
-							<td data-person-id='" + this.field('id') + "' data-field='name' data-value='" + this.fullname() + "'>" + this.fullname() + "</td> \
+							<td data-value='" + this.fullname() + "'> \
+								<span data-person-id='" + this.field('id') + "' data-field='name' >" + this.fullname() + "</span> \
+								<div data-person-id='" + this.field('id') + "' data-field='email-list'></div> \
+							</td> \
 							<td data-person-id='" + this.field('id') + "' data-field='priority' data-value='" + this.priority() + "'>" + Priority.name(this.priority()) + "</td> \
 							<td data-person-id='" + this.field('id') + "' data-field='twitter_followers' data-value='" + this.field('twitter_followers') + "'>" + this.twitterCell() + "</td> \
-							<td data-person-id='" + this.field('id') + "' data-field='last_contacted' data-value='" + this.field('lastcontacted') + "'>" + impresslist.util.relativetime_contact(this.field('lastcontacted')) + " " + lastcontactedbystring + "</td> \
-						</tr>";
+							<td data-person-id='" + this.field('id') + "' data-field='last_contacted' data-value='" + this.field('lastcontacted') + "'>" + impresslist.util.relativetime_contact(this.field('lastcontacted')) + " " + lastcontactedbystring + "</td>";
+		html += "		</tr>";
 		$('#people').append(html);
 		
+		// Events for this table row.
 		var person = this;
 		$(this.openSelector()).click(function() {
 			person.open();
 		});
 	},
+	Person.prototype.refreshEmails = function() {
+		// Extra (hidden) rows for each e-mail address the person has.
+		var emails = []
+		if (this.field('email').length > 0) {
+			emails.push({
+				type: "Personal",
+				person: this.field('id'),
+				name: this.fullname(),
+				email: this.field('email') 
+			});
+		}
+		for(var i = 0; i < impresslist.personPublications.length; ++i) {
+			if (impresslist.personPublications[i].field('person') == this.id) {
+				if (impresslist.personPublications[i].field('email').length > 0) { 
+					emails.push({
+						type: impresslist.findPublicationById( impresslist.personPublications[i].field('publication')).field("name"),
+						personPublication: impresslist.personPublications[i].field('id'),
+						name: this.fullname(),
+						email: impresslist.personPublications[i].field('email')
+					});	
+				}
+			}
+		}
+		var extraEmails = "";
+		for(var i = 0; i < emails.length; i++) {
+			extraEmails += "	<div data-type='person' data-person-id='" + this.field('id') + "' data-person-extra-tablerow='true' style='padding:5px;'>";
+			extraEmails += "		<input \
+										data-type='person' \
+										data-person-id='" + this.field('id') + "' \
+										data-checkbox='true' \
+										data-person-checkbox='true' \
+										data-mailout-name='" + emails[i]['name'] + "' \
+										data-mailout-type='" + emails[i]['type'] + "' \
+										data-mailout-email='" + emails[i]['email'] + "' \
+										type='checkbox' \
+										value='1'/>";
+			extraEmails += "		&nbsp; " + emails[i]['type'] + " - " + emails[i]['email'];
+			extraEmails += "	</div>";
+		}
+
+		$('div[data-person-id="' + this.field('id') + '"][data-field="email-list"]').html(extraEmails);
+
+		var person = this;
+		$("input[data-person-id='" + this.field('id') + "'][data-checkbox='true']").click(function(e) { 
+			impresslist.refreshMailoutRecipients(); 
+			person.preventOpen();
+			e.stopPropagation();
+		});
+	};
 	Person.prototype.openSelector = function() {
 		return "#people [data-person-tablerow='true'][data-person-id='" + this.id + "']";
 	};
@@ -2228,9 +2284,15 @@ Person = function(data) {
 	}
 
 	Person.prototype.filter = function(text) {
+		var elementExtras = $("#people [data-person-extra-tablerow='true'][data-person-id='" + this.id + "']");
+		elementExtras.hide();
+
 		var element = $("#people [data-person-tablerow='true'][data-person-id='" + this.id + "']");
 		if (this.search(text) && this.filter_isContactedByMe() && this.filter_isRecentlyContacted() && this.filter_isHighPriority() && this.filter_hasEmail() && this.filter_isAssignedToMe()) {
 			element.show();
+			if ($("#nav-select-all[data-type='person']").is(":visible")) {
+				elementExtras.show();
+			}
 			return true;
 		} else {
 			element.hide();
@@ -2595,6 +2657,7 @@ var impresslist = {
 		$('#nav-user-changepassword').click(function() { thiz.findUserById(thiz.config.user.id).openChangePassword(); });
 		$('#nav-home').click(this.changePage);
 		$('#nav-coverage').click(this.changePage);
+		$('#nav-mailout').click(this.changePage);
 		$('#nav-admin').click(this.changePage);
 		$('#nav-importtool').click(this.changePage);
 		$('#nav-help').click(this.changePage);
@@ -2680,7 +2743,57 @@ var impresslist = {
 					importtool_disableForm(false);
 				});
 
-		})
+		});
+
+		// Mailout tool.
+		$('#mailout-content').keyup(function(){
+			var md_content = $(this).val();
+			md_content = md_content.replace("{{first_name}}", "(First Name)");
+			var html_content = markdown.toHTML( md_content ); 
+			$('#mailout-preview').html(html_content);
+		});
+
+		// Select people en-masse
+		var selectAllCheckedForType = function(type, checked) {
+			$('input[data-'+type+'-checkbox="true"]').each(function(){
+				var visible = $(this).is(":visible");
+				if (visible) {
+					var typeId = $(this).attr('data-'+type+'-id');
+					if (typeId != undefined) {
+						if (checked) { 
+							$('input[data-'+type+'-checkbox="true"][data-'+type+'-id="' + typeId + '"]').prop("checked", true);
+						} else {
+							$('input[data-'+type+'-checkbox="true"][data-'+type+'-id="' + typeId + '"]').prop("checked", false);
+						}
+					}
+				}
+			})
+		}
+		
+		$('#nav-select-edit').click(function(){
+			
+			// Refresh emails for all people here.
+			for(var i = 0; i < impresslist.people.length; i++) {
+				impresslist.people[i].refreshEmails();
+			}
+			impresslist.refreshMailoutRecipients();
+
+			var type = $(this).attr('data-type');
+			$('.checkbox-column[data-type="' + type+ '"]').each(function(){
+				$(this).toggle();
+			});
+			impresslist.refreshFilter();
+		});
+		$('#nav-select-all').click(function(){
+			var type = $(this).attr('data-type');
+			selectAllCheckedForType(type, true);
+			impresslist.refreshMailoutRecipients();
+		});
+		$('#nav-deselect-all').click(function(){
+			var type = $(this).attr('data-type');
+			selectAllCheckedForType(type, false);
+			impresslist.refreshMailoutRecipients();
+		});
 
 		// Chat functionality
 		this.chat.init();
@@ -2737,49 +2850,73 @@ var impresslist = {
 		if (text.length > 0) { $('#chat-container').hide(); } else { $('#chat-container').show(); }
 
 	},
+	refreshMailoutRecipients: function() {
+		var peopleSelected = $('input[data-type="person"][data-checkbox="true"]:checked');
+
+		if (peopleSelected.length == 0) {
+			$('#mailout-recipients-none').show();
+			$('#mailout-recipients').hide();
+			return;
+		}
+
+		var html = "";
+		for(var i = 0; i < peopleSelected.length; i++) {
+			
+			html += "<tr>"
+			html += "	<td>" + $(peopleSelected[i]).attr('data-mailout-name') + "</td>";
+			html += "	<td>" + $(peopleSelected[i]).attr('data-mailout-type') + "</td>";
+			// " + $(peopleSelected[i]).attr('data-mailout-email') + "
+			html += "</tr>";
+		}
+
+		$('#mailout-recipients-tbody').html(html);
+
+		$('#mailout-recipients').show();
+		$('#mailout-recipients-none').hide();
+	},
 	
 	addPerson: function(obj, fromInit) {
-		obj.onAdded();
 		this.people.push(obj);
+		obj.onAdded();
 		if (!fromInit) { impresslist.refreshFilter(); }
 	},
 	addPublication: function(obj, fromInit) {
-		obj.onAdded();
 		this.publications.push(obj);
+		obj.onAdded();
 		if (!fromInit) { impresslist.refreshFilter(); }
 	},
 	addPersonPublication: function(obj, fromInit) {
-		obj.onAdded(fromInit);
 		this.personPublications.push(obj);
+		obj.onAdded(fromInit);
 		if (!fromInit) { impresslist.refreshFilter(); }
 	},
 	addPersonYoutubeChannel: function(obj, fromInit) {
-		obj.onAdded(fromInit);
 		this.personYoutubeChannels.push(obj);
+		obj.onAdded(fromInit);
 		if (!fromInit) { impresslist.refreshFilter(); }
 	},
 	addEmail: function(obj, fromInit) {
-		obj.onAdded();
 		this.emails.push(obj);
+		obj.onAdded();
 		if (!fromInit) { impresslist.refreshFilter(); }
 	},
 	addUser: function(obj, fromInit) {
-		obj.onAdded();
 		this.users.push(obj);
+		obj.onAdded();
 		if (!fromInit) { impresslist.refreshFilter(); }
 	},
 	addYoutuber: function(obj, fromInit) {
-		obj.onAdded();
 		this.youtubers.push(obj);
+		obj.onAdded();
 		if (!fromInit) { impresslist.refreshFilter(); }
 	},
 	addGame: function(obj, fromInit) {
-		obj.onAdded();
 		this.games.push(obj);
+		obj.onAdded();
 	},
 	addCoverage: function(obj, fromInit) {
-		obj.onAdded(fromInit);
 		this.coverage.push(obj);
+		obj.onAdded(fromInit);
 	},
 	removePerson: function(obj) {
 		for(var i = 0, len = this.people.length; i < len; ++i) {

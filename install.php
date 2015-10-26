@@ -44,6 +44,12 @@ if ($resetdb) {
 	$sql = "DROP TABLE email;";
 	$db->exec($sql);
 
+	$sql = "DROP TABLE emailcampaignsimple;";
+	$db->exec($sql);
+
+	$sql = "DROP TABLE emailqueue;";
+	$db->exec($sql);
+
 	$sql = "DROP TABLE game;";
 	$db->exec($sql);
 
@@ -194,6 +200,20 @@ $sql = "CREATE TABLE IF NOT EXISTS emailqueue (
 			`timestamp` INTEGER NOT NULL,
 			sent INTEGER NOT NULL DEFAULT 0
 		);";
+$db->exec($sql);
+
+// email (simple) camapaign system
+$sql = "CREATE TABLE IF NOT EXISTS emailcampaignsimple (
+			id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+			name VARCHAR(255) NOT NULL,
+			subject VARCHAR(255) NOT NULL,
+			recipients TEXT NOT NULL,
+			markdown TEXT NOT NULL,
+			`timestamp` INTEGER NOT NULL,
+			user INTEGER NOT NULL,
+			ready INTEGER NOT NULL DEFAULT 0,
+			sent INTEGER NOT NULL DEFAULT 0
+		);"
 $db->exec($sql);
 
 // create email boxes

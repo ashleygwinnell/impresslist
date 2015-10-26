@@ -48,6 +48,7 @@
 					<ul class="nav navbar-nav navbar-right">
 				    	<li><a id='nav-home' data-nav-page='home' href="javascript:;">Home</a></li>
 				    	<li><a id='nav-coverage' data-nav-page='coverage' href="javascript:;">Coverage</a></li>
+				    	<li><a id='nav-mailout' data-nav-page='mailout' href="javascript:;">Mailout</a></li>
 
 				    	<li class="dropdown">
 				    		<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Add <span class="caret"></span></a>
@@ -84,7 +85,7 @@
 
 				    <form class="navbar-form navbar-left" role="search">
 				    	<div class="form-group">
-				    		<input id='filter' type="text" class="form-control" placeholder="Search" style='width:400px;'>
+				    		<input id='filter' type="text" class="form-control" placeholder="Search" style='width:300px;'>
 				    	</div>
 				    </form>
 
@@ -134,7 +135,32 @@
 						<!-- People -->
 						<div id='people-container'>
 							<div class="panel panel-default">
-				  				<div class="panel-heading oa"><span class='fl'>People</span><span id='people-count' class='fr'>(0)</div>
+				  				<div class="panel-heading oa">
+				  					
+				  					
+				  					<span 
+				  						id='nav-select-edit' 
+				  						data-type='person' 
+				  						title='Select People' 
+				  						class='nav-table-topright-item glyphicon glyphicon-edit'
+				  						></span>
+
+				  					<span 
+										id='nav-deselect-all'
+				  						data-type='person'
+				  						title='Deselect All'
+				  						class='nav-table-topright-item glyphicon glyphicon-unchecked checkbox-column'></span>
+				  					<span 
+				  						id='nav-select-all'
+				  						data-type='person'
+				  						title='Select All'
+				  						class='nav-table-topright-item glyphicon glyphicon-check checkbox-column'
+				  						></span>
+				  					
+				  					<span class='fl'>People</span>
+
+				  					<span id='people-count' class='fr'>(0)</span>
+				  				</div>
 								<table class='table table-striped sortable' >
 									<thead>
 										<tr>
@@ -347,6 +373,71 @@
 			</div>
 			<br/><br/>
 
+		</div>
+
+		<!-- Mailout -->
+		<div id='mailout-page' data-type-page='true' data-page='mailout'>
+			<div class='container mycontainer'>
+				<div class='row'>
+					<div class='col-sm-4'>
+						<p><b>Mailout</b></p>
+						<p>Send an email out to multiple contacts. It contains tags available for mail merge features.</p>
+
+						<p><b>Tags:</b></p>
+						<ul>
+						<li><b>{{first_name}}</b> - Use contact's first name.</li>
+						</ul>
+					</div>
+					<div class='col-sm-8'>
+						<p><b>Name:</b></p>
+						<input class='form-control' name='mailout-name' placeholder='' /><br/>
+
+						<p><b>Subject line:</b></p>
+						<input class='form-control' name='mailout-subject' placeholder='' /><br/>
+
+						<p><b>Basic Content:</b></p>
+						<ul class="nav nav-tabs">
+							<li class="active"><a data-toggle="tab" href="#mailout-write">Write</a></li>
+							<li><a id='mailout-preview-tab' data-toggle="tab" href="#mailout-preview">Preview</a></li>
+						</ul>
+
+						<div class="tab-content">
+							<div id="mailout-write" class="tab-pane fade in active">
+								<textarea id='mailout-content' class='messages form-control' style='margin-top:10px;margin-bottom:10px;min-height:100px; overflow:scroll;' placeholder="Use Markdown..."></textarea>
+							</div>
+							<div id="mailout-preview" class="tab-pane fade" style=''>
+								
+							</div>
+						</div>
+
+						<div id='mailout-recipients' class='panel panel-default'>
+							<div class="panel-heading oa">
+				  				<span class="fl"><b>Recipients:</b></span>
+							</div>
+							<table class='table table-striped'>
+								<thead>
+									<tr>
+										<th>Name</th>
+										<th>Publication/Channel</th>
+									</tr>
+								</thead>
+								<tbody id='mailout-recipients-tbody'>
+
+								</tbody>
+							</table>
+						</div>
+						<div id='mailout-recipients-none'><p>No recipients added.</p></div>
+						<br/>
+						<button class='btn btn-primary'>Send</button>
+					</div>
+				</div>
+				
+
+				
+			</div>
+			<br/>
+			<br/>
+			<br/>
 		</div>
 
 		<!-- Import tool -->

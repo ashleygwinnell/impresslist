@@ -43,6 +43,7 @@ h3 {
 
 #home-page { display:block; }
 #coverage-page { display:none; }
+#mailout-page { display:none; }
 #admin-page { display:none; }
 #help-page { display:none; }
 #importtool-page { display:none; }
@@ -79,4 +80,23 @@ h3 {
 	font-weight:bold;
 }
 .tag a { color:white; }
+
+/* Mailout bits */
+#mailout-preview {
+	border-bottom:1px solid #ddd; 
+	padding:5px;
+	margin-bottom:10px;
+}
+#mailout-preview img {
+	width:100%;
+}
+#mailout-recipients { display:none; }
+
+.nav-table-topright-item {
+	float:right; 
+	margin-left:10px;
+	font-size:18px;
+	cursor:pointer;
+}
+.checkbox-column { display:none; }
 

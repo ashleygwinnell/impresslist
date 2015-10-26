@@ -105,7 +105,7 @@ if (!isset($_GET['endpoint'])) {
 		"/backup-sql/",
 		"/job/list/",
 		"/job/save-all/",
-		"/import/",
+		
 		"/person/list/",
 		"/person/add/",
 		"/person/save/",
@@ -135,6 +135,12 @@ if (!isset($_GET['endpoint'])) {
 		"/person-publication/list/",
 		"/person-youtube-channel/list/",
 		"/email/list/",
+
+		// Import tool/s
+		"/import/",
+
+		// Mailouts
+		"/mailout/simple/add/",
 
 		"/coverage/",
 		"/coverage/publication/add/",
@@ -248,6 +254,10 @@ if (!isset($_GET['endpoint'])) {
 			
 		}
 
+		else if ($endpoint == "/mailout/simple/add/") 
+		{
+			// [{"type":"person","person_id":333,"sent":true,"read":false},{"type":"personPublication","personPublication_id":221,"sent":true,"read":false}]
+		} 
 		else if ($endpoint == "/import/") 
 		{
 			$require_login = true;
@@ -1401,7 +1411,7 @@ if (!isset($_GET['endpoint'])) {
 						for ($j = 0; $j < count($lines); $j++) {
 							$line = $lines[$j];
 							$o = json_decode($line);
-							if ($o->time >= $latest_message_time) {
+							if ($o != null && $o->time >= $latest_message_time) {
 								$new_lines[] = $o;
 								$latest_message_time = $o->time;
 							}

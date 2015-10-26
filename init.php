@@ -9,6 +9,9 @@ include_once("includes/config.php");
 include_once("includes/util.php");
 include_once("includes/database.php");
 
+// Internal config vars
+$impresslist_version = "0.0.1";
+
 $cache = Cache::getInstance();
 
 // Sorts
