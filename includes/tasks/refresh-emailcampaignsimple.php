@@ -6,7 +6,7 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/libs/Parsedown-1.6.0.php");
 
 error_reporting(E_ALL);
 
-$queue = $db->query("SELECT * FROM emailcampaignsimple WHERE ready = 1 AND sent = 0 ORDER BY timestamp LIMIT 10;");
+$queue = $db->query("SELECT * FROM emailcampaignsimple WHERE ready = 1 AND sent = 0 AND `timestamp` <= " . time() . " ORDER BY timestamp LIMIT 10;");
 //print_r($queue);
 
 $Parsedown = new Parsedown();

@@ -141,6 +141,9 @@ if (!isset($_GET['endpoint'])) {
 
 		// Mailouts
 		"/mailout/simple/add/",
+		"/mailout/simple/save/",
+		"/mailout/simple/send/",
+		"/mailout/simple/remove/",
 
 		"/coverage/",
 		"/coverage/publication/add/",
@@ -256,8 +259,144 @@ if (!isset($_GET['endpoint'])) {
 
 		else if ($endpoint == "/mailout/simple/add/") 
 		{
+			$require_login = true;
+			include_once('init.php');
+
+			$stmt = $db->prepare("INSERT INTO emailcampaignsimple (id, name, subject, recipients, markdown, `timestamp`, user, ready, sent, removed) 
+														VALUES ( NULL, :name, :subject, :recipients, :markdown, :ts, :user, :ready, :sent, :removed);
+								");
+			$stmt->bindValue(":name", 		'Unnamed Mailout', 	Database::VARTYPE_STRING); 
+			$stmt->bindValue(":subject", 	"Subject", 			Database::VARTYPE_STRING); 
+			$stmt->bindValue(":recipients", "[]", 				Database::VARTYPE_STRING); 
+			$stmt->bindValue(":markdown", 	"", 				Database::VARTYPE_STRING); 
+			$stmt->bindValue(":ts", 		0, 					Database::VARTYPE_INTEGER); 
+			$stmt->bindValue(":user", 		$user_id, 			Database::VARTYPE_INTEGER); 
+			$stmt->bindValue(":ready", 		0, 					Database::VARTYPE_INTEGER); 
+			$stmt->bindValue(":sent", 		0, 					Database::VARTYPE_INTEGER); 
+			$stmt->bindValue(":removed", 	0, 					Database::VARTYPE_INTEGER); 
+			$stmt->execute();
+
+			$mailoutId = $db->lastInsertRowID();
+
+			$result = new stdClass();
+			$result->success = true;
+			$result->mailout = db_singlemailoutsimple( $mailoutId );
 			// [{"type":"person","person_id":333,"sent":true,"read":false},{"type":"personPublication","personPublication_id":221,"sent":true,"read":false}]
 		} 
+		else if ($endpoint == "/mailout/simple/save/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer'),
+				array('name' => 'name', 'type' => 'textarea'),
+				array('name' => 'subject', 'type' => 'textarea'),
+				array('name' => 'recipients', 'type' => 'textarea'),
+				array('name' => 'markdown', 'type' => 'textarea'),
+				array('name' => 'timestamp', 'type' => 'integer')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+
+				// validate person
+				$person = $_GET['person'];
+				if ($_GET['person'] != "" && !util_isInteger($person)) {
+					$result = api_error("person was not an integer");
+				} else { 
+
+					$json = json_decode($_GET['recipients']);
+					if ($json === NULL) {
+						$result = api_error("Invalid json passed.");
+					} else { 
+
+						// TODO: 
+						// Validate all people, personPublications, etc.
+						// [{"type":"person","person_id":333,"sent":true,"read":false},{"type":"personPublication","personPublication_id":221,"sent":true,"read":false}]
+						for($j = 0; $j < count($json); $j++) {
+							if ($json[$j]['type'] == "person") {
+
+							} else if ($json[$j]['type'] == "personPublication") {
+
+							} 
+						}
+
+						$stmt = $db->prepare("UPDATE emailcampaignsimple
+										SET 
+											name = :name, 
+											subject = :subject, 
+											recipients = :recipients, 
+											markdown = :markdown, 
+											`timestamp` = :ts, 
+											user = :user, 
+											ready = :ready, 
+											sent = :sent, 
+											removed = :removed
+										) WHERE id = :id; ");
+						$stmt->bindValue(":id", 		$_GET['id'], 		Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":name", 		$_GET['name'], 		Database::VARTYPE_STRING); 
+						$stmt->bindValue(":subject", 	$_GET['subject'], 	Database::VARTYPE_STRING); 
+						$stmt->bindValue(":recipients", "[]", 				Database::VARTYPE_STRING); 
+						$stmt->bindValue(":markdown", 	$_GET['markdown'], 	Database::VARTYPE_STRING); 
+						$stmt->bindValue(":ts", 		$_GET['timestamp'], Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":user", 		$user_id, 			Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":ready", 		0, 					Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":sent", 		0, 					Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":removed", 	0, 					Database::VARTYPE_INTEGER); 
+						$stmt->execute();
+
+						$result = new stdClass();
+						$result->success = true;
+						$result->mailout = db_singlemailoutsimple( $_GET['id'] );
+					}
+				}
+			}
+
+			
+		} 
+		else if ($endpoint == "/mailout/simple/send/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer')
+			);
+
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+
+				$stmt = $db->prepare(" UPDATE emailcampaignsimple SET ready = 1 WHERE id = :id");
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
+				$stmt->execute();
+				
+				$result = new stdClass();
+				$result->success = true;
+			}
+		}
+		else if ($endpoint == "/mailout/simple/remove/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer')
+			);
+
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+
+				$stmt = $db->prepare(" UPDATE emailcampaignsimple SET removed = 1 WHERE id = :id");
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
+				$stmt->execute();
+				
+				$result = new stdClass();
+				$result->success = true;
+			}
+		}
+
+
+
 		else if ($endpoint == "/import/") 
 		{
 			$require_login = true;

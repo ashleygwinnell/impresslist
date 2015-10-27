@@ -41,6 +41,11 @@
 		$youtubeChannels = $db->query("SELECT * FROM youtuber WHERE id = '" . $youtuberId . "' LIMIT 1;");
 		return $youtubeChannels[0];
 	}
+	function db_singlemailoutsimple($db, $mailoutId) {
+		if (!is_numeric($mailoutId)) { return false; }
+		$mailouts = $db->query("SELECT * FROM emailcampaignsimple WHERE id = '" . $mailoutId . "' LIMIT 1;");
+		return $mailouts[0];
+	}
 	function db_defaultPrioritiesString($db) {
 		$string = "";
 		$count = 0;
