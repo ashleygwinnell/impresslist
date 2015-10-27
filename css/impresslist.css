@@ -82,6 +82,8 @@ h3 {
 .tag a { color:white; }
 
 /* Mailout bits */
+#mailout-homepage { display:inherit; }
+#mailout-writepage { display:none; }
 #mailout-preview {
 	border-bottom:1px solid #ddd; 
 	padding:5px;
@@ -99,4 +101,5 @@ h3 {
 	cursor:pointer;
 }
 .checkbox-column { display:none; }
+
 

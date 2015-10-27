@@ -191,6 +191,157 @@ API.listCoverage = function(fromInit) {
 			API.errorMessage("Could not list Emails.");
 		});
 }
+API.listSimpleMailouts = function(fromInit) {
+	if (typeof fromInit == 'undefined') { fromInit = true; }
+	
+	var url = "api.php?endpoint=/mailout/simple/list/";
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			
+			for(var i = 0; i < json.mailouts.length; ++i) { 
+				var mailout = new SimpleMailout(json.mailouts[i]);
+				impresslist.addSimpleMailout(mailout, fromInit);
+			}
+			
+		})
+		.fail(function() {
+			API.errorMessage("Could not list Mailouts.");
+		});
+}
+API.addSimpleMailout = function() {
+	var url = "api.php?endpoint=/mailout/simple/add/";
+	console.log(url);
+	
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Simple Mailout added.");
+			console.log(json);
+
+			var simpleMailout = new SimpleMailout(json.mailout);
+			impresslist.addSimpleMailout(simpleMailout, false);
+		})
+		.fail(function() {
+			API.errorMessage("Could not add Simple Mailout.");
+		});
+}
+API.saveSimpleMailout = function(obj, name, subject, recipients, markdown, timestamp, callbackfunction) {
+	
+	var url = "api.php?endpoint=/mailout/simple/save/" + 
+					"&id=" + encodeURIComponent(obj.id) + 
+					"&name=" + encodeURIComponent(name) + 
+					"&subject=" + encodeURIComponent(subject) + 
+					"&recipients=" + encodeURIComponent( JSON.stringify(recipients) ) + 
+					"&markdown=" + encodeURIComponent(markdown) + 
+					"&timestamp=" + encodeURIComponent(timestamp);
+	console.log(url);
+
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return; 
+			}
+			API.successMessage("Simple Mailout saved.");
+			obj.init(json.mailout);
+			obj.update();
+			callbackfunction();
+		})
+		.fail(function() {
+			API.errorMessage("Could not save Simple Mailout.");
+		});
+}
+API.sendSimpleMailout = function(obj) {
+	var url = "api.php?endpoint=/mailout/simple/send/" + 
+					"&id=" + encodeURIComponent(obj.id);
+	console.log(url);
+
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return; 
+			}
+			API.successMessage("Simple Mailout sent!");
+			obj.init(json.mailout);
+			obj.update();
+		})
+		.fail(function() {
+			API.errorMessage("Could not send Simple Mailout.");
+		});
+}
+API.cancelSimpleMailout = function(obj) {
+	var url = "api.php?endpoint=/mailout/simple/cancel/" + 
+					"&id=" + encodeURIComponent(obj.id);
+	console.log(url);
+
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return; 
+			}
+			API.successMessage("Simple Mailout cancelled send!");
+			obj.init(json.mailout);
+			obj.update();
+		})
+		.fail(function() {
+			API.errorMessage("Could not cancel send of Simple Mailout.");
+		});
+}
+API.removeSimpleMailout = function(simpleMailout) {
+	var url = "api.php?endpoint=/mailout/simple/remove/&id=" + encodeURIComponent(simpleMailout.id);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Simple Mailout removed.");
+			impresslist.removeSimpleMailout(simpleMailout);
+		})
+		.fail(function() {
+			API.errorMessage("Could not remove Simple Mailout.");
+		});
+}
 
 API.addPerson = function() {
 	var firstname = "Blank";
@@ -936,6 +1087,8 @@ Email = function(data) {
 		//this.user_id = this.field('user_id');
 		//this.person_id = this.field('person_id');
 	}
+
+
 
 Coverage = function(data) {
 	DBO.call(this, data); 
@@ -1760,7 +1913,233 @@ PersonYoutubeChannel = function(data) {
 
 
 
+SimpleMailout = function(data) {
+	DBO.call(this, data);
+}
+	SimpleMailout.prototype = Object.create(DBO.prototype);
+	SimpleMailout.prototype.constructor = SimpleMailout;
+	SimpleMailout.prototype.init = function(data) {
+		DBO.prototype.init.call(this, data);
+		this.id = this.field('id');
+		
+		// Todo: Calculate and cache this server-side or something.
+		this.numRecipients = 0;
+		this.numOpens = 0;
+		this.recipientsData = JSON.parse(data.recipients);
+		for(var i = 0; i < this.recipientsData.length; i++) {
+			if (this.recipientsData[i].read) {
+				this.numOpens++;
+			}
+			this.numRecipients++; 
+		}
+	}
+	SimpleMailout.prototype.createTableRow = function() {
+		var html = "	<tr data-simplemailout-id='" + this.field('id') + "' data-simplemailout-tablerow='true' class='table-list' > \
+							<td data-simplemailout-id='" + this.field('id') + "' data-field='name' data-value='" + this.field('name') + "'>" + this.field('name') + "</td> \
+							<td data-simplemailout-id='" + this.field('id') + "' data-field='numRecipients' data-value='" + this.numRecipients + "'>" + this.numRecipients + "</td> \
+							<td data-simplemailout-id='" + this.field('id') + "' data-field='numOpens' data-value='" + this.numOpens + "'>" + this.numOpens + "</td>\
+							<td data-simplemailout-id='" + this.field('id') + "' data-field='timestamp' data-value='" + this.field('timestamp') + "'>...</td>";
+		html += "		</tr>";
+		$('#mailout-list-tbody').append(html);
+		$('#mailout-list-footer').hide();
+		
+		// Events
+		var mailout = this;
+		$('tr[data-simplemailout-id="' + this.field('id') + '"][data-simplemailout-tablerow="true"]').unbind("click");
+		$('tr[data-simplemailout-id="' + this.field('id') + '"][data-simplemailout-tablerow="true"]').click(function() {
+			mailout.open();
+		});
 
+		this.update();
+	}
+	SimpleMailout.prototype.removeTableRow = function() {
+		$("[data-simplemailout-tablerow='true'][data-simplemailout-id='" + this.field('id') + "']").remove();
+	}
+	SimpleMailout.prototype.update = function() {
+		var sentText = "";
+		if (this.field("sent") == 1) {
+			sentText = "Sent " + impresslist.util.relativetime_contact(this.field('timestamp'));
+		} else if (this.field("ready") == 1 && (Date.now() / 1000) <= this.field('timestamp') ) {
+			sentText = "Scheduled " + impresslist.util.relativetime_contact(this.field('timestamp'));
+		} else if (this.field("ready") == 1 && (Date.now() / 1000) > this.field('timestamp') ) {
+			sentText = "In send queue.";
+		} else {
+			sentText = "Draft";
+		}
+
+		$("[data-simplemailout-id='" + this.id + "'][data-field='name']").html( this.field('name') );
+		$("[data-simplemailout-id='" + this.id + "'][data-field='numRecipients']").html( this.numRecipients );
+		$("[data-simplemailout-id='" + this.id + "'][data-field='numOpens']").html( this.numOpens );		
+		$("[data-simplemailout-id='" + this.id + "'][data-field='timestamp']").html( sentText );		
+	}
+	SimpleMailout.prototype.send = function() {
+		var mailout = this;
+		this.save(function() {
+			API.sendSimpleMailout(mailout);	
+			mailout.close();
+		});		
+	}
+	SimpleMailout.prototype.cancelsend = function() {
+		API.cancelSimpleMailout(this);
+		this.close();
+	}
+	SimpleMailout.prototype.save = function(callback) {
+		if (typeof callback == 'undefined') { callback = function() {}; }
+		var name = $('#mailout-name').val();
+		var subject = $('#mailout-subject').val();
+		var markdown = $('#mailout-content').val();
+		
+		var recipients = [];
+		var peopleSelected = $('input[data-type="person"][data-checkbox="true"]:checked');
+		for(var i = 0; i < peopleSelected.length; i++) {
+			var obj = {	};
+			obj.type = $(peopleSelected[i]).attr('data-mailout-type');
+			obj.sent = false;
+			obj.read = false;
+			if (obj.type == 'person') {
+				obj.person_id = $(peopleSelected[i]).attr('data-mailout-typeid');
+			} else if (obj.type == "personPublication") {
+				obj.personPublication_id = $(peopleSelected[i]).attr('data-mailout-typeid');
+			}
+			recipients.push(obj);
+		}
+		// #####
+		//  $('#mailout-radio-time-asap');
+		var whichtime = $('input[name="mailout-time-radio"]:checked').val();
+		if (whichtime == undefined) {
+			API.errorMessage("Please select a time for this mailout.");
+			return;
+		}
+		var timestamp = 0;
+		if (whichtime == 'later') {
+			var date = new Date($('#mailout-timepicker').data("DateTimePicker").date());
+			timestamp = Math.floor(date.getTime() / 1000);
+		}
+		
+		API.saveSimpleMailout(this, name, subject, recipients, markdown, timestamp, callback);
+	}
+	SimpleMailout.prototype.setFormEnabled = function(boo) {
+		boo = !boo;
+		$('#mailout-name').attr("disabled", boo); 
+		$('#mailout-subject').attr("disabled", boo);
+		$('#mailout-content').attr("disabled", boo);
+		$('#mailout-radio-time-asap').attr("disabled", boo);
+		$('#mailout-radio-time-scheduled').attr("disabled", boo);
+		$('#mailout-timepicker').attr("disabled", boo);
+		$('#mailout-edit-timestamp').attr("disabled", boo);
+		$('#mailout-writepage-back').attr("disabled", boo);
+		$('#mailout-writepage-save').attr("disabled", boo);
+		$('#mailout-writepage-send').attr("disabled", boo);
+		$('#mailout-writepage-cancelsend').attr("disabled", boo);
+		$('#mailout-writepage-remove').attr("disabled", boo);
+	}
+	SimpleMailout.prototype.open = function() {
+		console.log("mailout open");
+		$('#mailout-homepage').hide();
+		$('#mailout-writepage').show();
+		$('#mailout-writepage-send').hide();
+		$('#mailout-writepage-cancelsend').hide();
+
+		$('#mailout-writepage-save').show();
+		$('#mailout-writepage-remove').show();
+		if (this.field("ready") == 0) {
+			$('#mailout-writepage-send').show();
+		} 
+		if (this.field("ready") == 1 && this.field("sent") == 0) {
+			$('#mailout-writepage-cancelsend').show();
+		}
+		
+		this.setFormEnabled(true);
+
+		// Set data on form.
+		$('#mailout-name').val(this.field("name"));
+		$('#mailout-subject').val(this.field("subject"));
+		$('#mailout-content').val(this.field("markdown"));
+		$('#mailout-content').keyup();
+
+		var utime = this.field('timestamp');
+		if (utime == 0) {
+			utime = Date.now() / 1000;
+		}
+		$('#mailout-timepicker').datetimepicker();
+		$('#mailout-timepicker').data("DateTimePicker").defaultDate(moment(utime, "X"));
+		$('#mailout-timepicker').data("DateTimePicker").format("DD/MM/YYYY h:mma");
+
+		// Events
+		var mailout = this;
+		$('#mailout-writepage-save').unbind("click");
+		$('#mailout-writepage-save').click(function() {
+			mailout.save();
+		});
+		$('#mailout-writepage-send').unbind("click");
+		$('#mailout-writepage-send').click(function() {
+			mailout.send();
+		});
+		$('#mailout-writepage-cancelsend').unbind("click");
+		$('#mailout-writepage-cancelsend').click(function() {
+			mailout.cancelsend();
+		});
+		$('#mailout-writepage-back').unbind("click");
+		$('#mailout-writepage-back').click(function(){ 
+			mailout.close();
+		});
+		$('#mailout-writepage-remove').unbind("click");
+		$('#mailout-writepage-remove').click(function() { 
+			mailout.setFormEnabled(false);
+			API.removeSimpleMailout(mailout); 
+		});
+		
+		// time picker
+		$('#mailout-radio-time-asap').unbind("click");
+		$('#mailout-radio-time-scheduled').unbind("click");
+		$('#mailout-radio-time-asap').click(function() { $('#mailout-timepicker').hide(); });
+		$('#mailout-radio-time-scheduled').click(function() { $('#mailout-timepicker').show(); });
+		if (this.field("timestamp") == 0) { 
+			$('#mailout-timepicker').hide();
+			$('#mailout-radio-time-asap').prop("checked", "true");
+		} else {
+			$('#mailout-timepicker').show();
+			$('#mailout-radio-time-scheduled').prop("checked", "true");
+		}
+
+		// Sync recipients.
+		impresslist.openSelectMode();
+		for(var i = 0; i < this.recipientsData.length; i++) {
+			if (this.recipientsData[i].type == 'person') {
+				var p = impresslist.findPersonById(this.recipientsData[i].person_id);
+				var box = $('input[data-type="person"][data-mailout-typeid="' + p.id + '"][data-checkbox="true"][data-mailout-type="person"]');
+				$(box).prop("checked", true);
+			} else if (this.recipientsData[i].type == "personPublication") {
+				var p = impresslist.findPersonPublicationById(this.recipientsData[i].personPublication_id);
+				var box = $('input[data-type="person"][data-mailout-typeid="' + p.id + '"][data-checkbox="true"][data-mailout-type="personPublication"]');
+				$(box).prop("checked", true);
+			}
+		}
+		impresslist.refreshMailoutRecipients();
+
+		console.log (this.field("sent"));
+		if (this.field("sent") == 1) {
+			this.setFormEnabled(false);
+			$('#mailout-writepage-back').attr("disabled", false);
+			$('#mailout-writepage-save').hide();
+			$('#mailout-writepage-remove').hide();
+			$('#mailout-writepage-send').hide();
+		}
+	}
+	SimpleMailout.prototype.close = function() {
+		console.log("mailout close");
+		impresslist.closeSelectMode();
+		$('#mailout-writepage').hide();
+		$('#mailout-homepage').show();
+	}
+	SimpleMailout.prototype.onAdded = function(fromInit) {
+		this.createTableRow();
+	}
+	SimpleMailout.prototype.onRemoved = function(fromInit) {
+		this.setFormEnabled(true);
+		this.removeTableRow();
+		this.close();
+	}
 
 
 Person = function(data) {
@@ -2231,7 +2610,9 @@ Person = function(data) {
 		var emails = []
 		if (this.field('email').length > 0) {
 			emails.push({
-				type: "Personal",
+				type: "person",
+				typeId: this.field("id"),
+				typeName: "Personal",
 				person: this.field('id'),
 				name: this.fullname(),
 				email: this.field('email') 
@@ -2241,7 +2622,9 @@ Person = function(data) {
 			if (impresslist.personPublications[i].field('person') == this.id) {
 				if (impresslist.personPublications[i].field('email').length > 0) { 
 					emails.push({
-						type: impresslist.findPublicationById( impresslist.personPublications[i].field('publication')).field("name"),
+						type: "personPublication",
+						typeId: impresslist.personPublications[i].field("id"),
+						typeName: impresslist.findPublicationById( impresslist.personPublications[i].field('publication')).field("name"),
 						personPublication: impresslist.personPublications[i].field('id'),
 						name: this.fullname(),
 						email: impresslist.personPublications[i].field('email')
@@ -2259,10 +2642,12 @@ Person = function(data) {
 										data-person-checkbox='true' \
 										data-mailout-name='" + emails[i]['name'] + "' \
 										data-mailout-type='" + emails[i]['type'] + "' \
+										data-mailout-typeid='" + emails[i]['typeId'] + "' \
+										data-mailout-typename='" + emails[i]['typeName'] + "' \
 										data-mailout-email='" + emails[i]['email'] + "' \
 										type='checkbox' \
 										value='1'/>";
-			extraEmails += "		&nbsp; " + emails[i]['type'] + " - " + emails[i]['email'];
+			extraEmails += "		&nbsp; " + emails[i]['typeName'] + " - " + emails[i]['email'];
 			extraEmails += "	</div>";
 		}
 
@@ -2290,7 +2675,7 @@ Person = function(data) {
 		var element = $("#people [data-person-tablerow='true'][data-person-id='" + this.id + "']");
 		if (this.search(text) && this.filter_isContactedByMe() && this.filter_isRecentlyContacted() && this.filter_isHighPriority() && this.filter_hasEmail() && this.filter_isAssignedToMe()) {
 			element.show();
-			if ($("#nav-select-all[data-type='person']").is(":visible")) {
+			if (impresslist.selectModeIsOpen) {
 				elementExtras.show();
 			}
 			return true;
@@ -2615,6 +3000,7 @@ var impresslist = {
 	users: [],
 	games: [],
 	coverage: [],
+	simpleMailouts: [],
 	loading: {
 		people: false,
 		publications: false,
@@ -2643,8 +3029,7 @@ var impresslist = {
 		API.listPersonYoutubeChannels();
 		API.listYoutubeChannels();
 		API.listEmails();
-
-
+		API.listSimpleMailouts();
 		
 
 		// Navigation links
@@ -2654,6 +3039,7 @@ var impresslist = {
 		$('#nav-add-youtuber').click(API.addYoutuber);
 		$('#nav-add-coverage-publication').click(API.addPublicationCoverage);
 		$('#nav-add-coverage-youtuber').click(API.addYoutuberCoverage);
+		$('#nav-add-simplemailout').click(API.addSimpleMailout);
 		$('#nav-user-changepassword').click(function() { thiz.findUserById(thiz.config.user.id).openChangePassword(); });
 		$('#nav-home').click(this.changePage);
 		$('#nav-coverage').click(this.changePage);
@@ -2771,18 +3157,7 @@ var impresslist = {
 		}
 		
 		$('#nav-select-edit').click(function(){
-			
-			// Refresh emails for all people here.
-			for(var i = 0; i < impresslist.people.length; i++) {
-				impresslist.people[i].refreshEmails();
-			}
-			impresslist.refreshMailoutRecipients();
-
-			var type = $(this).attr('data-type');
-			$('.checkbox-column[data-type="' + type+ '"]').each(function(){
-				$(this).toggle();
-			});
-			impresslist.refreshFilter();
+			impresslist.toggleSelectMode();
 		});
 		$('#nav-select-all').click(function(){
 			var type = $(this).attr('data-type');
@@ -2803,6 +3178,36 @@ var impresslist = {
 		
 		this.refreshFilter();
 	},
+	selectModeIsOpen: false,
+	openSelectMode: function() {
+		if (!this.selectModeIsOpen) { 
+			this.toggleSelectMode();
+		}
+	},
+	closeSelectMode: function() {
+		if (this.selectModeIsOpen) { 
+			this.toggleSelectMode();
+		}
+	},
+	toggleSelectMode: function() {
+		this.selectModeIsOpen = !this.selectModeIsOpen;
+
+		// Refresh emails for all people here.
+		for(var i = 0; i < this.people.length; i++) {
+			this.people[i].refreshEmails();
+		}
+		this.refreshMailoutRecipients();
+
+		var type = 'person'; //$(this).attr('data-type');
+		$('.checkbox-column[data-type="' + type+ '"]').each(function(){
+			$(this).toggle();
+		});
+		this.refreshFilter();
+
+		
+	},
+
+
 	changePage: function() {
 		var page = $(this).attr('data-nav-page');
 		$("[data-type-page='true']").hide();
@@ -2864,7 +3269,7 @@ var impresslist = {
 			
 			html += "<tr>"
 			html += "	<td>" + $(peopleSelected[i]).attr('data-mailout-name') + "</td>";
-			html += "	<td>" + $(peopleSelected[i]).attr('data-mailout-type') + "</td>";
+			html += "	<td>" + $(peopleSelected[i]).attr('data-mailout-typename') + "</td>";
 			// " + $(peopleSelected[i]).attr('data-mailout-email') + "
 			html += "</tr>";
 		}
@@ -2917,6 +3322,20 @@ var impresslist = {
 	addCoverage: function(obj, fromInit) {
 		this.coverage.push(obj);
 		obj.onAdded(fromInit);
+	},
+	addSimpleMailout: function(obj, fromInit) {
+		this.simpleMailouts.push(obj);
+		obj.onAdded(fromInit);
+	},
+	removeSimpleMailout: function(obj) {
+		for(var i = 0, len = this.simpleMailouts.length; i < len; ++i) {
+			if (this.simpleMailouts[i].id == obj.id) {
+				console.log('simple mailout removed: ' + obj.id);
+				obj.onRemoved();
+				this.simpleMailouts.splice(i, 1);
+				break;
+			}
+		}
 	},
 	removePerson: function(obj) {
 		for(var i = 0, len = this.people.length; i < len; ++i) {
@@ -2991,6 +3410,15 @@ var impresslist = {
 			}
 		}
 		console.log("impresslist: could not findPersonById: " + id);
+		return null;
+	},
+	findPersonPublicationById: function(id) {
+		for(var i = 0, len = this.personPublications.length; i < len; ++i) {
+			if (this.personPublications[i].id == id) {
+				return this.personPublications[i];
+			}
+		}
+		console.log("impresslist: could not findPersonPublicationById: " + id);
 		return null;
 	},
 	findPublicationById: function(id) {
@@ -3272,7 +3700,26 @@ impresslist.util = {
 	    //console.log("current: " + current);
 	    //console.log("prev: " + previous);
 
-		if (elapsed < msPerMinute) {
+	    if (elapsed < 0) {
+	    	var elapsed = Math.abs(elapsed);
+	    	if (elapsed < msPerMinute) {
+				var num = Math.round(elapsed/1000);
+				if (num == 0) {
+					return "now";
+				}
+		        return num + ' seconds from now';
+		    } else if (elapsed < msPerHour) {
+		        return Math.round(elapsed/msPerMinute) + ' minutes from now';   
+		    } else if (elapsed < msPerDay ) {
+		        return Math.round(elapsed/msPerHour ) + ' hours from now';   
+		    } else if (elapsed < msPerMonth) {
+		        return '~' + Math.round(elapsed/msPerDay) + ' days from now';   
+		    } else if (elapsed < msPerYear) {
+		        return '~' + Math.round(elapsed/msPerMonth) + ' months from now';   
+		    }
+	    	return '~' + Math.round(elapsed/msPerYear ) + ' years from now';   
+	    }
+		else if (elapsed < msPerMinute) {
 			var num = Math.round(elapsed/1000);
 			if (num == 0) {
 				return "now";

@@ -140,9 +140,11 @@ if (!isset($_GET['endpoint'])) {
 		"/import/",
 
 		// Mailouts
+		"/mailout/simple/list/",
 		"/mailout/simple/add/",
 		"/mailout/simple/save/",
 		"/mailout/simple/send/",
+		"/mailout/simple/cancel/",
 		"/mailout/simple/remove/",
 
 		"/coverage/",
@@ -257,6 +259,17 @@ if (!isset($_GET['endpoint'])) {
 			
 		}
 
+		else if ($endpoint == "/mailout/simple/list/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$results = $db->query("SELECT * FROM emailcampaignsimple WHERE removed = 0 ORDER BY `timestamp`;");
+			
+			$result = new stdClass();
+			$result->success = true;
+			$result->mailouts = $results;
+		}
 		else if ($endpoint == "/mailout/simple/add/") 
 		{
 			$require_login = true;
@@ -280,7 +293,7 @@ if (!isset($_GET['endpoint'])) {
 
 			$result = new stdClass();
 			$result->success = true;
-			$result->mailout = db_singlemailoutsimple( $mailoutId );
+			$result->mailout = db_singlemailoutsimple( $db, $mailoutId );
 			// [{"type":"person","person_id":333,"sent":true,"read":false},{"type":"personPublication","personPublication_id":221,"sent":true,"read":false}]
 		} 
 		else if ($endpoint == "/mailout/simple/save/") 
@@ -305,7 +318,7 @@ if (!isset($_GET['endpoint'])) {
 					$result = api_error("person was not an integer");
 				} else { 
 
-					$json = json_decode($_GET['recipients']);
+					$json = json_decode($_GET['recipients'], true);
 					if ($json === NULL) {
 						$result = api_error("Invalid json passed.");
 					} else { 
@@ -332,11 +345,11 @@ if (!isset($_GET['endpoint'])) {
 											ready = :ready, 
 											sent = :sent, 
 											removed = :removed
-										) WHERE id = :id; ");
+										WHERE id = :id ;");
 						$stmt->bindValue(":id", 		$_GET['id'], 		Database::VARTYPE_INTEGER); 
 						$stmt->bindValue(":name", 		$_GET['name'], 		Database::VARTYPE_STRING); 
 						$stmt->bindValue(":subject", 	$_GET['subject'], 	Database::VARTYPE_STRING); 
-						$stmt->bindValue(":recipients", "[]", 				Database::VARTYPE_STRING); 
+						$stmt->bindValue(":recipients", $_GET['recipients'],Database::VARTYPE_STRING); 
 						$stmt->bindValue(":markdown", 	$_GET['markdown'], 	Database::VARTYPE_STRING); 
 						$stmt->bindValue(":ts", 		$_GET['timestamp'], Database::VARTYPE_INTEGER); 
 						$stmt->bindValue(":user", 		$user_id, 			Database::VARTYPE_INTEGER); 
@@ -347,7 +360,7 @@ if (!isset($_GET['endpoint'])) {
 
 						$result = new stdClass();
 						$result->success = true;
-						$result->mailout = db_singlemailoutsimple( $_GET['id'] );
+						$result->mailout = db_singlemailoutsimple($db, $_GET['id'] );
 					}
 				}
 			}
@@ -366,12 +379,34 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				$stmt = $db->prepare(" UPDATE emailcampaignsimple SET ready = 1 WHERE id = :id");
+				$stmt = $db->prepare(" UPDATE emailcampaignsimple SET ready = 1 WHERE id = :id ;");
 				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
 				$stmt->execute();
 				
 				$result = new stdClass();
 				$result->success = true;
+				$result->mailout = db_singlemailoutsimple($db, $_GET['id'] );
+			}
+		}
+		else if ($endpoint == "/mailout/simple/cancel/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer')
+			);
+
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+
+				$stmt = $db->prepare(" UPDATE emailcampaignsimple SET ready = 0 WHERE id = :id ;");
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
+				$stmt->execute();
+				
+				$result = new stdClass();
+				$result->success = true;
+				$result->mailout = db_singlemailoutsimple($db, $_GET['id'] );
 			}
 		}
 		else if ($endpoint == "/mailout/simple/remove/")
