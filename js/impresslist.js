@@ -960,6 +960,29 @@ API.removeYoutuber = function(youtuber) {
 			API.errorMessage("Could not remove Youtuber.");
 		});
 }
+API.userChangeIMAPSettings = function(user, imapServer, imapPassword) {
+	var url = "api.php?endpoint=/user/change-imap-settings/";
+	url += "&id=" + encodeURIComponent(user.id);
+	url += "&imapServer=" + encodeURIComponent(imapServer);
+	url += "&imapPassword=" + encodeURIComponent(imapPassword);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			} 
+			API.successMessage("IMAP settings changed.");
+		})
+		.fail(function() {
+			API.errorMessage("Could not change IMAP settings.");
+		});
+}
 API.userChangePassword = function(user, currentPassword, newPassword) {
 	var url = "api.php?endpoint=/user/change-password/&id=" + encodeURIComponent(user.id) + "&currentPassword=" + encodeURIComponent(currentPassword) + "&newPassword=" + encodeURIComponent(newPassword);
 	console.log(url);
@@ -975,7 +998,6 @@ API.userChangePassword = function(user, currentPassword, newPassword) {
 				return;
 			} 
 			API.successMessage("Password changed.");
-			impresslist.removePublication(publication);
 		})
 		.fail(function() {
 			API.errorMessage("Could not change Password.");
@@ -1628,6 +1650,43 @@ User = function(data) {
 		});
 
 	};
+	User.prototype.openChangeIMAPSettings = function() {
+		var html = "<div class='modal fade imapsettings_modal' tabindex='-1' role='dialog'> \
+						<div class='modal-dialog'> \
+							<div class='modal-content' style='padding:5px;'> \
+								<div style='min-height:100px;padding:20px;'> \
+									<h3>IMAP Settings</h3> \
+									<form role='form' class='oa' onsubmit='return false;'>	\
+										<div class='form-group'>\
+											<label for='change-imap-server'>IMAP Server:</label> \
+											<input id='user-change-imap-server' type='text' class='form-control' value='" + impresslist.config.user.imapServer + "'   />\
+										</div>\
+										<div class='form-group'>\
+											<label for='change-imap-password'>IMAP Password:</label> \
+											<input id='user-change-imap-password' class='form-control'  type='password' />\
+										</div>\
+										<div class='fl'> \
+											<button id='user-change-imap-settings-submit' type='submit' class='btn btn-primary'>Save</button> \
+											&nbsp;<button id='user-change-imap-settings-close' type='submit' class='btn btn-default'>Close</button> \
+										</div>\
+									</form> \
+								</div>\
+							</div>\
+						</div>\
+					</div>";
+		$('#modals').html(html);
+
+		var thiz = this;
+		$('#user-change-imap-settings-submit').click(function() {
+			var imap_server = $('#user-change-imap-server').val();
+			var imap_password = $('#user-change-imap-password').val(); 
+			API.userChangeIMAPSettings(thiz, imap_server, imap_password);
+		});
+		$('#user-change-imap-settings-close').click(function() {
+			$('.imapsettings_modal').modal("hide");
+		});
+
+	};
 
 
 Youtuber = function(data) {
@@ -1937,7 +1996,7 @@ SimpleMailout = function(data) {
 		var html = "	<tr data-simplemailout-id='" + this.field('id') + "' data-simplemailout-tablerow='true' class='table-list' > \
 							<td data-simplemailout-id='" + this.field('id') + "' data-field='name' data-value='" + this.field('name') + "'>" + this.field('name') + "</td> \
 							<td data-simplemailout-id='" + this.field('id') + "' data-field='numRecipients' data-value='" + this.numRecipients + "'>" + this.numRecipients + "</td> \
-							<td data-simplemailout-id='" + this.field('id') + "' data-field='numOpens' data-value='" + this.numOpens + "'>" + this.numOpens + "</td>\
+							<td data-simplemailout-id='" + this.field('id') + "' data-field='numOpens' data-value='" + this.numOpens + "'>...</td>\
 							<td data-simplemailout-id='" + this.field('id') + "' data-field='timestamp' data-value='" + this.field('timestamp') + "'>...</td>";
 		html += "		</tr>";
 		$('#mailout-list-tbody').append(html);
@@ -1967,9 +2026,16 @@ SimpleMailout = function(data) {
 			sentText = "Draft";
 		}
 
+		var recipientsText = "" + this.numRecipients;
+
+		var openText = "-";
+		if (this.field("sent") == 1) {
+			openText = (((1.0*this.numOpens)/(1.0*this.numRecipients))*100) + "%";
+		}
+
 		$("[data-simplemailout-id='" + this.id + "'][data-field='name']").html( this.field('name') );
-		$("[data-simplemailout-id='" + this.id + "'][data-field='numRecipients']").html( this.numRecipients );
-		$("[data-simplemailout-id='" + this.id + "'][data-field='numOpens']").html( this.numOpens );		
+		$("[data-simplemailout-id='" + this.id + "'][data-field='numRecipients']").html( recipientsText );
+		$("[data-simplemailout-id='" + this.id + "'][data-field='numOpens']").html( openText );
 		$("[data-simplemailout-id='" + this.id + "'][data-field='timestamp']").html( sentText );		
 	}
 	SimpleMailout.prototype.send = function() {
@@ -2074,7 +2140,7 @@ SimpleMailout = function(data) {
 		$('#mailout-writepage-send').unbind("click");
 		$('#mailout-writepage-send').click(function() {
 			mailout.send();
-		});
+		}); 
 		$('#mailout-writepage-cancelsend').unbind("click");
 		$('#mailout-writepage-cancelsend').click(function() {
 			mailout.cancelsend();
@@ -2989,6 +3055,7 @@ var impresslist = {
 			id: 0,
 			game: 0,
 			gmail: 0,
+			imapServer: ''
 		}
 	},
 	people: [],
@@ -3041,6 +3108,7 @@ var impresslist = {
 		$('#nav-add-coverage-youtuber').click(API.addYoutuberCoverage);
 		$('#nav-add-simplemailout').click(API.addSimpleMailout);
 		$('#nav-user-changepassword').click(function() { thiz.findUserById(thiz.config.user.id).openChangePassword(); });
+		$('#nav-user-changeimapsettings').click(function() { thiz.findUserById(thiz.config.user.id).openChangeIMAPSettings(); });
 		$('#nav-home').click(this.changePage);
 		$('#nav-coverage').click(this.changePage);
 		$('#nav-mailout').click(this.changePage);

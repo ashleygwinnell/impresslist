@@ -124,6 +124,7 @@ if (!isset($_GET['endpoint'])) {
 		"/publication/remove/",
 		"/admin/sql-query/",
 		"/admin/user/add/",
+		"/user/change-imap-settings/",
 		"/user/change-password/",
 
 		"/youtuber/list/",
@@ -264,7 +265,7 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once('init.php');
 
-			$results = $db->query("SELECT * FROM emailcampaignsimple WHERE removed = 0 ORDER BY `timestamp`;");
+			$results = $db->query("SELECT * FROM emailcampaignsimple WHERE removed = 0 ORDER BY ready ASC, sent ASC, `timestamp` DESC;");
 			
 			$result = new stdClass();
 			$result->success = true;
@@ -1470,6 +1471,50 @@ if (!isset($_GET['endpoint'])) {
 				$result = api_error("This API call is disabled. ");
 			}
 		}
+		else if ($endpoint == "/user/change-imap-settings/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			//error_reporting(0);
+			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer'),
+				array('name' => 'imapServer', 'type' => 'textarea'),
+				array('name' => 'imapPassword', 'type' => 'textarea')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+				if ($user_id != $_GET['id']) {
+					$result = api_error("You can only change your own IMAP settings.");
+				} else {
+
+					$imapServer = $_GET['imapServer'];
+					$imapPassword = $_GET['imapPassword'];
+
+					$imapPasswordSalt = util_getSalt($imapPassword);
+					$imapPasswordIV = util_getIV(true);
+					$imapPasswordEncrypted = util_encrypt($imapPassword, $imapPasswordSalt);
+					
+					$stmt = $db->prepare("UPDATE user 
+											SET 
+												emailIMAPServer = :imapServer,
+												emailIMAPPassword = :imapPassword,
+												emailIMAPPasswordSalt = :imapPasswordSalt, 
+												emailIMAPPasswordIV = :imapPasswordIV
+											WHERE id = :id; ");
+					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":imapServer", $imapServer, Database::VARTYPE_STRING);
+					$stmt->bindValue(":imapPassword", $imapPasswordEncrypted, Database::VARTYPE_STRING);
+					$stmt->bindValue(":imapPasswordSalt", $imapPasswordSalt, Database::VARTYPE_STRING);
+					$stmt->bindValue(":imapPasswordIV", $imapPasswordIV, Database::VARTYPE_STRING);
+					$rs = $stmt->execute();
+					
+					$result = new stdClass();
+					$result->success = true;							
+				}
+			}
+
+		} 
 		else if ($endpoint == "/user/change-password/")
 		{
 			$require_login = true;
@@ -1487,8 +1532,8 @@ if (!isset($_GET['endpoint'])) {
 					$result = api_error("You can only change your own password.");
 				} else {
 					$stmt = $db->prepare("SELECT * FROM user WHERE id = :id AND password = :currentPassword; ");
-					$stmt->bindValue("id", $_GET['id'], Database::VARTYPE_INTEGER);
-					$stmt->bindValue("currentPassword", md5($_GET['currentPassword']), Database::VARTYPE_STRING);
+					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":currentPassword", md5($_GET['currentPassword']), Database::VARTYPE_STRING);
 					$users = $stmt->query();
 
 					if (count($users) == 0) {
@@ -1503,10 +1548,16 @@ if (!isset($_GET['endpoint'])) {
 						if (strlen($newPassword) < 8) {
 							$result = api_error("Your password must be 8 characters long.");
 						} else {
-							$stmt = $db->prepare("UPDATE user SET password = :newPassword WHERE id = :id AND password = :currentPassword; ");
-							$stmt->bindValue("id", $_GET['id'], Database::VARTYPE_INTEGER);
-							$stmt->bindValue("currentPassword", md5($_GET['currentPassword']), Database::VARTYPE_STRING);
-							$stmt->bindValue("newPassword", md5($newPassword), Database::VARTYPE_STRING);
+							$stmt = $db->prepare("UPDATE user 
+													SET 
+														password = :newPassword 
+													WHERE 
+														id = :id AND 
+														password = :currentPassword 
+												;");
+							$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":currentPassword", md5($_GET['currentPassword']), Database::VARTYPE_STRING);
+							$stmt->bindValue(":newPassword", md5($newPassword), Database::VARTYPE_STRING);
 							$rs = $stmt->execute();
 							
 							$result = new stdClass();

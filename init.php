@@ -77,7 +77,10 @@ if ($require_login) {
 		$user_id = $user['id'];
 		$user_gmailIndex = $user['emailGmailIndex'];
 		$user_currentGame = $user['currentGame'];
-		$user_admin = ($user['admin'] == 1)?true:false;;
+		$user_admin = ($user['admin'] == 1)?true:false;
+		$user_imapServer = $user['emailIMAPServer'];
+
+		//print_r($user);
 	}
 }
 

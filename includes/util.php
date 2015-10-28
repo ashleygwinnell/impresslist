@@ -192,7 +192,41 @@ function is_ssl() {
     return false;
 }
 
+srand((double) microtime() * 1000000);
+$impresslist_encryption_iv = util_getIV(true);
+function util_getIV($new) {
+	global $impresslist_encryption_iv;
+	if ($new) {
+		$impresslist_encryption_iv = mcrypt_create_iv(32, MCRYPT_DEV_URANDOM); // mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_CBC)
+		if (strlen($impresslist_encryption_iv) < 32) {
+			$impresslist_encryption_iv = str_pad($impresslist_encryption_iv, 32, ".", STR_PAD_RIGHT);
+		} else if (strlen($impresslist_encryption_iv) > 32) {
+			$impresslist_encryption_iv = substr($impresslist_encryption_iv, 0, 32);
+		}
 
+
+		// ... FFFFFFFFF it keeps generating strings less than 32 chars long.
+		$impresslist_encryption_iv = md5($impresslist_encryption_iv);
+
+	}
+	return $impresslist_encryption_iv;
+}
+function util_setIV($iv) {
+	global $impresslist_encryption_iv;
+	$impresslist_encryption_iv = $iv;	
+}
+function util_getSalt() {
+	return strtr(base64_encode(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM)), '+', '.');
+}
+
+function util_encrypt($sValue, $sSecretKey) {
+    global $impresslist_encryption_iv;
+    return rtrim(base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_256, $sSecretKey, $sValue, MCRYPT_MODE_CBC, $impresslist_encryption_iv)), "\0\3");
+}
+function util_decrypt($sValue, $sSecretKey) {
+    global $impresslist_encryption_iv;
+    return rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, $sSecretKey, base64_decode($sValue), MCRYPT_MODE_CBC, $impresslist_encryption_iv), "\0\3");
+}
 
 // ----------------------------------------------------------------------------
 // Twitter
@@ -295,6 +329,10 @@ function youtube_getUploads($channel) {
 	return $content;
 }
 
+function util_isLocalhost() {
+	return $_SERVER['HTTP_HOST'] == "localhost";
+}
+
 function youtube_v3_getInformation($channel) {
 	global $youtube_apiKey;
 	if (strlen($channel) == 0) { return 0; }
@@ -346,6 +384,24 @@ function youtube_v3_getUploads($playlist) {
 	return $results;
 }
 
+/*function user_imap_email($userObject, $to, $subject, $message, $headers ) {
+	util_setIV($userObject['emailIMAPPasswordIV']);
+	$usePassword = util_decrypt($userObject['emailIMAPPassword'], $userObject['emailIMAPPasswordSalt']);
+	$imap_connection = imap_open("{" . $userObject['emailIMAPServer'] . ":993/imap/ssl/novalidate-cert}INBOX", $userObject['email'], $usePassword);
+	if ($imap_connection === FALSE) {
+	    return mail($to, $subject, $message, $headers);
+	}
+	$sent = imap_mail($to, $subject, $message, $headers);
+	imap_close($imap_connection, CL_EXPUNGE);
+
+	util_getIV(true);
+
+	if (util_isLocalhost()) { 
+		$sent = false;
+	}
+
+	return $sent;
+}*/
 
 function get_impress_email_template($include_footer = false, $include_trackingpixel = false) {
 	global $impresslist_company_name;

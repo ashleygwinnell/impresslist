@@ -11,7 +11,8 @@
 	        	impresslist.config.system.backups.lastmanual = <?php echo $settings['manual_backup_lastbackedupon']; ?>;
         		impresslist.config.user.id = <?php echo $user_id; ?>;
         		impresslist.config.user.game = <?php echo $user_currentGame; ?>;
-      			impresslist.config.user.gmail = <? echo $user_gmailIndex; ?>;
+      			impresslist.config.user.gmail = <?php echo $user_gmailIndex; ?>;
+      			impresslist.config.user.imapServer = "<?php echo $user_imapServer; ?>";
 
       			<?php for($i = 0; $i < $num_users; $i++): ?>
 	        		impresslist.addUser(new User(<?php echo json_encode($users[$i]); ?>), true);
@@ -75,6 +76,8 @@
 				    			<?php endif;?>
 				    			
 				    			<li><a id='nav-user-changepassword' href="#" data-toggle='modal' data-target='.password_modal'>Change Password</a></li>
+				    			<li><a id='nav-user-changeimapsettings' href="#" data-toggle='modal' data-target='.imapsettings_modal'>Change IMAP Settings</a></li>
+				    			<li class="divider"></li>
 				    			<li><a id='nav-help' href="#" data-nav-page="help" href='javascript:;'>Help</a></li>
 				    			<li><a id='nav-feedback'>Feedback</a></li>
 				    			<li class="divider"></li>

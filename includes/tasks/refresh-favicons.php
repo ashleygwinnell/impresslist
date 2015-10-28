@@ -23,7 +23,7 @@ for($i = 0; $i < $num_publications; ++$i) {
 	$url = $publications[$i]['url'];
 	if (strlen($url) > 0) {
 
-		$rsscontent = file_get_contents($url);
+		$rsscontent = url_get_contents($url);
 		
 		//$resStart = strpos($rsscontent, "<link rel='icon'", 0);
 		//if ($resStart === FALSE) { continue; }

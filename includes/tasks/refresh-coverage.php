@@ -77,7 +77,7 @@ for($i = 0; $i < $num_publications; ++$i) {
 		echo "Checking RSS...<br/>\n";
 
 		// Use XML parser on the feed.
-		$rsscontent = file_get_contents($rss);
+		$rsscontent = url_get_contents($rss);
 		$doc = new DOMDocument();
 		$doc->strictErrorChecking = false;
 		@$doc->loadHTML( $rsscontent );
@@ -129,7 +129,7 @@ for($i = 0; $i < $num_publications; ++$i) {
 		$url = $publications[$i]['url'];
 		echo $url . "<br/>\n";
 
-		$urlcontents = file_get_contents($url);
+		$urlcontents = url_get_contents($url);
 		if (strlen($urlcontents) == 0) {
 			echo "Could not get contents of homepage. Skipping...<br/>\n";
 			continue;
@@ -199,7 +199,7 @@ for($i = 0; $i < $num_publications; ++$i) {
 				foreach ($checkedUrls as $key => $checked) {
 					if (!isset($checkedUrls[$key]['title'])) { 
 						$url2 = fixrelativeurl($url, $checkedUrls[$key]['url']);
-						$url2contents = file_get_contents($url2);
+						$url2contents = url_get_contents($url2);
 						$doc2 = new DOMDocument();
 						$doc2->strictErrorChecking = false;
 						@$doc2->loadHTML( $url2contents );
