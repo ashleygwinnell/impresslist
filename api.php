@@ -65,6 +65,12 @@ function api_checkRequiredGETFieldsWithTypes($fields, &$result) {
 					$result = api_error($fields[$i]['name'] . " is not a valid alphanumeric (with spaces) string. -- " . $temp);
 					return true;
 				}
+			} else if ($type == 'platform') {
+				$temp = $_GET[$fields[$i]['name']];
+				if ($temp != 'steam') {
+					$result = api_error($fields[$i]['name'] . " is not a valid platform. Steam only right now. -- " . $temp);
+					return true;
+				}
 			} else if ($type == 'url') {
 
 				$http = substr($_GET[$fields[$i]['name']], 0, 7);
@@ -101,11 +107,8 @@ if (!isset($_GET['endpoint'])) {
 } else {
 
 	$endpoints = array(
-		"/backup/",
-		"/backup-sql/",
-		"/job/list/",
-		"/job/save-all/",
 		
+		// People
 		"/person/list/",
 		"/person/add/",
 		"/person/save/",
@@ -117,21 +120,33 @@ if (!isset($_GET['endpoint'])) {
 		"/person/remove-youtube-channel/",
 		"/person/set-priority/",
 		"/person/set-assignment/",
+
+		// Publications
 		"/publication/list/",
 		"/publication/add/",
 		"/publication/set-priority/",
 		"/publication/save/",
 		"/publication/remove/",
-		"/admin/sql-query/",
-		"/admin/user/add/",
-		"/user/change-imap-settings/",
-		"/user/change-password/",
 
+		// Youtubers
 		"/youtuber/list/",
 		"/youtuber/add/",
 		"/youtuber/save/",
 		"/youtuber/set-priority/",
 		"/youtuber/remove/",
+
+		// Admin
+		"/admin/sql-query/",
+		"/admin/user/add/",
+		"/backup/",
+		"/backup-sql/",
+
+		// User settings
+		"/user/change-imap-settings/",
+		"/user/change-password/",
+
+		"/job/list/",
+		"/job/save-all/",
 
 		"/person-publication/list/",
 		"/person-youtube-channel/list/",
@@ -148,6 +163,11 @@ if (!isset($_GET['endpoint'])) {
 		"/mailout/simple/cancel/",
 		"/mailout/simple/remove/",
 
+		// Key management
+		"/keys/list/",
+		"/keys/add/",
+
+		// Coverage management
 		"/coverage/",
 		"/coverage/publication/add/",
 		"/coverage/publication/save/",
@@ -841,6 +861,84 @@ if (!isset($_GET['endpoint'])) {
 			}
 		}
 
+		else if ($endpoint == "/keys/list/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$dolist = true;
+			if ($_GET['platform'] != 'steam') {
+				$result = api_error("Invalid 'platform' value.");
+				$dolist = false;
+			} else if ($_GET['assigned'] != "true" && $_GET['assigned'] != "false") {
+				$result = api_error("Invalid 'assigned' value.");
+				$dolist = false;
+			}
+
+			if ($dolist) {
+				$assignedSQL = ($_GET['assigned'] == "true")
+					? "assignedToTypeId != 0"
+					: "assignedToTypeId == 0";
+
+				$keys = $db->query("SELECT * FROM game_key 
+									WHERE 
+										game = '" . $user_currentGame . "' AND 
+										platform = '" . $_GET['platform'] . "' AND 
+										{$assignedSQL}
+									;");
+				$result = new stdClass();
+				$result->success = true;
+				$result->keys = $keys;
+			} else {
+				$result = api_error("Unknown error. Invalid value.");
+			}
+		}
+		else if ($endpoint == "/keys/add/") 
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'keys', 'type' => 'alphanumericspaces'),
+				array('name' => 'platform', 'type' => 'platform'),
+				array('name' => 'expiresOn', 'type' => 'integer')
+			);
+
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+				// Check format of keys.
+				$keysArray = explode("\n", $_GET['keys']);
+				for($j = 0; $j < count($keysArray); $j++) {
+					if (strlen($keysArray[$j]) != 17) {
+						$result = api_error("Steam keys must be in format XXXXX-XXXXX-XXXXX, and one per each line.");
+						break;
+					}
+				}
+
+				// if we get here then the keys are all good! 
+				// TODO: should we check for duplicates..?
+				for($j = 0; $j < count($keysArray); $j++) {
+					$stmt = $db->prepare("INSERT INTO game_key (id, game, platform, keystring, assigned, assignedToType, assignedToTypeId, assignedByUser, assignedByUserTimestamp, createdOn, expiresOn) 
+											  			VALUES (NULL, :game, :platform, :keystring, :assigned, :assignedToType, :assignedToTypeId, :assignedByUser, :assignedByUserTimestamp, :createdOn, :expiresOn ); ");
+					$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER); 
+					$stmt->bindValue(":platform", $_GET['platform'], Database::VARTYPE_STRING); 
+					$stmt->bindValue(":keystring", $keysArray[$j], Database::VARTYPE_STRING); 
+					$stmt->bindValue(":assigned", 0, Database::VARTYPE_INTEGER); 
+					$stmt->bindValue(":assignedToType", '', Database::VARTYPE_STRING); 
+					$stmt->bindValue(":assignedToTypeId", 0, Database::VARTYPE_INTEGER); 
+					$stmt->bindValue(":assignedByUser", 0, Database::VARTYPE_INTEGER); 
+					$stmt->bindValue(":assignedByUserTimestamp", 0, Database::VARTYPE_INTEGER); 
+					$stmt->bindValue(":createdOn", time(), Database::VARTYPE_INTEGER); 
+					$stmt->bindValue(":expiresOn", $_GET['expiresOn'], Database::VARTYPE_INTEGER); 
+					$stmt->execute();
+				}
+
+				$result = new stdClass();
+				$result->success = true;
+				$result->keys = $keysArray;
+			}
+
+		}
 
 		else if ($endpoint == "/person/add/")
 		{

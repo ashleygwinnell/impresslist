@@ -19,7 +19,6 @@ if ($games == NULL) {
 $num_games = count($games);
 
 
-
 // Settings
 $settings = array();
 $settings_resultset = $db->query("SELECT * FROM settings;");

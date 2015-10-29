@@ -53,6 +53,9 @@ if ($resetdb) {
 	$sql = "DROP TABLE game;";
 	$db->exec($sql);
 
+	$sql = "DROP TABLE game_keys;";
+	$db->exec($sql);
+
 }
 
 // keywords
@@ -254,7 +257,21 @@ if (count($games) == 0) {
 	$db->exec("INSERT INTO game VALUES (NULL, 'Untitled Game', ''); "); 
 }
 
-
+// game key storage
+$sql = "CREATE TABLE IF NOT EXISTS game_key (
+			id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+			game INTEGER NOT NULL,
+			platform VARCHAR(16) NOT NULL,
+			keystring VARCHAR(255) NOT NULL,
+			assigned INTEGER NOT NULL DEFAULT 0,
+			assignedToType VARCHAR(16) NOT NULL,
+			assignedToTypeId INTEGER NOT NULL,
+			assignedByUser INTEGER NOT NULL,
+			assignedByUserTimestamp INTEGER NOT NULL,
+			createdOn INTEGER NOT NULL,
+			expiresOn INTEGER NOT NULL
+		);";
+$db->exec($sql); // todo; add indexes?
 
 
 // track coverage

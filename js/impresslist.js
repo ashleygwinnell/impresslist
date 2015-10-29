@@ -3111,7 +3111,9 @@ var impresslist = {
 		$('#nav-user-changeimapsettings').click(function() { thiz.findUserById(thiz.config.user.id).openChangeIMAPSettings(); });
 		$('#nav-home').click(this.changePage);
 		$('#nav-coverage').click(this.changePage);
+		$('#nav-keys').click(this.changePage);
 		$('#nav-mailout').click(this.changePage);
+		$('#nav-mailout-addrecipients').click(this.changePage);
 		$('#nav-admin').click(this.changePage);
 		$('#nav-importtool').click(this.changePage);
 		$('#nav-help').click(this.changePage);
