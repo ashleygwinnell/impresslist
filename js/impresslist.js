@@ -191,6 +191,58 @@ API.listCoverage = function(fromInit) {
 			API.errorMessage("Could not list Emails.");
 		});
 }
+API.listKeys = function(game, platform, assigned, callbackfunction) {
+	var url = "api.php?endpoint=/keys/list/" +
+				"&game=" + encodeURIComponent(game) + 
+				"&platform=" + encodeURIComponent(platform) +
+				"&assigned=" + encodeURIComponent(assigned);
+	console.log(url);
+
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
+			
+			var json = JSON.parse(result);
+			if (!json.success) { API.errorMessage(json.message); return; }
+			
+			callbackfunction(json);
+		})
+		.fail(function() {
+			API.errorMessage("Could not list keys.");
+		});
+}
+API.addKeys = function(keys, game, platform, expiresOn, callbackfunction) {
+	var url = "api.php?endpoint=/keys/add/" +
+					"&keys=" + encodeURIComponent(keys) + 
+					"&game=" + encodeURIComponent(game) + 
+					"&platform=" + encodeURIComponent(platform) + 
+					"&expiresOn=" + encodeURIComponent(expiresOn);
+	console.log(url);
+	
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Keys added.");
+			console.log(json);
+
+			callbackfunction(json);
+
+			//var simpleMailout = new SimpleMailout(json.mailout);
+			//impresslist.addSimpleMailout(simpleMailout, false);
+		})
+		.fail(function() {
+			API.errorMessage("Could not add Keys.");
+		});
+}
+
 API.listSimpleMailouts = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 	
@@ -3097,7 +3149,6 @@ var impresslist = {
 		API.listYoutubeChannels();
 		API.listEmails();
 		API.listSimpleMailouts();
-		
 
 		// Navigation links
 		var thiz = this;
@@ -3225,7 +3276,6 @@ var impresslist = {
 				}
 			})
 		}
-		
 		$('#nav-select-edit').click(function(){
 			impresslist.toggleSelectMode();
 		});
@@ -3238,6 +3288,70 @@ var impresslist = {
 			var type = $(this).attr('data-type');
 			selectAllCheckedForType(type, false);
 			impresslist.refreshMailoutRecipients();
+		});
+
+		// Keys functions
+		$('#nav-keys').click(function() {
+			API.listKeys(impresslist.config.user.game, 'steam', true, function(data) {
+				$('#steam_keys_assigned_count').html(data.count);
+			});
+
+			API.listKeys(impresslist.config.user.game, 'steam', false, function(data) {
+				$('#steam_keys_available_count').html(data.count);
+			});
+
+			// sort out timepicker
+			$('#keys-timepicker').datetimepicker();
+			$('#keys-timepicker').data("DateTimePicker").defaultDate(moment(0, "X"));
+			$('#keys-timepicker').data("DateTimePicker").format("DD/MM/YYYY h:mma");
+
+			$('#keys-radio-expiry-never').unbind("click");
+			$('#keys-radio-expiry-time').unbind("click");
+			$('#keys-radio-expiry-never').click(function() { $('#keys-timepicker').hide(); });
+			$('#keys-radio-expiry-time').click(function() { $('#keys-timepicker').show(); });
+			$('#keys-timepicker').hide();
+			$('#keys-radio-expiry-never').prop("checked", "true");
+
+		});
+		$('#keys-add-submit').click(function(){
+			var keys_setFormEnabled = function(boo) {
+				boo = !boo;
+				$('#keys-add-platform').attr("disabled", boo); 
+				$('#keys-add-textfield').attr("disabled", boo); 
+				$('#keys-radio-expiry-never').attr("disabled", boo); 
+				$('#keys-radio-expiry-time').attr("disabled", boo); 
+				$('#keys-timepicker').attr("disabled", boo); 
+				$('#keys-add-submit').attr("disabled", boo); 
+			}
+			keys_setFormEnabled(false);
+
+			var submitList = $('#keys-add-textfield').val();
+			var submitGame = impresslist.config.user.game;
+			var submitPlatform = $('#keys-add-platform').val();
+			if (submitPlatform == '---') {
+				API.errorMessage("Please select an platform for these keys.");
+				keys_setFormEnabled(true);
+				return;
+			}
+
+			var whichtime = $('input[name="keys-expiry-radio"]:checked').val();
+			if (whichtime == undefined) {
+				API.errorMessage("Please select an expiry for these keys.");
+				keys_setFormEnabled(true);
+				return;
+			}
+			var expiresOn = 0;
+			if (whichtime == 'time') {
+				var date = new Date($('#keys-timepicker').data("DateTimePicker").date());
+				expiresOn = Math.floor(date.getTime() / 1000);
+			}
+			API.addKeys(submitList, submitGame, submitPlatform, expiresOn, function(d) {
+				keys_setFormEnabled(true);
+				$('#keys-add-platform').val('---');
+				$('#keys-add-textfield').val('');
+				$('#nav-keys').click();
+			});	
+				
 		});
 
 		// Chat functionality

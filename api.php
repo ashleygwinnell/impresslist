@@ -58,6 +58,12 @@ function api_checkRequiredGETFieldsWithTypes($fields, &$result) {
 					$result = api_error($fields[$i]['name'] . " is not a valid alphanumeric string. -- " . $temp);
 					return true;
 				}
+			} else if ($type == 'alphanumerichyphensnewlines') {
+				$temp = $_GET[$fields[$i]['name']];
+				if (!util_isAlphaNumericWithExtras($temp, array("-", "\n"), 255, 0)) {
+					$result = api_error($fields[$i]['name'] . " is not a valid alphanumeric string. -- " . $temp);
+					return true;
+				}
 			} else if ($type == 'alphanumericspaces') {
 				$temp = $_GET[$fields[$i]['name']]; // str_replace("%20", " ", $_GET[$fields[$i]['name']]);
 				//if (!util_isAlphaNumericWithSpaces($temp)) {
@@ -870,26 +876,42 @@ if (!isset($_GET['endpoint'])) {
 			if ($_GET['platform'] != 'steam') {
 				$result = api_error("Invalid 'platform' value.");
 				$dolist = false;
-			} else if ($_GET['assigned'] != "true" && $_GET['assigned'] != "false") {
-				$result = api_error("Invalid 'assigned' value.");
+			//} else if ($_GET['assigned'] != "true" && $_GET['assigned'] != "false") {
+			//	$result = api_error("Invalid 'assigned' value.");
+			//	$dolist = false;
+			} else if (!util_isInteger($_GET['game'])) {
+				$result = api_error("Invalid 'game' value.");
 				$dolist = false;
 			}
 
+			if ($dolist) { // make sure Game is valid.
+				$game = db_singlegame($db, $_GET['game']);
+				if (!$game) {
+					$result = api_error("Invalid 'game' value.");
+					$dolist = false;
+				}
+			}
+
 			if ($dolist) {
-				$assignedSQL = ($_GET['assigned'] == "true")
-					? "assignedToTypeId != 0"
-					: "assignedToTypeId == 0";
+
+				$assignedSQL = "";
+				if ($_GET['assigned'] == "true") {
+					$assignedSQL = " AND assignedToTypeId != 0 ";
+				} else if ($_GET['assigned'] == "false") {
+					$assignedSQL = " AND assignedToTypeId = 0 ";
+				}
 
 				$keys = $db->query("SELECT * FROM game_key 
 									WHERE 
 										game = '" . $user_currentGame . "' AND 
-										platform = '" . $_GET['platform'] . "' AND 
+										platform = '" . $_GET['platform'] . "' 
 										{$assignedSQL}
 									;");
 				$result = new stdClass();
 				$result->success = true;
 				$result->keys = $keys;
-			} else {
+				$result->count = count($keys);
+			} else if (!$dolist && !$result){
 				$result = api_error("Unknown error. Invalid value.");
 			}
 		}
@@ -899,43 +921,53 @@ if (!isset($_GET['endpoint'])) {
 			include_once("init.php");
 
 			$required_fields = array(
-				array('name' => 'keys', 'type' => 'alphanumericspaces'),
+				array('name' => 'keys', 'type' => 'alphanumerichyphensnewlines'),
+				array('name' => 'game', 'type' => 'integer'),
 				array('name' => 'platform', 'type' => 'platform'),
 				array('name' => 'expiresOn', 'type' => 'integer')
 			);
 
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
-				// Check format of keys.
-				$keysArray = explode("\n", $_GET['keys']);
-				for($j = 0; $j < count($keysArray); $j++) {
-					if (strlen($keysArray[$j]) != 17) {
-						$result = api_error("Steam keys must be in format XXXXX-XXXXX-XXXXX, and one per each line.");
-						break;
+
+				$game = db_singlegame($db, $_GET['game']);
+				if (!$game) {
+					$result = api_error("Invalid 'game' value.");
+					$dolist = false;
+				}
+				else { 
+
+					// Check format of keys.
+					$keysArray = explode("\n", $_GET['keys']);
+					for($j = 0; $j < count($keysArray); $j++) {
+						if (strlen($keysArray[$j]) != 17) {
+							$result = api_error("Steam keys must be in format XXXXX-XXXXX-XXXXX, and one per each line.");
+							break;
+						}
 					}
-				}
 
-				// if we get here then the keys are all good! 
-				// TODO: should we check for duplicates..?
-				for($j = 0; $j < count($keysArray); $j++) {
-					$stmt = $db->prepare("INSERT INTO game_key (id, game, platform, keystring, assigned, assignedToType, assignedToTypeId, assignedByUser, assignedByUserTimestamp, createdOn, expiresOn) 
-											  			VALUES (NULL, :game, :platform, :keystring, :assigned, :assignedToType, :assignedToTypeId, :assignedByUser, :assignedByUserTimestamp, :createdOn, :expiresOn ); ");
-					$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER); 
-					$stmt->bindValue(":platform", $_GET['platform'], Database::VARTYPE_STRING); 
-					$stmt->bindValue(":keystring", $keysArray[$j], Database::VARTYPE_STRING); 
-					$stmt->bindValue(":assigned", 0, Database::VARTYPE_INTEGER); 
-					$stmt->bindValue(":assignedToType", '', Database::VARTYPE_STRING); 
-					$stmt->bindValue(":assignedToTypeId", 0, Database::VARTYPE_INTEGER); 
-					$stmt->bindValue(":assignedByUser", 0, Database::VARTYPE_INTEGER); 
-					$stmt->bindValue(":assignedByUserTimestamp", 0, Database::VARTYPE_INTEGER); 
-					$stmt->bindValue(":createdOn", time(), Database::VARTYPE_INTEGER); 
-					$stmt->bindValue(":expiresOn", $_GET['expiresOn'], Database::VARTYPE_INTEGER); 
-					$stmt->execute();
-				}
+					// if we get here then the keys are all good! 
+					// TODO: should we check for duplicates..?
+					for($j = 0; $j < count($keysArray); $j++) {
+						$stmt = $db->prepare("INSERT INTO game_key (id, game, platform, keystring, assigned, assignedToType, assignedToTypeId, assignedByUser, assignedByUserTimestamp, createdOn, expiresOn) 
+												  			VALUES (NULL, :game, :platform, :keystring, :assigned, :assignedToType, :assignedToTypeId, :assignedByUser, :assignedByUserTimestamp, :createdOn, :expiresOn ); ");
+						$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":platform", $_GET['platform'], Database::VARTYPE_STRING); 
+						$stmt->bindValue(":keystring", $keysArray[$j], Database::VARTYPE_STRING); 
+						$stmt->bindValue(":assigned", 0, Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":assignedToType", '', Database::VARTYPE_STRING); 
+						$stmt->bindValue(":assignedToTypeId", 0, Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":assignedByUser", 0, Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":assignedByUserTimestamp", 0, Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":createdOn", time(), Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":expiresOn", $_GET['expiresOn'], Database::VARTYPE_INTEGER); 
+						$stmt->execute();
+					}
 
-				$result = new stdClass();
-				$result->success = true;
-				$result->keys = $keysArray;
+					$result = new stdClass();
+					$result->success = true;
+					$result->keys = $keysArray;
+				}
 			}
 
 		}

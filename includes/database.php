@@ -46,6 +46,11 @@
 		$mailouts = $db->query("SELECT * FROM emailcampaignsimple WHERE id = '" . $mailoutId . "' LIMIT 1;");
 		return $mailouts[0];
 	}
+	function db_singlegame($db, $gameId) {
+		if (!is_numeric($gameId)) { return false; }
+		$rs = $db->query("SELECT * FROM game WHERE id = '" . $gameId . "' LIMIT 1;");
+		return $rs[0];
+	}
 	function db_defaultPrioritiesString($db) {
 		$string = "";
 		$count = 0;
