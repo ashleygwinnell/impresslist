@@ -2157,6 +2157,7 @@ SimpleMailout = function(data) {
 		$('#mailout-writepage').show();
 		$('#mailout-writepage-send').hide();
 		$('#mailout-writepage-cancelsend').hide();
+		$('.mailout-readflags').hide();
 
 		$('#mailout-writepage-save').show();
 		$('#mailout-writepage-remove').show();
@@ -2232,6 +2233,7 @@ SimpleMailout = function(data) {
 				var box = $('input[data-type="person"][data-mailout-typeid="' + p.id + '"][data-checkbox="true"][data-mailout-type="personPublication"]');
 				$(box).prop("checked", true);
 			}
+			$(box).attr("mailout-read", this.recipientsData[i].read);
 		}
 		impresslist.refreshMailoutRecipients();
 
@@ -2242,6 +2244,8 @@ SimpleMailout = function(data) {
 			$('#mailout-writepage-save').hide();
 			$('#mailout-writepage-remove').hide();
 			$('#mailout-writepage-send').hide();
+
+			$('.mailout-readflags').show();
 		}
 	}
 	SimpleMailout.prototype.close = function() {
@@ -3451,9 +3455,11 @@ var impresslist = {
 		var html = "";
 		for(var i = 0; i < peopleSelected.length; i++) {
 			
+			var readBool = $(peopleSelected[i]).attr('mailout-read');
 			html += "<tr>"
 			html += "	<td>" + $(peopleSelected[i]).attr('data-mailout-name') + "</td>";
 			html += "	<td>" + $(peopleSelected[i]).attr('data-mailout-typename') + "</td>";
+			html += "	<td class='mailout-readflags mailout-read-" + readBool + "'>" + readBool + "</td>";
 			// " + $(peopleSelected[i]).attr('data-mailout-email') + "
 			html += "</tr>";
 		}
