@@ -175,6 +175,7 @@ $sql = "CREATE TABLE IF NOT EXISTS user (
 			surname VARCHAR(255) NOT NULL,
 			email VARCHAR(255) NOT NULL,
 			emailGmailIndex INTEGER NOT NULL,
+			emailSMTPServer VARCHAR(255) NOT NULL,
 			emailIMAPServer VARCHAR(255) NOT NULL,
 			emailIMAPPassword VARCHAR(255) NOT NULL,
 			emailIMAPPasswordSalt VARCHAR(255) NOT NULL,
@@ -189,8 +190,10 @@ $sql = "CREATE TABLE IF NOT EXISTS user (
 $db->exec($sql);
 $users = $db->query("SELECT * FROM user;");
 if (count($users) == 0) { 
-	$db->exec("INSERT INTO user (id, 	forename, 	  surname, 	 email, 				emailGmailIndex, password, 					currentGame, color, 	admin, lastactivity) 
-						 VALUES (NULL,  'Firstname', 'Surname',  'admin@website.com', 	'1', 			 '" . md5("password") . "', 1, 			 '#000000', 1, 		0 			); "); 	
+	$db->exec("INSERT INTO user (
+		id, 	forename, 	  surname, 	 email, 				emailGmailIndex, 	emailSMTPServer, 	password, 					currentGame, coverageNotifications, color, 		admin, lastactivity) 
+						 VALUES (
+		NULL,  'Firstname', 'Surname',  'admin@website.com', 	'1', 			 	'smtp.gmail.com', 	'" . md5("password") . "', 	1, 			 1, 					'#000000', 	1, 		0 			); "); 	
 }
 // if ($resetdb) { 
 //	

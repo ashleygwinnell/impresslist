@@ -406,13 +406,87 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				$stmt = $db->prepare(" UPDATE emailcampaignsimple SET ready = 1 WHERE id = :id ;");
-				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
-				$stmt->execute();
-				
-				$result = new stdClass();
-				$result->success = true;
-				$result->mailout = db_singlemailoutsimple($db, $_GET['id'] );
+				// check smtp settings.
+				if ($user['emailSMTPServer'] != '' && 
+					$user['emailIMAPServer'] != '' && 
+					$user['emailIMAPPassword'] != '' && 
+					$user['emailIMAPPasswordSalt'] != '' && 
+					$user['emailIMAPPasswordIV'] != '') { 
+
+					// if the mailout contains keys, we have to check that we have enough! 
+					$stmt = $db->prepare("SELECT * FROM emailcampaignsimple WHERE id = :id ;");
+					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+					$mailouts = $stmt->query();
+					$mailout = $mailouts[0];
+					$markdown = $mailout['markdown'];
+
+					$doSend = true;
+
+					if (strpos($markdown, "{{steam_key}}") !== false) {
+						$recipientsArray = json_decode($mailout['recipients'], true);
+						$countRecipients = count($recipientsArray);
+						// TODO: game_id should probably be part of the mailout data?! 
+						$keysArray = $db->query("SELECT * 
+											FROM game_key 
+											WHERE 
+												game = '" . $user_currentGame . "' AND 
+												platform = 'steam' AND
+												assigned = 0;"); 
+						$countKeys = count($keysArray);
+
+						if ($countKeys < $countRecipients) {
+							$doSend = false;
+							$numNewKeysNeeded = $countRecipients - $countKeys;
+							$result = api_error("There are not enough Steam keys in the system to allocate to this mailout. {$numNewKeysNeeded} more needed.");
+						}
+					}
+					else if (strpos($markdown, "{{steam_keys}}") !== false) 
+					{
+						$recipientsArray = json_decode($mailout['recipients'], true);
+						$newKeysNeeded = 0;
+						for ($i = 0; $i < count($recipientsArray); $i++) {
+							$contact = $recipientsArray[$i];
+							if ($contact['type'] == "person") {
+								$keysForContact = $db->query("SELECT * 
+																FROM game_key 
+																WHERE platform = 'steam' 
+																	AND assigned = 1 
+																	AND assignedToType = 'person' 
+																	AND assignedToTypeId = '" . $contact['person_id'] . "'; 
+																");
+								if (count($keysForContact) == 0) {
+									$newKeysNeeded++;
+								}
+							}
+						}
+
+						$keysArray = $db->query("SELECT * 
+											FROM game_key 
+											WHERE 
+												game = '" . $user_currentGame . "' AND 
+												platform = 'steam' AND
+												assigned = 0;"); 
+						$countKeys = count($keysArray);
+						if ($countKeys < $newKeysNeeded) {
+							$numNewKeysNeeded = $newKeysNeeded - $countKeys;
+							$doSend = false;
+							$result = api_error("There are not enough Steam keys in the system to allocate to this mailout. {$numNewKeysNeeded} more needed.");
+						}
+					}
+
+					if ($doSend) { 
+						//$stmt = $db->prepare(" UPDATE emailcampaignsimple SET ready = 1 WHERE id = :id ;");
+						//$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
+						//$stmt->execute();
+						
+						$result = new stdClass();
+						$result->success = true;
+						$result->mailout = db_singlemailoutsimple($db, $_GET['id'] );
+						$result->extras = $newKeysNeeded;
+					}
+				} else {
+					$result = api_error('You need to configure your e-mail settings to perform a mailout.');
+				}
 			}
 		}
 		else if ($endpoint == "/mailout/simple/cancel/")
@@ -1609,6 +1683,7 @@ if (!isset($_GET['endpoint'])) {
 			//error_reporting(0);
 			$required_fields = array(
 				array('name' => 'id', 'type' => 'integer'),
+				array('name' => 'smtpServer', 'type' => 'textarea'),
 				array('name' => 'imapServer', 'type' => 'textarea'),
 				array('name' => 'imapPassword', 'type' => 'textarea')
 			);
@@ -1618,6 +1693,7 @@ if (!isset($_GET['endpoint'])) {
 					$result = api_error("You can only change your own IMAP settings.");
 				} else {
 
+					$smtpServer = $_GET['smtpServer'];
 					$imapServer = $_GET['imapServer'];
 					$imapPassword = $_GET['imapPassword'];
 
@@ -1627,12 +1703,14 @@ if (!isset($_GET['endpoint'])) {
 					
 					$stmt = $db->prepare("UPDATE user 
 											SET 
+												emailSMTPServer = :smtpServer,
 												emailIMAPServer = :imapServer,
 												emailIMAPPassword = :imapPassword,
 												emailIMAPPasswordSalt = :imapPasswordSalt, 
 												emailIMAPPasswordIV = :imapPasswordIV
 											WHERE id = :id; ");
 					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":smtpServer", $imapServer, Database::VARTYPE_STRING);
 					$stmt->bindValue(":imapServer", $imapServer, Database::VARTYPE_STRING);
 					$stmt->bindValue(":imapPassword", $imapPasswordEncrypted, Database::VARTYPE_STRING);
 					$stmt->bindValue(":imapPasswordSalt", $imapPasswordSalt, Database::VARTYPE_STRING);

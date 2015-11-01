@@ -1012,9 +1012,10 @@ API.removeYoutuber = function(youtuber) {
 			API.errorMessage("Could not remove Youtuber.");
 		});
 }
-API.userChangeIMAPSettings = function(user, imapServer, imapPassword) {
+API.userChangeIMAPSettings = function(user, smtpServer, imapServer, imapPassword) {
 	var url = "api.php?endpoint=/user/change-imap-settings/";
 	url += "&id=" + encodeURIComponent(user.id);
+	url += "&smtpServer=" + encodeURIComponent(smtpServer);
 	url += "&imapServer=" + encodeURIComponent(imapServer);
 	url += "&imapPassword=" + encodeURIComponent(imapPassword);
 	console.log(url);
@@ -1710,6 +1711,10 @@ User = function(data) {
 									<h3>IMAP Settings</h3> \
 									<form role='form' class='oa' onsubmit='return false;'>	\
 										<div class='form-group'>\
+											<label for='change-smtp-server'>SMTP Server:</label> \
+											<input id='user-change-smtp-server' type='text' class='form-control' value='" + impresslist.config.user.smtpServer + "'   />\
+										</div>\
+										<div class='form-group'>\
 											<label for='change-imap-server'>IMAP Server:</label> \
 											<input id='user-change-imap-server' type='text' class='form-control' value='" + impresslist.config.user.imapServer + "'   />\
 										</div>\
@@ -1730,9 +1735,10 @@ User = function(data) {
 
 		var thiz = this;
 		$('#user-change-imap-settings-submit').click(function() {
+			var smtp_server = $('#user-change-smtp-server').val();
 			var imap_server = $('#user-change-imap-server').val();
 			var imap_password = $('#user-change-imap-password').val(); 
-			API.userChangeIMAPSettings(thiz, imap_server, imap_password);
+			API.userChangeIMAPSettings(thiz, smtp_server, imap_server, imap_password);
 		});
 		$('#user-change-imap-settings-close').click(function() {
 			$('.imapsettings_modal').modal("hide");
@@ -3111,7 +3117,8 @@ var impresslist = {
 			id: 0,
 			game: 0,
 			gmail: 0,
-			imapServer: ''
+			imapServer: '',
+			smtpServer: ''
 		}
 	},
 	people: [],

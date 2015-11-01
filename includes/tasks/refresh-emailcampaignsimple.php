@@ -98,7 +98,7 @@ X-Mailer: impresslist/" . $impresslist_version;
 		
 			$mail = new PHPMailer(); // create a new object
 			$mail->IsSMTP(); // enable SMTP
-			$mail->Host = "smtp.gmail.com";
+			$mail->Host = $user['emailSMTPServer'];//  "smtp.gmail.com";
 			$mail->Port = 587; // 465 or 587
 			$mail->Timeout  =  5;
 			$mail->SMTPDebug = 0; // debugging: 1 = errors and messages, 2 = messages only
