@@ -102,6 +102,8 @@ h3 {
 	cursor:pointer;
 }
 .checkbox-column { display:none; }
+
+.mailout-readflags { display:none; }
 .mailout-read-true { color:green; }
 .mailout-read-false { color:red; }
 
