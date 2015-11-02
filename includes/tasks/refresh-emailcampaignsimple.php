@@ -89,10 +89,10 @@ X-Mailer: impresslist/" . $impresslist_version;
 				echo "Replacing {{steam_key}} in email.<br/>\n";
 				$availableKey = db_singleavailablekeyforgame($db, $user['currentGame'], 'steam');
 				$assignsSingleSteamKey_id = $availableKey['id'];
-				$assignsSingleSteamKey_code = $availableKeys['keystring'];
+				$assignsSingleSteamKey_code = $availableKey['keystring'];
 				$markdown = str_replace("{{steam_key}}", $assignsSingleSteamKey_code, $markdown);
 			} 
-			if (strpos($markdown, "{{steam_keys}}") !== false) {
+			else if (strpos($markdown, "{{steam_keys}}") !== false) {
 				echo "Replacing {{steam_keys}} (plural) in email.<br/>\n";
 				$keysForContact = db_keysassignedtotype($db, $user['currentGame'], 'steam', 'person', $person['id']); 
 				//print_r($keysForContact);
@@ -132,11 +132,8 @@ X-Mailer: impresslist/" . $impresslist_version;
 									<head>
 										<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 										<meta http-equiv="Content-Language" content="en-us">
-									</head>
-									<body>
-										' . $html_contents . '
-										<img src="' . $urlroot . '/pixel.php?type=simple-mailout&id=' . $campaign['id'] . '&recipient=' . $person_email . '"/>
-									</body>
+									</head> 
+									<body>' . $html_contents . '<img src="' . $urlroot . '/pixel.php?type=simple-mailout&id=' . $campaign['id'] . '&recipient=' . $person_email . '"/></body>
 								</html>';
 
 			// Try to send the email with the user's IMAP connection, 
