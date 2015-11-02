@@ -32,8 +32,9 @@ for($i = 0; $i < $num_publications; ++$i) {
 		$doc = new DOMDocument();
 		$doc->strictErrorChecking = false;
 		@$doc->loadHTML( $rsscontent );
-		$xml = simplexml_import_dom($doc);
+		$xml = @simplexml_import_dom($doc);
 		if ($xml === FALSE) { skip($publications[$i]['name']); continue; }
+		else if (!is_object($xml)) { skip($publications[$i]['name']); continue; }
 
 		$arr = $xml->xpath('//link[@rel="shortcut icon"]');
 		if ($arr === FALSE) { skip($publications[$i]['name']); continue; }

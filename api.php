@@ -469,9 +469,9 @@ if (!isset($_GET['endpoint'])) {
 					}
 
 					if ($doSend) { 
-						//$stmt = $db->prepare(" UPDATE emailcampaignsimple SET ready = 1 WHERE id = :id ;");
-						//$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
-						//$stmt->execute();
+						$stmt = $db->prepare(" UPDATE emailcampaignsimple SET ready = 1 WHERE id = :id ;");
+						$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
+						$stmt->execute();
 						
 						$result = new stdClass();
 						$result->success = true;

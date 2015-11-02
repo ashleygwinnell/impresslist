@@ -75,7 +75,8 @@ X-Mailer: impresslist/" . $impresslist_version;
 				continue;
 			}
 				
-			echo "Sending e-mail <i>" . $campaign['subject'] . "</i> to " . $person['firstname'] . " " . $person['surnames'] . " (" . $person_email . "). <br/>";
+			echo "<hr/>";
+			echo "Sending e-mail <i>" . $campaign['subject'] . "</i> to " . $person['firstname'] . " " . $person['surnames'] . " (" . $person_email . "). <br/>\n";
 			
 			// templates
 			$markdown = $campaign['markdown'];
@@ -85,19 +86,26 @@ X-Mailer: impresslist/" . $impresslist_version;
 			$assignsSingleSteamKey_code = '';
 			$assignsSingleSteamKey = (strpos($markdown, "{{steam_key}}") !== false);
 			if ($assignsSingleSteamKey) {
+				echo "Replacing {{steam_key}} in email.<br/>\n";
 				$availableKey = db_singleavailablekeyforgame($db, $user['currentGame'], 'steam');
 				$assignsSingleSteamKey_id = $availableKey['id'];
 				$assignsSingleSteamKey_code = $availableKeys['keystring'];
 				$markdown = str_replace("{{steam_key}}", $assignsSingleSteamKey_code, $markdown);
 			} 
 			if (strpos($markdown, "{{steam_keys}}") !== false) {
+				echo "Replacing {{steam_keys}} (plural) in email.<br/>\n";
 				$keysForContact = db_keysassignedtotype($db, $user['currentGame'], 'steam', 'person', $person['id']); 
+				//print_r($keysForContact);
 
 				if (count($keysForContact) == 0) {
+					echo "Assigning new key<br/>\n";
 					$availableKey = db_singleavailablekeyforgame($db, $user['currentGame'], 'steam');
+					//echo "key: " . $availableKey;
+					print_r($availableKey);
+
 					$assignsSingleSteamKey = true;
 					$assignsSingleSteamKey_id = $availableKey['id'];
-					$assignsSingleSteamKey_code = $availableKeys['keystring'];
+					$assignsSingleSteamKey_code = $availableKey['keystring'];
 					
 					$steam_keys_md = "**Steam Key:**\n\n";
 					$steam_keys_md .= "* {$assignsSingleSteamKey_code}\n\n";
@@ -234,6 +242,7 @@ X-Mailer: impresslist/" . $impresslist_version;
 
 	
 }
+echo "<hr/>\n";
 echo "Done!";
 
 ?>

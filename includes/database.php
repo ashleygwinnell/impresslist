@@ -52,21 +52,21 @@
 		return $rs[0];
 	}
 	function db_singleavailablekeyforgame($db, $gameid, $platform) {
-		if (!is_numeric($gameId)) { return false; }
+		if (!is_numeric($gameid)) { return false; }
 		$rs = $db->query("SELECT * FROM game_key WHERE game = '" . $gameid . "' AND platform = '" . $platform . "' AND assigned = 0 ORDER BY id ASC;");
 		return $rs[0];
 	}
 	function db_keysassignedtotype($db, $gameid, $platform, $type, $typeid) {
 		$stmt = $db->prepare("SELECT * 
 								FROM game_key 
-								WHERE game = :game,
+								WHERE game = :game 
 									AND platform = :platform
 									AND assigned = :assigned
 									AND assignedToType = :assignedToType 
 									AND assignedToTypeId = :assignedToTypeId
 								");
 		$stmt->bindValue(":game", $gameid, Database::VARTYPE_INTEGER);
-		$stmt->bindValue(":platform", $platform, Database::VARTYPE_INTEGER);
+		$stmt->bindValue(":platform", $platform, Database::VARTYPE_STRING);
 		$stmt->bindValue(":assigned", 1, Database::VARTYPE_INTEGER);
 		$stmt->bindValue(":assignedToType", $type, Database::VARTYPE_STRING);
 		$stmt->bindValue(":assignedToTypeId", $typeid, Database::VARTYPE_INTEGER);

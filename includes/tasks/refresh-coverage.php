@@ -81,7 +81,15 @@ for($i = 0; $i < $num_publications; ++$i) {
 		$doc = new DOMDocument();
 		$doc->strictErrorChecking = false;
 		@$doc->loadHTML( $rsscontent );
-		$xml = simplexml_import_dom($doc);
+		$xml = @simplexml_import_dom($doc);
+		if ($xml === FALSE) {
+			// log error. 
+			echo "Invalid XML for website .<br/>\n";
+			continue; 
+		} else if (!is_object($xml)) { 
+			echo "Invalid XML for website. Did not make XML object.<br/>\n";
+			continue;
+		}
 		$items = $xml->body->rss->channel->item;
 
 		if ($items == null) {
