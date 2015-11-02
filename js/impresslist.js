@@ -3265,8 +3265,15 @@ var impresslist = {
 
 		// Mailout tool.
 		$('#mailout-content').keyup(function(){
+
+			var steam_keys_md = "**Steam Keys:**\n\n";
+			steam_keys_md += "* XXXXX-XXXXX-XXXXX *(Sent by Nick on 23rd March 2015)*\n";
+			steam_keys_md += "* XXXXX-XXXXX-XXXXX *(Sent by Ashley on 3rd March 2015)*\n\n";
+
 			var md_content = $(this).val();
 			md_content = md_content.replace("{{first_name}}", "(First Name)");
+			md_content = md_content.replace("{{steam_key}}", "XXXXX-XXXXX-XXXXX");
+			md_content = md_content.replace("{{steam_keys}}", steam_keys_md);
 			var html_content = markdown.toHTML( md_content ); 
 			$('#mailout-preview').html(html_content);
 		});

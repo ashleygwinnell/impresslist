@@ -440,20 +440,14 @@ if (!isset($_GET['endpoint'])) {
 							$result = api_error("There are not enough Steam keys in the system to allocate to this mailout. {$numNewKeysNeeded} more needed.");
 						}
 					}
-					else if (strpos($markdown, "{{steam_keys}}") !== false) 
+					if (strpos($markdown, "{{steam_keys}}") !== false) 
 					{
 						$recipientsArray = json_decode($mailout['recipients'], true);
 						$newKeysNeeded = 0;
 						for ($i = 0; $i < count($recipientsArray); $i++) {
 							$contact = $recipientsArray[$i];
 							if ($contact['type'] == "person") {
-								$keysForContact = $db->query("SELECT * 
-																FROM game_key 
-																WHERE platform = 'steam' 
-																	AND assigned = 1 
-																	AND assignedToType = 'person' 
-																	AND assignedToTypeId = '" . $contact['person_id'] . "'; 
-																");
+								$keysForContact = db_keysassignedtotype($db, $user_currentGame, 'steam', 'person', $contact['person_id']);
 								if (count($keysForContact) == 0) {
 									$newKeysNeeded++;
 								}

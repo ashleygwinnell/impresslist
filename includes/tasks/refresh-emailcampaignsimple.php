@@ -76,8 +76,46 @@ X-Mailer: impresslist/" . $impresslist_version;
 			}
 				
 			echo "Sending e-mail <i>" . $campaign['subject'] . "</i> to " . $person['firstname'] . " " . $person['surnames'] . " (" . $person_email . "). <br/>";
+			
+			// templates
 			$markdown = $campaign['markdown'];
 			$markdown = str_replace("{{first_name}}", $person['firstname'], $markdown);
+
+			$assignsSingleSteamKey_id = 0;
+			$assignsSingleSteamKey_code = '';
+			$assignsSingleSteamKey = (strpos($markdown, "{{steam_key}}") !== false);
+			if ($assignsSingleSteamKey) {
+				$availableKey = db_singleavailablekeyforgame($db, $user['currentGame'], 'steam');
+				$assignsSingleSteamKey_id = $availableKey['id'];
+				$assignsSingleSteamKey_code = $availableKeys['keystring'];
+				$markdown = str_replace("{{steam_key}}", $assignsSingleSteamKey_code, $markdown);
+			} 
+			if (strpos($markdown, "{{steam_keys}}") !== false) {
+				$keysForContact = db_keysassignedtotype($db, $user['currentGame'], 'steam', 'person', $person['id']); 
+
+				if (count($keysForContact) == 0) {
+					$availableKey = db_singleavailablekeyforgame($db, $user['currentGame'], 'steam');
+					$assignsSingleSteamKey = true;
+					$assignsSingleSteamKey_id = $availableKey['id'];
+					$assignsSingleSteamKey_code = $availableKeys['keystring'];
+					
+					$steam_keys_md = "**Steam Key:**\n\n";
+					$steam_keys_md .= "* {$assignsSingleSteamKey_code}\n\n";
+					$markdown = str_replace("{{steam_keys}}", $steam_keys_md, $markdown);
+				} else {
+					$plural = count($keysForContact) >= 2;
+					$steam_keys_md = "**Steam Key" . (($plural)?"s":"") . ":**\n\n";
+					for($k = 0; $k < count($keysForContact); $k++) {
+						$datetimestring = date("jS F Y", $keysForContact[$k]['assignedByUserTimestamp']);
+						$steam_keys_md .= "* " . $keysForContact[$k]['keystring'] . " *(Sent on " . $datetimestring . ")*\n";
+					}
+					$steam_keys_md .= "\n";
+
+					$markdown = str_replace("{{steam_keys}}", $steam_keys_md, $markdown);
+				}
+			}
+			
+
 			$html_contents = $Parsedown->text($markdown);
 			
 			$urlroot = (isset($_SERVER['HTTPS'])?"https://":"http://") . $_SERVER['HTTP_HOST'];
@@ -167,6 +205,23 @@ X-Mailer: impresslist/" . $impresslist_version;
 					$stmt->execute();
 				}
 
+				// Assign the steam key/s
+				if ($assignsSingleSteamKey) {
+					$stmt = $db->prepare("UPDATE game_key 
+											SET assigned = :assigned, 
+												assignedToType = :assignedToType,
+												assignedToTypeId = :assignedToTypeId, 
+												assignedByUser = :assignedByUser, 
+												assignedByUserTimestamp = :assignedByUserTimestamp
+											WHERE id = :id ");
+					$stmt->bindValue(":id", $assignsSingleSteamKey_id, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":assigned", 1, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":assignedToType", 'person', Database::VARTYPE_STRING);
+					$stmt->bindValue(":assignedToTypeId", $person['id'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":assignedByUser", $user['id'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":assignedByUserTimestamp", time(), Database::VARTYPE_INTEGER);
+					$stmt->execute();
+				}
 			}
 		}	
 	}
