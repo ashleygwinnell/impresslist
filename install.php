@@ -80,7 +80,8 @@ $sql = "CREATE TABLE IF NOT EXISTS person (
 			notes TEXT NOT NULL,
 			lastcontacted INTEGER NOT NULL,
 			lastcontactedby INTEGER NOT NULL, 
-			removed INTEGER NOT NULL DEFAULT 0
+			removed INTEGER NOT NULL DEFAULT 0,
+			outofdate INTEGER NOT NULL DEFAULT 0
 		);";
 $db->exec($sql);
 if ($resetdb) {

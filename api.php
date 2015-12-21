@@ -55,13 +55,13 @@ function api_checkRequiredGETFieldsWithTypes($fields, &$result) {
 			} else if ($type == 'alphanumerichyphens') {
 				$temp = $_GET[$fields[$i]['name']];
 				if (!util_isAlphaNumericWithExtras($temp, array("-"), 255, 0)) {
-					$result = api_error($fields[$i]['name'] . " is not a valid alphanumeric string. -- " . $temp);
+					$result = api_error($fields[$i]['name'] . " is not a valid alphanumerichyphens string. -- " . $temp);
 					return true;
 				}
 			} else if ($type == 'alphanumerichyphensnewlines') {
 				$temp = $_GET[$fields[$i]['name']];
-				if (!util_isAlphaNumericWithExtras($temp, array("-", "\n"), 255, 0)) {
-					$result = api_error($fields[$i]['name'] . " is not a valid alphanumeric string. -- " . $temp);
+				if (!util_isAlphaNumericWithExtras($temp, array("-", "\n"), 4096*2*2, 0)) {
+					$result = api_error($fields[$i]['name'] . " is not a valid alphanumerichyphensnewlines string. -- " . $temp);
 					return true;
 				}
 			} else if ($type == 'alphanumericspaces') {
@@ -345,7 +345,7 @@ if (!isset($_GET['endpoint'])) {
 					$result = api_error("person was not an integer");
 				} else { 
 
-					$json = json_decode($_GET['recipients'], true);
+					$json = json_decode(urldecode($_POST['recipients']), true);
 					if ($json === NULL) {
 						$result = api_error("Invalid json passed.");
 					} else { 
@@ -376,7 +376,7 @@ if (!isset($_GET['endpoint'])) {
 						$stmt->bindValue(":id", 		$_GET['id'], 		Database::VARTYPE_INTEGER); 
 						$stmt->bindValue(":name", 		$_GET['name'], 		Database::VARTYPE_STRING); 
 						$stmt->bindValue(":subject", 	$_GET['subject'], 	Database::VARTYPE_STRING); 
-						$stmt->bindValue(":recipients", $_GET['recipients'],Database::VARTYPE_STRING); 
+						$stmt->bindValue(":recipients", urldecode($_POST['recipients']),Database::VARTYPE_STRING); 
 						$stmt->bindValue(":markdown", 	$_GET['markdown'], 	Database::VARTYPE_STRING); 
 						$stmt->bindValue(":ts", 		$_GET['timestamp'], Database::VARTYPE_INTEGER); 
 						$stmt->bindValue(":user", 		$user_id, 			Database::VARTYPE_INTEGER); 
@@ -1086,7 +1086,8 @@ if (!isset($_GET['endpoint'])) {
 				//array('name' => 'surnames', 'type' => 'alphanumericspaces'),
 				array('name' => 'email', 'type' => 'email'),
 				array('name' => 'notes', 'type' => 'textarea'),
-				array('name' => 'twitter', 'type' => 'alphanumericunderscores')
+				array('name' => 'twitter', 'type' => 'alphanumericunderscores'),
+				array('name' => 'outofdate', 'type' => 'boolean')
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
@@ -1099,8 +1100,9 @@ if (!isset($_GET['endpoint'])) {
 				$twitter_followers = twitter_countFollowers($_GET['twitter']);
 				if ($twitter_followers == "") { $twitter_followers = 0; }
 				$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
+				$outofdate = ($_GET['outofdate'] == "true")?1:0;
 
-				$stmt = $db->prepare(" UPDATE person SET firstname = :firstname, surnames = :surnames, email = :email, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes WHERE id = :id ");
+				$stmt = $db->prepare(" UPDATE person SET firstname = :firstname, surnames = :surnames, email = :email, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes, outofdate = :outofdate WHERE id = :id ");
 				$stmt->bindValue(":firstname", $_GET['firstname'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":surnames", $surname, Database::VARTYPE_STRING);
 				$stmt->bindValue(":email", strtolower(trim($_GET['email'])), Database::VARTYPE_STRING);
@@ -1109,6 +1111,7 @@ if (!isset($_GET['endpoint'])) {
 					$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
 				}
 				$stmt->bindValue(":notes", strip_tags(stripslashes($_GET['notes'])), Database::VARTYPE_STRING);
+				$stmt->bindValue(":outofdate", $outofdate, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
 				$rs = $stmt->execute();
 

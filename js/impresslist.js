@@ -300,12 +300,17 @@ API.saveSimpleMailout = function(obj, name, subject, recipients, markdown, times
 					"&id=" + encodeURIComponent(obj.id) + 
 					"&name=" + encodeURIComponent(name) + 
 					"&subject=" + encodeURIComponent(subject) + 
-					"&recipients=" + encodeURIComponent( JSON.stringify(recipients) ) + 
+					//"&recipients=" + encodeURIComponent( JSON.stringify(recipients) ) + 
+					"&recipients=look_in_post_data" + 
 					"&markdown=" + encodeURIComponent(markdown) + 
 					"&timestamp=" + encodeURIComponent(timestamp);
 	console.log(url);
 
-	$.ajax( url )
+	$.ajax( {
+		method: 'POST',
+		url: url,
+		data: { recipients: encodeURIComponent( JSON.stringify(recipients) ) }
+	})
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') { 
 				API.errorMessage(result);
@@ -754,7 +759,7 @@ API.setPersonAssignment = function(person, user, gameId) {
 			API.errorMessage("Could not set user-assignment on Person.");
 		});
 }
-API.savePerson = function(person, firstname, surnames, email, twitter, notes) {
+API.savePerson = function(person, firstname, surnames, email, twitter, notes, outofdate) {
 
 	var url = "api.php?endpoint=/person/save/" + 
 					"&id=" + encodeURIComponent(person.id) + 
@@ -762,7 +767,8 @@ API.savePerson = function(person, firstname, surnames, email, twitter, notes) {
 					"&surnames=" + encodeURIComponent(surnames) + 
 					"&email=" + encodeURIComponent(email) + 
 					"&twitter=" + encodeURIComponent(twitter) + 
-					"&notes=" + encodeURIComponent(notes);
+					"&notes=" + encodeURIComponent(notes) + 
+					"&outofdate=" + encodeURIComponent(outofdate);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -2127,6 +2133,7 @@ SimpleMailout = function(data) {
 			}
 			recipients.push(obj);
 		}
+		console.log(JSON.stringify(recipients));
 		// #####
 		//  $('#mailout-radio-time-asap');
 		var whichtime = $('input[name="mailout-time-radio"]:checked').val();
@@ -2232,12 +2239,16 @@ SimpleMailout = function(data) {
 		for(var i = 0; i < this.recipientsData.length; i++) {
 			if (this.recipientsData[i].type == 'person') {
 				var p = impresslist.findPersonById(this.recipientsData[i].person_id);
-				var box = $('input[data-type="person"][data-mailout-typeid="' + p.id + '"][data-checkbox="true"][data-mailout-type="person"]');
-				$(box).prop("checked", true);
+				if (p != null) { 
+					var box = $('input[data-type="person"][data-mailout-typeid="' + p.id + '"][data-checkbox="true"][data-mailout-type="person"]');
+					$(box).prop("checked", true);
+				}
 			} else if (this.recipientsData[i].type == "personPublication") {
 				var p = impresslist.findPersonPublicationById(this.recipientsData[i].personPublication_id);
-				var box = $('input[data-type="person"][data-mailout-typeid="' + p.id + '"][data-checkbox="true"][data-mailout-type="personPublication"]');
-				$(box).prop("checked", true);
+				if (p != null) { 
+					var box = $('input[data-type="person"][data-mailout-typeid="' + p.id + '"][data-checkbox="true"][data-mailout-type="personPublication"]');
+					$(box).prop("checked", true);
+				}
 			}
 			$(box).attr("mailout-read", this.recipientsData[i].read);
 		}
@@ -2296,8 +2307,9 @@ Person = function(data) {
 		var email = $("[data-person-id=" + this.id + "][data-input-field='email']").val();
 		var twitter = $("[data-person-id=" + this.id + "][data-input-field='twitter']").val();
 		var notes = $("[data-person-id=" + this.id + "][data-input-field='notes']").val();
+		var outofdate = $("[data-person-id=" + this.id + "][data-input-field='outofdate']").is(':checked');
 		
-		API.savePerson(this, firstname, surnames, email, twitter, notes);
+		API.savePerson(this, firstname, surnames, email, twitter, notes, outofdate);
 	}
 	Person.prototype.savePriority = function() {
 		var priority = $("[data-person-id='" + this.id + "'][data-input-field='priority']").val();
@@ -2416,6 +2428,9 @@ Person = function(data) {
 									<div class='form-group'>\
 										<label for='email'>Notes:&nbsp; </label> \
 										<textarea data-person-id='" + this.id + "' data-input-field='notes' class='form-control' style='height:100px;'>" + this.field('notes') + "</textarea>\
+									</div>\
+									<div class='form-group'>\
+										<label class='checkbox-inline'><input data-person-id='" + this.id + "' data-input-field='outofdate' type='checkbox' " + (((this.field('outofdate')==1)?"checked":"")) + "><strong>Out of date?</strong></label>\
 									</div>\
 									<div class='fl'> \
 										<button id='save_personId" + this.id + "' type='submit' class='btn btn-primary'>Save</button>";
@@ -2801,7 +2816,7 @@ Person = function(data) {
 		elementExtras.hide();
 
 		var element = $("#people [data-person-tablerow='true'][data-person-id='" + this.id + "']");
-		if (this.search(text) && this.filter_isContactedByMe() && this.filter_isRecentlyContacted() && this.filter_isHighPriority() && this.filter_hasEmail() && this.filter_isAssignedToMe()) {
+		if (this.search(text) && this.filter_isContactedByMe() && this.filter_isRecentlyContacted() && this.filter_isHighPriority() && this.filter_hasEmail() && this.filter_isAssignedToMe() && this.filter_isOutOfDate()) {
 			element.show();
 			if (impresslist.selectModeIsOpen) {
 				elementExtras.show();
@@ -2860,6 +2875,15 @@ Person = function(data) {
 			//console.log(this.field('assigned'));
 			//console.log(impresslist.config.user.id);
 			if (this.field('assigned') == impresslist.config.user.id) {
+				return true;
+			}
+			return false;
+		}
+		return true;
+	}
+	Person.prototype.filter_isOutOfDate = function() {
+		if ($('#filter-show-outofdate').is(':checked')) { 
+			if (this.field('outofdate') ==1) {
 				return true;
 			}
 			return false;
@@ -3194,6 +3218,7 @@ var impresslist = {
 		$('#filter-high-priority').change(this.refreshFilter);
 		$('#filter-email-attached').change(this.refreshFilter);
 		$('#filter-assigned-self').change(this.refreshFilter);
+		$('#filter-show-outofdate').change(this.refreshFilter);
 
 		// Import tool
 		$('#importtool-fieldselect').change(function() {
