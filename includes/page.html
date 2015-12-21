@@ -49,6 +49,7 @@
 			      
 					<ul class="nav navbar-nav navbar-right">
 				    	<li><a id='nav-home' data-nav-page='home' href="javascript:;">Home</a></li>
+				    	<li><a id='nav-social' data-nav-page='social' href="javascript:;">Social</a></li>
 				    	<li><a id='nav-mailout' data-nav-page='mailout' href="javascript:;">Mailout</a></li>
 
 				    	
@@ -465,6 +466,63 @@
 			</div>
 			<br/><br/>
 
+		</div>
+
+		<!-- Mailout -->
+		<div id='social-page' data-type-page='true' data-page='social'>
+			<div class='container mycontainer'>
+				<div id='social-homepage' class='row'>
+					<div class='col-sm-9'>
+						<p><b>Social Scheduler</b></p>
+						<p>Schedule tweets/retweets &amp; Facebook posts/shares.</p>
+					</div>
+					<div class='col-sm-3'>
+						<p><b>Timeline</b></p>
+						<p>...</p>
+					</div>
+				</div>
+				<div class='row'>
+					<hr/>
+					<div class='col-sm-9'>
+						<p><b>Accounts</b></p>
+						<div id='social-homepage-twitteracc-list'>
+						</div>
+						<div id='social-homepage-twitteracc-list-none' style='display:none;'>
+							<p>No linked accounts.</p> 
+						</div>
+						<div id='social-homepage-twitteracc-list-loading'>
+							<p>Loading...</p> 
+						</div>
+						<!-- <p><img src='images/email-twitter.png' /> @ashleygwinnell</p> -->
+						<!-- <p><img src='images/email-facebook.png' /> Force Of Habit (page)</p>-->
+					</div>
+					<div class='col-sm-3'>
+						<p><b>Add</b></p>
+						<?php
+							$connection = new TwitterOAuth($twitter_consumerKey, $twitter_consumerSecret);
+							$arr = $connection->getRequestToken('oob');
+							//print_r($arr);
+							$authoriseurl = $connection->getAuthorizeURL($arr['oauth_token']);
+						?>
+						<div id='social-addtwitteraccount-buttonpage'>
+							<a id='social-addtwitteraccount-link' href="<?php echo $authoriseurl; ?>" target='new'><button class='btn btn-primary'>Twitter Account</button></a>
+						</div>
+						<div id='social-addtwitteraccount-verifypage' style='display:none;'>
+							<p><b>Twitter Account</b></p>
+							<p>
+								<input id='social-addtwitteraccount-requesttoken' type='text' class='form-control' style='display:none;' value='<?php echo $arr["oauth_token"]; ?>'/>
+								<input id='social-addtwitteraccount-requesttokensecret' type='text' class='form-control' style='display:none;' value='<?php echo $arr["oauth_token_secret"]; ?>'/>
+
+								<input id='social-addtwitteraccount-pin' type='text' class='form-control' placeholder='Enter PIN...'/></p>
+							<p><button id='social-addtwitteraccount-submit' class='btn btn-primary'>Add</button> <button id='social-addtwitteraccount-cancel' class='btn btn-danger'>Cancel</button></p>
+						</div>
+						
+						
+					</div>
+
+					
+				</div>
+			</div>
 		</div>
 
 		<!-- Mailout -->

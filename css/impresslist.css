@@ -42,6 +42,7 @@ h3 {
 
 
 #home-page { display:block; }
+#social-page { display:none; }
 #coverage-page { display:none; }
 #keys-page { display:none; }
 #mailout-page { display:none; }

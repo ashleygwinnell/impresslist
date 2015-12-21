@@ -182,7 +182,12 @@ if (!isset($_GET['endpoint'])) {
 		"/coverage/youtuber/save/",
 		"/coverage/youtuber/remove/",
 
-		
+		// Social
+		"/social/account/twitter/list/",
+		"/social/account/twitter/add/",
+		"/social/account/twitter/remove/",
+
+		// Chat
 		"/chat/online-users/",
 		"/chat/lines/",
 		"/chat/send/"
@@ -192,7 +197,90 @@ if (!isset($_GET['endpoint'])) {
 		$result = api_error("API endpoint " . $endpoint . " does not exist.");
 	} else { 
 
-		if ($endpoint == "/backup/")
+		if ($endpoint == "/social/account/twitter/list/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$results = $db->query("SELECT * FROM oauth_twitteracc WHERE removed = 0 ORDER BY id ASC;");
+			
+			$result = new stdClass();
+			$result->success = true;
+			$result->twitteraccs = $results;
+		} 
+		else if ($endpoint == "/social/account/twitter/add/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$required_fields = array(
+				array('name' => 'request_token', 		'type' => 'alphanumericunderscores'),
+				array('name' => 'request_token_secret', 'type' => 'alphanumericunderscores'),
+				array('name' => 'pin', 			 		'type' => 'alphanumeric')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) 
+			{
+				$pin = $_GET['pin'];
+				$connection = new TwitterOAuth($twitter_consumerKey, $twitter_consumerSecret, $_GET['request_token'], $_GET['request_token_secret']);
+				$token = $connection->getAccessToken($pin);
+
+				if (!isset($token['screen_name'])) { 
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = "Could not add Twitter Account (for an unknown reason).";
+				} else { 
+
+					// Make sure this isn't in tehre already! 
+					$existing_result = db_singleOAuthTwitterByHandle($db, $token['screen_name']);
+					if ($existing_result == null) {
+
+						$stmt = $db->prepare("INSERT INTO oauth_twitteracc (id, twitter_id, twitter_name, twitter_handle, oauth_key, oauth_secret, removed) 
+																VALUES ( NULL, :twitter_id, :twitter_name, :twitter_handle, :oauth_key, :oauth_secret, :removed);
+											");
+						$stmt->bindValue(":twitter_id", 	$token['user_id'], 				Database::VARTYPE_STRING); 
+						$stmt->bindValue(":twitter_name", 	$token['screen_name'], 			Database::VARTYPE_STRING); 
+						$stmt->bindValue(":twitter_handle", $token['screen_name'], 			Database::VARTYPE_STRING); 
+						$stmt->bindValue(":oauth_key", 		$token['oauth_token'], 			Database::VARTYPE_STRING); 
+						$stmt->bindValue(":oauth_secret", 	$token['oauth_token_secret'], 	Database::VARTYPE_STRING); 
+						$stmt->bindValue(":removed", 		0, 								Database::VARTYPE_INTEGER); 
+						$stmt->execute();
+
+						//print_r($token);
+
+						$twitterAccId = $db->lastInsertRowID();
+
+						$result = new stdClass();
+						$result->success = true;
+						$result->twitteracc = db_singleOAuthTwitter( $db, $twitterAccId );
+					} else {
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = "Twitter Account already exists.";
+					}
+				}
+			}
+			
+		}
+		else if ($endpoint == "/social/account/twitter/remove/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$required_fields = array( array('name' => 'id', 		'type' => 'alphanumeric') );
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) 
+			{
+				$stmt = $db->prepare(" UPDATE oauth_twitteracc SET removed = :removed WHERE id = :id; ");
+				$stmt->bindValue(":removed", 	1, 				Database::VARTYPE_INTEGER); 
+				$stmt->bindValue(":id", 		$_GET['id'], 	Database::VARTYPE_STRING); 
+				$stmt->execute();	
+
+				$result = new stdClass();
+				$result->success = true;
+			}
+		}
+		else if ($endpoint == "/backup/")
 		{
 			$require_login = true;
 			include_once("init.php");

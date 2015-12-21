@@ -30,6 +30,7 @@ $impresslist_cacheType = Cache::TYPE_NONE;
 $impresslist_memcacheServer = "localhost";
 $impresslist_memcachePort = 11211;
 
+// https://apps.twitter.com/
 $twitter_consumerKey = "consumer_key";
 $twitter_consumerSecret = "consumer_secret";
 $twitter_oauthToken = "oauth_token";

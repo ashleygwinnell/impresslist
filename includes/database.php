@@ -56,6 +56,16 @@
 		$rs = $db->query("SELECT * FROM game_key WHERE game = '" . $gameid . "' AND platform = '" . $platform . "' AND assigned = 0 ORDER BY id ASC;");
 		return $rs[0];
 	}
+	function db_singleOAuthTwitter($db, $twitterAccId) {
+		//if (!is_numeric($gameid)) { return false; }
+		$rs = $db->query("SELECT * FROM oauth_twitteracc WHERE id = '" . $twitterAccId . "' AND removed = 0  LIMIT 1;");
+		return $rs[0];
+	}
+	function db_singleOAuthTwitterByHandle($db, $twitterHandle) {
+		//if (!is_numeric($gameid)) { return false; }
+		$rs = $db->query("SELECT * FROM oauth_twitteracc WHERE twitter_handle = '" . $twitterHandle . "' AND removed = 0 LIMIT 1;");
+		return $rs[0];
+	}
 	function db_keysassignedtotype($db, $gameid, $platform, $type, $typeid) {
 		$stmt = $db->prepare("SELECT * 
 								FROM game_key 

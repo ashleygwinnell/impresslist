@@ -915,6 +915,7 @@ API.removePublication = function(publication) {
 			API.errorMessage("Could not remove Publication.");
 		});
 }
+
 API.addYoutuber = function() {
 	var name = "Blank";
 	var url = "api.php?endpoint=/youtuber/add/&channel=youtube";
@@ -1060,6 +1061,70 @@ API.userChangePassword = function(user, currentPassword, newPassword) {
 		})
 		.fail(function() {
 			API.errorMessage("Could not change Password.");
+		});
+}
+API.listOAuthTwitterAccounts = function(fromInit) {
+	if (typeof fromInit == 'undefined') { fromInit = true; }
+	
+	var url = "api.php?endpoint=/social/account/twitter/list/";
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
+			var json = JSON.parse(result);
+			if (!json.success) { API.errorMessage(json.message); return; }
+			
+			for(var i = 0; i < json.twitteraccs.length; ++i) { 
+				var twacc = new OAuthTwitterAccount(json.twitteraccs[i]);
+				impresslist.addOAuthTwitterAccount(twacc, fromInit);
+			}
+
+			$('#social-homepage-twitteracc-list-loading').hide();
+			if (json.twitteraccs.length == 0) {
+				$('#social-homepage-twitteracc-list-none').show();
+			}
+			
+		})
+		.fail(function() {
+			API.errorMessage("Could not list OAuth Twitter Accounts.");
+		});
+}
+API.addOAuthTwitterAccount = function(request_token, request_token_secret, pin) {
+	var url = "api.php?endpoint=/social/account/twitter/add/" + 
+				"&request_token=" + encodeURIComponent(request_token) +
+				"&request_token_secret=" + encodeURIComponent(request_token_secret) +
+				"&pin=" + encodeURIComponent(pin);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
+			
+			var json = JSON.parse(result);
+			if (!json.success) { API.errorMessage(json.message); return; }
+			API.successMessage("Twitter Account added.");
+			console.log(json);
+
+			var oauthtwitter = new OAuthTwitterAccount(json.twitteracc);
+			impresslist.addOAuthTwitterAccount(oauthtwitter, false);
+		})
+		.fail(function() {
+			API.errorMessage("Could not add Twitter Account.");
+		});
+}
+API.removeOAuthTwitterAccount = function(acc) {
+	var url = "api.php?endpoint=/social/account/twitter/remove/&id=" + encodeURIComponent(acc.id);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
+			
+			var json = JSON.parse(result);
+			if (!json.success) { API.errorMessage(json.message); return; }
+			API.successMessage("Twitter Account removed.");
+			impresslist.removeOAuthTwitterAccount(acc);
+			
+		})
+		.fail(function() {
+			API.errorMessage("Could not remove Twitter Account.");
 		});
 }
 API.sqlQuery = function(query) {
@@ -3128,6 +3193,49 @@ Publication = function(data) {
 		return false;
 	}
 
+OAuthTwitterAccount = function(data) {
+	DBO.call(this, data); 
+}
+	OAuthTwitterAccount.prototype = Object.create(DBO.prototype)
+	OAuthTwitterAccount.prototype.constructor = OAuthTwitterAccount;
+	OAuthTwitterAccount.prototype.init = function(data) {
+		DBO.prototype.init.call(this, data);
+		this.id = this.field('id');
+	}
+	OAuthTwitterAccount.prototype.onAdded = function(fromInit) {
+		this.createItem(fromInit);
+		$('#social-homepage-twitteracc-list-none').hide();
+		if (!fromInit) {
+			$('#social-addtwitteraccount-cancel').click();
+		}
+	}
+	OAuthTwitterAccount.prototype.onRemoved = function() {
+		this.removeItem();
+
+		if (impresslist.oauthTwitterAccounts.length - 1 == 0) {
+			$('#social-homepage-twitteracc-list-none').show();
+		}
+	}
+	OAuthTwitterAccount.prototype.createItem = function(fromInit) {
+		var html = "";
+		html += "<p id='social-twitteracc-" + this.id + "'>";
+		html += "	<img src='images/email-twitter.png' /> <a href='http://twitter.com/" + this.field("twitter_name") + "'>@" + this.field("twitter_name") + "</a>";
+		html += "	<button id='social-remove-twitteracc-" + this.id + "' class='btn btn-sm btn-danger fr'>X</button>";
+		html += "</p>";
+		$('#social-homepage-twitteracc-list').append(html);
+		this.update();
+	}
+	OAuthTwitterAccount.prototype.removeItem = function() {
+		$("#social-twitteracc-" + this.id).remove();
+	}
+	OAuthTwitterAccount.prototype.update = function() {
+		var th = this;
+		$("#social-remove-twitteracc-" + this.id).click(function(){
+			API.removeOAuthTwitterAccount(th);
+		});
+	}
+
+
 
 var impresslist = {
 	config: {
@@ -3155,6 +3263,7 @@ var impresslist = {
 	games: [],
 	coverage: [],
 	simpleMailouts: [],
+	oauthTwitterAccounts: [],
 	loading: {
 		people: false,
 		publications: false,
@@ -3184,6 +3293,7 @@ var impresslist = {
 		API.listYoutubeChannels();
 		API.listEmails();
 		API.listSimpleMailouts();
+		API.listOAuthTwitterAccounts();
 
 		// Navigation links
 		var thiz = this;
@@ -3198,6 +3308,7 @@ var impresslist = {
 		$('#nav-home').click(this.changePage);
 		$('#nav-coverage').click(this.changePage);
 		$('#nav-keys').click(this.changePage);
+		$('#nav-social').click(this.changePage);
 		$('#nav-mailout').click(this.changePage);
 		$('#nav-mailout-addrecipients').click(this.changePage);
 		$('#nav-admin').click(this.changePage);
@@ -3397,6 +3508,24 @@ var impresslist = {
 				
 		});
 
+		// Social Scheduler 
+
+		// Social Account Management
+		$('#social-addtwitteraccount-link').click(function(){
+			$('#social-addtwitteraccount-buttonpage').hide();
+			$('#social-addtwitteraccount-verifypage').show();
+		});
+		$('#social-addtwitteraccount-cancel').click(function(){
+			$('#social-addtwitteraccount-verifypage').hide();
+			$('#social-addtwitteraccount-buttonpage').show();
+		});
+		$('#social-addtwitteraccount-submit').click(function(){
+			var token 		= $('#social-addtwitteraccount-requesttoken').val();
+			var tokenSecret = $('#social-addtwitteraccount-requesttokensecret').val();
+			var pin 		= $('#social-addtwitteraccount-pin').val();
+			API.addOAuthTwitterAccount(token, tokenSecret, pin);
+		});
+
 		// Chat functionality
 		this.chat.init();
 
@@ -3555,6 +3684,20 @@ var impresslist = {
 	addSimpleMailout: function(obj, fromInit) {
 		this.simpleMailouts.push(obj);
 		obj.onAdded(fromInit);
+	},
+	addOAuthTwitterAccount: function(obj, fromInit) {
+		this.oauthTwitterAccounts.push(obj);
+		obj.onAdded(fromInit);
+	},
+	removeOAuthTwitterAccount: function(obj) {
+		for(var i = 0, len = this.oauthTwitterAccounts.length; i < len; ++i) {
+			if (this.oauthTwitterAccounts[i].id == obj.id) {
+				console.log('oauth twitter removed: ' + obj.id);
+				obj.onRemoved();
+				this.oauthTwitterAccounts.splice(i, 1);
+				break;
+			}
+		}
 	},
 	removeSimpleMailout: function(obj) {
 		for(var i = 0, len = this.simpleMailouts.length; i < len; ++i) {

@@ -56,6 +56,9 @@ if ($resetdb) {
 	$sql = "DROP TABLE game_keys;";
 	$db->exec($sql);
 
+	$sql = "DROP TABLE oauth_twitteracc;";
+	$db->exec($sql);
+
 }
 
 // keywords
@@ -303,6 +306,19 @@ $sql = "CREATE TABLE IF NOT EXISTS youtuber_coverage (
 			thumbnail TEXT NOT NULL,
 			utime INTEGER NOT NULL DEFAULT 0,
 			thanked INTEGER NOT NULL DEFAULT 0,
+			removed INTEGER NOT NULL DEFAULT 0
+		);";
+$db->exec($sql);
+
+
+// twitter accounts
+$sql = "CREATE TABLE IF NOT EXISTS oauth_twitteracc (
+			id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+			twitter_id TEXT NOT NULL,
+			twitter_name TEXT NOT NULL,
+			twitter_handle TEXT NOT NULL,
+			oauth_key TEXT NOT NULL,
+			oauth_secret TEXT NOT NULL,
 			removed INTEGER NOT NULL DEFAULT 0
 		);";
 $db->exec($sql);
