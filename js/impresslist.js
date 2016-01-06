@@ -1321,11 +1321,22 @@ API.addOAuthTwitterAccount = function(request_token, request_token_secret, pin) 
 			
 			var json = JSON.parse(result);
 			if (!json.success) { API.errorMessage(json.message); return; }
-			API.successMessage("Twitter Account added.");
-			console.log(json);
+			
 
-			var oauthtwitter = new OAuthTwitterAccount(json.twitteracc);
-			impresslist.addOAuthTwitterAccount(oauthtwitter, false);
+			if (typeof json.updated == 'undefined') { 
+				API.successMessage("Twitter Account added.");
+				console.log(json);
+
+				var oauthtwitter = new OAuthTwitterAccount(json.twitteracc);
+				impresslist.addOAuthTwitterAccount(oauthtwitter, false);
+			} else {
+				API.successMessage("Twitter Account updated.");
+				console.log(json);
+
+				var oauthtwitter = impresslist.findOAuthTwitterAccountById(json.twitteracc.id);
+				oauthtwitter.init(json.twitteracc);
+				$('#social-homepage-twitteracc-list-none').hide();
+			}
 		})
 		.fail(function() {
 			API.errorMessage("Could not add Twitter Account.");
@@ -2380,7 +2391,7 @@ SimpleMailout = function(data) {
 
 		var openText = "-";
 		if (this.field("sent") == 1) {
-			openText = (((1.0*this.numOpens)/(1.0*this.numRecipients))*100) + "%";
+			openText = Math.round((((1.0*this.numOpens)/(1.0*this.numRecipients))*100)) + "%";
 		}
 
 		$("[data-simplemailout-id='" + this.id + "'][data-field='name']").html( this.field('name') );
@@ -3447,7 +3458,7 @@ OAuthTwitterAccount = function(data) {
 	OAuthTwitterAccount.prototype.createItem = function(fromInit) {
 		var html = "";
 		html += "<p id='social-twitteracc-" + this.id + "'>";
-		html += "	<img src='images/email-twitter.png' /> <a href='http://twitter.com/" + this.field("twitter_name") + "'>@" + this.field("twitter_name") + "</a>";
+		html += "	<img src='" + this.field("twitter_image") + "' /> <a href='http://twitter.com/" + this.field("twitter_name") + "'>@" + this.field("twitter_name") + "</a>";
 		html += "	<button id='social-remove-twitteracc-" + this.id + "' class='btn btn-sm btn-danger fr'>X</button>";
 		html += "</p>";
 		$('#social-homepage-twitteracc-list').append(html);
@@ -3856,7 +3867,7 @@ SocialTimelineItem = function(data) {
 			html += "			<p class='fr text-muted'><i class='glyphicon glyphicon-time'></i> <span data-social-id='" + this.id + "' data-toggle='tooltip' data-placement='left' title='" + reldate + "'>" + thedate + "</span></p> \
 							</div> \
 							<div> \
-								<img class='icon' src='images/email-twitter.png'/> \
+								<img class='icon' src='" + acc.field("twitter_image") + "' /> \
 								<p style='min-height:40px;'>" + this.field('typedata').message + "</p>";
 					
 								var attachments = this.field('typedata').attachments;
@@ -3872,7 +3883,7 @@ SocialTimelineItem = function(data) {
 		} else if (this.field("type") == "retweet") {
 			html += "	<div class='socialqueue-item indented thinnest " + (this.field('ready')==1?"ready":"") + "'> \
 							<div class='oa'> \
-								<img class='icon' src='images/email-twitter.png'/> \
+								<img class='icon' src='" + acc.field("twitter_image") + "'/> \
 								<p class='fl'><b>Retweet by <a href='http://twitter.com/" + acc.field('twitter_handle') + "'>@" + acc.field('twitter_handle') + "</a></b></p> \
 								<p class='fr text-muted' style='margin-left:10px;'> <a data-socialitem-id='" + this.id + "' data-toggle='modal' data-target='.social_modal' style='cursor:pointer'><i class='glyphicon glyphicon-pencil'></i></a></p> \
 								<p class='fr text-muted'><i class='glyphicon glyphicon-time'></i> <span data-social-id='" + this.id + "' data-toggle='tooltip' data-placement='left' title='" + reldate + "'>" + thedate + "</span> </p> \

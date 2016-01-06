@@ -271,6 +271,12 @@ function twitter_countFollowers($username)
 	return $twitter_content[0]->followers_count;
 }
 
+function twitter_getUserInfoById($oauthtoken, $oauthsecret, $id) {
+	$url = "https://api.twitter.com/1.1/users/show.json";
+	$twitter_connection = twitter_getConnectionWithAccessToken($oauthtoken, $oauthsecret);
+	return $twitter_connection->get($url, array("user_id" => $id));
+}
+
 function twitter_postStatus($oauthtoken, $oauthsecret, $status) {
 	$url = "https://api.twitter.com/1.1/statuses/update.json";
 	$twitter_connection = twitter_getConnectionWithAccessToken($oauthtoken, $oauthsecret);

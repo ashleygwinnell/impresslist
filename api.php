@@ -225,6 +225,11 @@ if (!isset($_GET['endpoint'])) {
 			//print_r($r);
 
 			//$acc = db_singleOAuthTwitterByHandle($db, "ashleygwinnell");
+			//$r = twitter_getUserInfoById($acc['oauth_key'], $acc['oauth_secret'], "28089893");
+			//echo $r->profile_image_url;
+			//print_r($r);
+
+			//$acc = db_singleOAuthTwitterByHandle($db, "ashleygwinnell");
 			//$r = twitter_retweetStatus($acc['oauth_key'], $acc['oauth_secret'], "684422428987146245");
 			//print_r($r);
 			
@@ -587,12 +592,15 @@ if (!isset($_GET['endpoint'])) {
 					$existing_result = db_singleOAuthTwitterByHandle($db, $token['screen_name']);
 					if ($existing_result == null) {
 
-						$stmt = $db->prepare("INSERT INTO oauth_twitteracc (id, twitter_id, twitter_name, twitter_handle, oauth_key, oauth_secret, removed) 
-																VALUES ( NULL, :twitter_id, :twitter_name, :twitter_handle, :oauth_key, :oauth_secret, :removed);
+						$tw_user = twitter_getUserInfoById($token['oauth_token'], $token['oauth_token_secret'], $token['user_id']);
+						
+						$stmt = $db->prepare("INSERT INTO oauth_twitteracc (id, twitter_id, twitter_name, twitter_handle, twitter_image, oauth_key, oauth_secret, removed) 
+																VALUES ( NULL, :twitter_id, :twitter_name, :twitter_handle, :twitter_image, :oauth_key, :oauth_secret, :removed);
 											");
 						$stmt->bindValue(":twitter_id", 	$token['user_id'], 				Database::VARTYPE_STRING); 
 						$stmt->bindValue(":twitter_name", 	$token['screen_name'], 			Database::VARTYPE_STRING); 
 						$stmt->bindValue(":twitter_handle", $token['screen_name'], 			Database::VARTYPE_STRING); 
+						$stmt->bindValue(":twitter_image",  $tw_user->profile_image_url, 	Database::VARTYPE_STRING); 
 						$stmt->bindValue(":oauth_key", 		$token['oauth_token'], 			Database::VARTYPE_STRING); 
 						$stmt->bindValue(":oauth_secret", 	$token['oauth_token_secret'], 	Database::VARTYPE_STRING); 
 						$stmt->bindValue(":removed", 		0, 								Database::VARTYPE_INTEGER); 
@@ -606,9 +614,36 @@ if (!isset($_GET['endpoint'])) {
 						$result->success = true;
 						$result->twitteracc = db_singleOAuthTwitter( $db, $twitterAccId );
 					} else {
+						//$result = new stdClass();
+						//$result->success = false;
+						//$result->message = "Twitter Account already exists.";
+
+						$tw_user = twitter_getUserInfoById($existing_result['oauth_key'], $existing_result['oauth_secret'], $existing_result['twitter_id']);
+
+						// Update user
+						$stmt = $db->prepare("UPDATE oauth_twitteracc 
+												SET twitter_id = :twitter_id, 
+													twitter_name = :twitter_name,
+													twitter_handle = :twitter_handle,
+													twitter_image = :twitter_image,
+													removed = :removed 
+												WHERE id = :id; 
+											");
+						$stmt->bindValue(":twitter_id", 	$token['user_id'], 				Database::VARTYPE_STRING); 
+						$stmt->bindValue(":twitter_name", 	$token['screen_name'], 			Database::VARTYPE_STRING); 
+						$stmt->bindValue(":twitter_handle", $token['screen_name'], 			Database::VARTYPE_STRING); 
+						$stmt->bindValue(":twitter_image",  $tw_user->profile_image_url, 	Database::VARTYPE_STRING); 
+						$stmt->bindValue(":oauth_key", 		$token['oauth_token'], 			Database::VARTYPE_STRING); 
+						$stmt->bindValue(":oauth_secret", 	$token['oauth_token_secret'], 	Database::VARTYPE_STRING); 
+						$stmt->bindValue(":removed", 		0, 								Database::VARTYPE_INTEGER); 
+						$stmt->bindValue(":id", 			$existing_result['id'], 		Database::VARTYPE_INTEGER); 
+						$stmt->execute();
+
 						$result = new stdClass();
-						$result->success = false;
-						$result->message = "Twitter Account already exists.";
+						$result->success = true;
+						$result->twitteracc = db_singleOAuthTwitter( $db, $existing_result['id'] );
+						$result->updated = true;
+
 					}
 				}
 			}
