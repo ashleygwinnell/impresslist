@@ -1,3 +1,4 @@
 data/database.sql
 data/backups/*
+images/uploads/*
 includes/config.php
