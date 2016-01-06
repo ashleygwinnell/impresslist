@@ -259,6 +259,12 @@ class OAuthRequest {
       // Find request headers
       $request_headers = OAuthUtil::get_headers();
 
+      if (isset($parameters['multipart/form-data'])) {
+        $request_headers["Content-Type"] = "multipart/form-data";
+        unset($parameters['multipart/form-data']);
+      }
+
+
       // Parse the query-string to find GET parameters
       $parameters = OAuthUtil::parse_parameters($_SERVER['QUERY_STRING']);
 

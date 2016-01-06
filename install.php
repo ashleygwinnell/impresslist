@@ -50,6 +50,9 @@ if ($resetdb) {
 	$sql = "DROP TABLE emailqueue;";
 	$db->exec($sql);
 
+	$sql = "DROP TABLE socialqueue;";
+	$db->exec($sql);
+
 	$sql = "DROP TABLE game;";
 	$db->exec($sql);
 
@@ -340,6 +343,8 @@ $db->exec($sql);
 @$db->exec("INSERT IGNORE INTO settings VALUES ('auto_backup_email', ''); "); 
 @$db->exec("INSERT IGNORE INTO settings VALUES ('auto_backup_frequency', 0); "); 
 @$db->exec("INSERT IGNORE INTO settings VALUES ('manual_backup_lastbackedupon', 0); "); 
+@$db->exec("INSERT IGNORE INTO settings VALUES ('todolist', ''); "); 
+@$db->exec("INSERT IGNORE INTO settings VALUES ('twitter_configuration', '{}'); "); 
 
 echo "done database";
 
@@ -375,6 +380,7 @@ echo "done database";
 // 	chmod 777 data/database.sql
 // 	chmod 777 data/chat.txt
 // 	chmod 644 backup.php
+//  chmod 777 images/uploads/
 
 // 6.
 // Set up cron tasks.

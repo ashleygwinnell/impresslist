@@ -5,6 +5,227 @@ API.prototype = {
 
 }
 
+API.listSocialTimeline = function(fromInit) {
+	if (typeof fromInit == 'undefined') { fromInit = true; }
+	
+	impresslist.loading.set('socialTimelineItem', true); 
+	var url = "api.php?endpoint=/social/timeline/";
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			
+			for(var i = 0; i < json.timeline.length; ++i) { 
+				var item = new SocialTimelineItem(json.timeline[i]);
+				impresslist.addSocialTimelineItem(item, fromInit);
+			}
+			impresslist.loading.set('socialTimelineItem', false); 
+		})
+		.fail(function() {
+			API.errorMessage("Could not pull Social Timeline.");
+		});
+}
+API.addSocialTimelineItem = function() {
+	var url = "api.php?endpoint=/social/timeline/item/add/";
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Schedule Item added.");
+			console.log(json);
+
+			var item = new SocialTimelineItem(json.socialTimelineItem);
+			impresslist.addSocialTimelineItem(item, false);
+		})
+		.fail(function() {
+			API.errorMessage("Could not add Schedule Item.");
+		});
+}
+API.addSocialTimelineItemRetweets = function(obj, accounts, timesep, donecallback) {
+	var url = "api.php?endpoint=/social/timeline/item/add-retweets/" +
+				"&id=" + encodeURIComponent(obj.id) + 
+				"&accounts=" + encodeURIComponent(accounts) + 
+				"&timesep=" + encodeURIComponent(timesep);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Shares added.");
+			console.log(json);
+
+			for(var i = 0; i < json.socialTimelineItems.length; ++i) {
+				var item = new SocialTimelineItem(json.socialTimelineItems[i]);
+				impresslist.addSocialTimelineItem(item, false);	
+			}
+
+			if (typeof donecallback != 'undefined') {
+				donecallback();
+			}
+			
+		})
+		.fail(function() {
+			API.errorMessage("Could not add Shares.");
+		});
+}
+API.saveSocialTimelineItem = function(obj, type, typedata, timestamp, ready) {
+	var url = "api.php?endpoint=/social/timeline/item/save/" + 
+					"&id=" + encodeURIComponent(obj.id) + 
+					"&type=" + encodeURIComponent(type) + 
+					"&data=" + encodeURIComponent(JSON.stringify(typedata)) + 
+					"&timestamp=" + encodeURIComponent(timestamp) + 
+					"&ready=" + encodeURIComponent(ready);
+	console.log(url);
+
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return; 
+			}
+			API.successMessage("Schedule Item saved.");
+			console.log(json);
+			obj.init(json.socialTimelineItem);
+			obj.updateRow();
+			obj.update();
+			SocialTimelineItem.displaySort();
+		})
+		.fail(function() {
+			API.errorMessage("Could not save Schedule Item.");
+		});
+}
+API.removeSocialTimelineItem = function(obj) {
+	var url = "api.php?endpoint=/social/timeline/item/remove/&id=" + encodeURIComponent(obj.id);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Schedule Item removed.");
+			impresslist.removeSocialTimelineItem(obj);
+		})
+		.fail(function() {
+			API.errorMessage("Could not remove Schedule Item.");
+		});
+}
+API.listSocialUploads = function(fromInit) {
+	if (typeof fromInit == 'undefined') { fromInit = true; }
+	
+	impresslist.loading.set('socialUploads', true); 
+	var url = "api.php?endpoint=/social/uploads/list/";
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			
+			for(var i = 0; i < json.uploads.length; ++i) { 
+				var upload = new SocialUpload(json.uploads[i]);
+				impresslist.addSocialUpload(upload, fromInit);
+			}
+			impresslist.loading.set('socialUploads', false); 
+		})
+		.fail(function() {
+			API.errorMessage("Could not list Social Uploads.");
+		});
+}
+API.addSocialUpload = function(d, successCallback) {
+	var url = "api.php?endpoint=/social/uploads/add/";
+	console.log(url);
+	
+	$.ajax({
+		url: "api.php?endpoint=/social/uploads/add/", 
+		type: "POST",             
+		data: d,
+		contentType: false, 
+		cache: false,             
+		processData: false,
+		success: function(result)   
+		{
+			if (result.substr(0, 1) != '{') { 
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Social Upload added.");
+			console.log(json);
+
+			var upload = new SocialUpload(json.upload);
+			impresslist.addSocialUpload(upload, false);
+
+			if (typeof successCallback != 'undefined') {
+				successCallback();
+			}
+		},
+		error: function(e, e2, e3) 
+		{
+			API.errorMessage("Could not add Social Upload.");
+			console.log("error: " + e + " " + e2 + " " + e3);
+		}
+	});
+}
+API.removeSocialUpload = function(acc) {
+	var url = "api.php?endpoint=/social/uploads/remove/&name=" + encodeURIComponent(acc.field("name"));
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
+			
+			var json = JSON.parse(result);
+			if (!json.success) { API.errorMessage(json.message); return; }
+			API.successMessage("Social Upload removed.");
+			impresslist.removeSocialUpload(acc);
+			
+		})
+		.fail(function() {
+			API.errorMessage("Could not remove Social Upload.");
+		});
+}
+
 API.listPeople = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 	
@@ -1210,7 +1431,7 @@ DBO = function(data) {
 	}
 	DBO.prototype.field = function(f) {
 		var r = this.fields[f];
-		if (r == null) { console.error("field " + f + " was null."); return ""; }
+		if (r == null) { console.error("field " + f + " was null."); console.error(this.fields); return ""; }
 		return r;
 	}
 	DBO.prototype.twitterCell = function() {
@@ -1229,7 +1450,7 @@ Email = function(data) {
 	Email.prototype.constructor = Email;
 	Email.prototype.init = function(data) {
 		DBO.prototype.init.call(this, data);
-		this.id = this.field('id');
+		this.id = parseInt(this.field('id'));
 		//this.user_id = this.field('user_id');
 		//this.person_id = this.field('person_id');
 	}
@@ -1243,7 +1464,7 @@ Coverage = function(data) {
 	Coverage.prototype.constructor = Email;
 	Coverage.prototype.init = function(data) {
 		DBO.prototype.init.call(this, data);
-		this.id = this.field('id');
+		this.id = parseInt(this.field('id'));
 	}
 	Coverage.prototype.filter = function(text) {
 		var element = $("#coverage [data-coverage-id='" + this.id + "']");
@@ -1715,10 +1936,10 @@ Game = function(data) {
 	DBO.call(this, data); 
 }
 	Game.prototype = Object.create(DBO.prototype)
-	Game.prototype.constructor = Email;
+	Game.prototype.constructor = Game;
 	Game.prototype.init = function(data) {
 		DBO.prototype.init.call(this, data);
-		this.id = this.field('id');
+		this.id = parseInt(this.field('id'));
 		this.name = this.field('name');
 		
 	}
@@ -1732,7 +1953,7 @@ User = function(data) {
 	User.prototype.constructor = User;
 	User.prototype.init = function(data) {
 		DBO.prototype.init.call(this, data);
-		this.id = this.field('id');
+		this.id = parseInt(this.field('id'));
 	}
 	User.prototype.fullname = function() {
 		return this.field('forename') + " " + this.field('surname');
@@ -1825,7 +2046,7 @@ Youtuber = function(data) {
 	Youtuber.prototype.constructor = Youtuber;
 	Youtuber.prototype.init = function(data) {
 		DBO.prototype.init.call(this, data);
-		this.id = this.field('id');
+		this.id = parseInt(this.field('id'));
 		this.name = this.field('name');
 
 		this.initPriorities('priorities');
@@ -1965,13 +2186,13 @@ Youtuber = function(data) {
 		ret = this.name.toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
-		ret = this.field('notes').toLowerCase().indexOf(text) != -1;
+		ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
-		ret = this.field('description').toLowerCase().indexOf(text) != -1;
+		ret = this.fields['description'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 		
-		ret = this.field('twitter').toLowerCase().indexOf(text) != -1;
+		ret = this.fields['twitter'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
 		return false;
@@ -1998,7 +2219,7 @@ PersonPublication = function(data) {
 	PersonPublication.prototype.constructor = PersonPublication;
 	PersonPublication.prototype.init = function(data) {
 		DBO.prototype.init.call(this, data);
-		this.id = this.fields['id'];
+		this.id = parseInt(this.fields['id']);
 	}
 	PersonPublication.prototype.open = function() {
 		console.log('per pub open');
@@ -2059,7 +2280,7 @@ PersonYoutubeChannel = function(data) {
 	PersonYoutubeChannel.prototype.constructor = PersonYoutubeChannel;
 	PersonYoutubeChannel.prototype.init = function(data) {
 		DBO.prototype.init.call(this, data);
-		this.id = this.fields['id'];
+		this.id = parseInt(this.fields['id']);
 	}
 	PersonYoutubeChannel.prototype.open = function() {
 		console.log('per yt open');
@@ -2108,7 +2329,7 @@ SimpleMailout = function(data) {
 	SimpleMailout.prototype.constructor = SimpleMailout;
 	SimpleMailout.prototype.init = function(data) {
 		DBO.prototype.init.call(this, data);
-		this.id = this.field('id');
+		this.id = parseInt(this.field('id'));
 		
 		// Todo: Calculate and cache this server-side or something.
 		this.numRecipients = 0;
@@ -2354,7 +2575,7 @@ Person = function(data) {
 	Person.prototype.init = function(data) {
 		DBO.prototype.init.call(this, data);
 
-		this.id = this.field('id');
+		this.id = parseInt(this.field('id'));
 		this.name = this.field('firstname');
 		//this.publications = [];
 
@@ -2791,7 +3012,7 @@ Person = function(data) {
 		var lastcontactedbytemp = this.field('lastcontactedby');
 		var lastcontactedbystring = "";
 		if (lastcontactedbytemp > 0) {
-			var lastcontactedbyuser = impresslist.findUserById(lastcontactedbytemp);
+			var lastcontactedbyuser = impresslist.findUserById(parseInt(lastcontactedbytemp));
 			lastcontactedbystring = "by <span style='color:" + lastcontactedbyuser.field('color') + "'>" + lastcontactedbyuser.field('forename') + "</span>";
 		}
 
@@ -2895,7 +3116,8 @@ Person = function(data) {
 	Person.prototype.filter_isRecentlyContacted = function() {
 		if ($('#filter-recent-contact').is(':checked')) { 
 			var contactedRecently = false;
-			for(var i = 0; i < impresslist.emails.length; ++i) {
+			var len = impresslist.emails.length;
+			for(var i = 0; i < len; ++i) {
 				if (impresslist.emails[i].field('person_id') == this.id && 
 					Number(impresslist.emails[i].field('utime')) >= (Date.now()/1000) - (86400*7)) {
 					contactedRecently = true;
@@ -2907,7 +3129,8 @@ Person = function(data) {
 	}
 	Person.prototype.filter_isContactedByMe = function() {
 		if ($('#filter-personal-contact').is(':checked')) { 
-			for(var i = 0; i < impresslist.emails.length; ++i) {
+			var len = impresslist.emails.length;
+			for(var i = 0; i < len; ++i) {
 				if (impresslist.emails[i].field('person_id') == this.id && 
 					impresslist.emails[i].field('user_id') == impresslist.config.user.id) {
 					//console.log(i + ": " + impresslist.emails[i].field('user_id') + " matches " + impresslist.config.user.id);
@@ -2923,7 +3146,8 @@ Person = function(data) {
 			if (this.priority() == 3) {
 				return true;
 			}
-			for(var i = 0; i < impresslist.personPublications.length; ++i) {
+			var len = impresslist.personPublications.length;
+			for(var i = 0; i < len; ++i) {
 				if (impresslist.personPublications[i].field('person') == this.id) {
 					var pub = impresslist.findPublicationById(impresslist.personPublications[i].field('publication'));
 					if (pub.priority() == 3) {
@@ -2960,7 +3184,9 @@ Person = function(data) {
 			if (this.field('email').length > 0) {
 				return true;
 			}
-			for(var i = 0; i < impresslist.personPublications.length; ++i) {
+
+			var len = impresslist.personPublications.length;
+			for(var i = 0; i < len; ++i) {
 				if (impresslist.personPublications[i].field('person') == this.id) {
 					if (impresslist.personPublications[i].field('email').length > 0) { 
 						return true;
@@ -2979,25 +3205,27 @@ Person = function(data) {
 		ret = this.fullname().toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
-		ret = this.field('notes').toLowerCase().indexOf(text) != -1;
+		ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
-		ret = this.field('email').toLowerCase().indexOf(text) != -1;
+		ret = this.fields['email'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
 		// Search all publications too.
-		for(var i = 0; i < impresslist.personPublications.length; ++i) {
-			if (impresslist.personPublications[i].field('person') == this.id) {
-				var pub = impresslist.findPublicationById( impresslist.personPublications[i].field('publication') );
+		var len = impresslist.personPublications.length;
+		for(var i = 0; i < len; ++i) {
+			if (impresslist.personPublications[i].fields['person'] == this.id) {
+				var pub = impresslist.findPublicationById( impresslist.personPublications[i].fields['publication'] );
 				ret = pub.search(text);
 				if (ret) { return ret; }
 			}
 		}
 
 		// Search all youtube channels too.
-		for(var i = 0; i < impresslist.personYoutubeChannels.length; ++i) {
-			if (impresslist.personYoutubeChannels[i].field('person') == this.id) {
-				var pub = impresslist.findYoutuberById( impresslist.personYoutubeChannels[i].field('youtuber') );
+		len = impresslist.personYoutubeChannels.length;
+		for(var i = 0; i < len; ++i) {
+			if (impresslist.personYoutubeChannels[i].fields['person'] == this.id) {
+				var pub = impresslist.findYoutuberById( impresslist.personYoutubeChannels[i].fields['youtuber'] );
 				ret = pub.search(text);
 				if (ret) { return ret; }
 			}
@@ -3016,7 +3244,7 @@ Publication = function(data) {
 	Publication.prototype.constructor = Publication;
 	Publication.prototype.init = function(data) {
 		DBO.prototype.init.call(this, data);
-		this.id = this.fields['id'];
+		this.id = parseInt(this.fields['id']);
 		this.name = this.fields['name'];
 		this.lastpostedon = 0;
 		this.initPriorities('priorities');
@@ -3181,13 +3409,13 @@ Publication = function(data) {
 		ret = this.name.toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
-		ret = this.field('notes').toLowerCase().indexOf(text) != -1;
+		ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 		
-		ret = this.field('url').toLowerCase().indexOf(text) != -1;
+		ret = this.fields['url'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
-		ret = this.field('twitter').toLowerCase().indexOf(text) != -1;
+		ret = this.fields['twitter'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
 		return false;
@@ -3200,7 +3428,7 @@ OAuthTwitterAccount = function(data) {
 	OAuthTwitterAccount.prototype.constructor = OAuthTwitterAccount;
 	OAuthTwitterAccount.prototype.init = function(data) {
 		DBO.prototype.init.call(this, data);
-		this.id = this.field('id');
+		this.id = parseInt(this.field('id'));
 	}
 	OAuthTwitterAccount.prototype.onAdded = function(fromInit) {
 		this.createItem(fromInit);
@@ -3235,6 +3463,550 @@ OAuthTwitterAccount = function(data) {
 		});
 	}
 
+var SocialUploadID = 0;
+SocialUpload = function(data) {
+	DBO.call(this, data); 
+}
+	SocialUpload.prototype = Object.create(DBO.prototype)
+	SocialUpload.prototype.constructor = SocialUpload;
+	SocialUpload.prototype.init = function(data) {
+		DBO.prototype.init.call(this, data);
+		this.id = SocialUploadID;
+		SocialUploadID++;
+	}
+	SocialUpload.prototype.onAdded = function(fromInit) {
+		this.createItem(fromInit);
+		$('#socialUploads-list-loading').hide();
+		$('#social-uploads-list-none').hide();
+	}
+	SocialUpload.prototype.onRemoved = function() {
+		this.removeItem();
+
+		if (impresslist.socialUploads.length - 1 == 0) {
+			$('#social-uploads-list-none').show();
+		}
+	}
+	SocialUpload.prototype.createItem = function(fromInit) {
+		var html = "";
+		html += "<div id='social-upload-" + this.id + "' class='socialqueue-item' style='padding:0px; float:left;margin-right:5px;width:149px;'>";
+		html += "	<button id='social-remove-upload-" + this.id + "' class='btn btn-sm btn-danger fr' style='border-radius:0;'>X</button>";
+		html += "	<a href='images/uploads/" + this.field("name") + "' target='new'><img style='padding:0px;width:100%;' src='images/uploads/" + this.field("name") + "' /></a>";
+		
+		html += "</div>";
+		$('#social-uploads-list').prepend(html);
+		this.update();
+	}
+	SocialUpload.prototype.removeItem = function() {
+		$("#social-upload-" + this.id).remove();
+	}
+	SocialUpload.prototype.update = function() {
+		var th = this;
+		$("#social-remove-upload-" + this.id).click(function(){
+			API.removeSocialUpload(th);
+		});
+	}
+
+
+SocialTimelineItem = function(data) {
+	DBO.call(this, data); 
+}
+	SocialTimelineItem.prototype = Object.create(DBO.prototype)
+	SocialTimelineItem.prototype.constructor = SocialTimelineItem;
+
+	SocialTimelineItem.displaySort = function() {
+		var $wrapper = $('#social-timeline');
+
+		$wrapper.find('.socialqueue-item-container').sort(function(a, b) {
+		    return +a.getAttribute('data-timestamp') - +b.getAttribute('data-timestamp');
+		})
+		.appendTo($wrapper);
+	}
+
+	SocialTimelineItem.prototype.init = function(data) {
+		DBO.prototype.init.call(this, data);
+		this.id = parseInt(data.id);
+	}
+	SocialTimelineItem.prototype.onAdded = function(fromInit) {
+		this.createItem(fromInit);
+		$('#social-timeline-loading').hide();
+		$('#social-timeline-none').hide();
+
+		SocialTimelineItem.displaySort();
+	}
+	SocialTimelineItem.prototype.onRemoved = function() {
+		this.removeItem();
+
+		if (impresslist.socialUploads.length - 1 == 0) {
+			$('#social-uploads-list-none').show();
+		}
+	}
+	SocialTimelineItem.prototype.createItem = function(fromInit) {
+		var html = "";
+
+		html += "<div class='socialqueue-item-container' data-timestamp='" + this.field('timestamp') + "' data-social-id='" + this.id + "' >";
+		html += "</div>";
+
+		$('#social-timeline').append(html);
+		this.updateRow();
+		this.update();
+	}
+	SocialTimelineItem.prototype.removeItem = function() {
+		//$("#social-upload-" + this.id).remove();
+		$(".socialqueue-item-container[data-social-id='" + this.id + "']").remove();
+		this.close();
+	}
+	SocialTimelineItem.prototype.openShareDialog = function() {
+		var html = "<div class='modal fade socialShare_modal' tabindex='-1' role='dialog'> \
+						<div class='modal-dialog' style='width:400px;margin-top:20%'> \
+							<div class='modal-content' style='width:400px;'> \
+								<div style='min-height:100px;padding:20px;'>";
+
+		html += "	<h3>Add Retweets</h3>";
+		html += "	<div class='form-group'>\
+						<label for='type'>Time Separation:&nbsp; </label> \
+						<select id='social-sharemodal-retweet-timesep' class='form-control'> \
+							<option value='3600'>1 hr</option>\
+							<option value='7200'>2 hrs</option>\
+							<option value='21600'>6 hrs</option>\
+							<option value='43200'>12 hrs</option>\
+							<option value='86400'>24 hrs</option>\
+						</select>\
+					</div>";
+
+		html += "	<div class='form-group'>\
+						<label for='accounts'>Accounts:&nbsp; </label>\
+						<select id='social-sharemodal-retweet-accounts' multiple='multiple'>";
+
+							for(var i = 0; i < impresslist.oauthTwitterAccounts.length; i++) 
+							{
+								var tw = impresslist.oauthTwitterAccounts[i];
+								console.log("upid:" + tw.id);
+								console.log(this.field('typedata').account);
+
+								if (tw.id == parseInt(this.field('typedata').account)) { 
+									continue; 
+								}
+
+								var hasRetweetScheduled = false;
+								for(var j = 0; j < impresslist.socialTimelineItems.length; j++) {
+									var sti = impresslist.socialTimelineItems[j];
+									if (sti.field('type') == 'retweet' &&
+										parseInt(sti.field('typedata').tweet) == this.id && 
+										parseInt(sti.field('typedata').account) == tw.id
+										) {
+										hasRetweetScheduled = true;
+									}
+								}
+
+								if (!hasRetweetScheduled) { 
+
+									//var selectedText = (hasRetweetScheduled)?"selected='true'":"";
+									var selectedText = "";
+									html += "<option value='" + tw.field('id') + "' " + selectedText + ">" + tw.field('twitter_handle') + "</option>";
+								}
+							}
+		html += "		</select>\
+					</div>";
+
+		html += "	<div class='oa'> \
+						<div class='fl'> \
+							<button id='social-add-retweets-" + this.id + "' type='submit' class='btn btn-success' style='margin-right:5px;'>Add</button> \
+						</div>\
+						<div class='fr'> \
+							<button id='social-close-retweets-" + this.id + "' type='submit' class='btn btn-default'>Close</button> \
+						</div> \
+					</div>";
+		
+		html += "				</div> \
+							</div> \
+						</div> \
+					</div>";
+		$('#modals').html(html);
+
+		var th = this;
+		$('#social-sharemodal-retweet-accounts').multiselect({
+			enableFiltering: true,
+			includeSelectAllOption: true,
+			enableCaseInsensitiveFiltering: true
+		});
+		$("#social-add-retweets-" + this.id).click(function() {
+			// ... 
+			var timeSeparation = $('#social-sharemodal-retweet-timesep').val();
+			var selectedAccountsNodes = $('#social-sharemodal-retweet-accounts option:selected');//.map(function(a, item){return item.value;});
+			var selectedAccounts = "";
+			for(var i = 0; i < selectedAccountsNodes.length; i++) {
+				selectedAccounts += selectedAccountsNodes[i].value;
+				if (i < selectedAccountsNodes.length - 1) {
+					selectedAccounts += ",";
+				}
+			}
+			console.log(timeSeparation);
+			console.log(selectedAccountsNodes);
+			console.log(selectedAccounts);
+
+			API.addSocialTimelineItemRetweets(th, selectedAccounts, timeSeparation, function() {
+				th.closeShareDialog();
+				SocialTimelineItem.displaySort();
+			}); 
+		});
+		$("#social-close-retweets-" + this.id).click(function() { th.closeShareDialog(); });
+	}
+	SocialTimelineItem.prototype.closeShareDialog = function() {
+		$('.socialShare_modal').modal('hide');
+	}
+	SocialTimelineItem.prototype.open = function() {
+		console.log('open');
+		var html = "<div class='modal fade social_modal' tabindex='-1' role='dialog'> \
+						<div class='modal-dialog'> \
+							<div class='modal-content'> \
+								<div style='min-height:100px;padding:20px;'>";
+					
+		html += "	<h3>Scheduled Item</h3>";
+		html += "	<div class='row'>\
+						<div class='col-sm-6'>\
+							<div class='form-group'>\
+								<label for='type'>Type:&nbsp; </label> \
+								<select id='social-modal-type'  class='form-control'> \
+									<option value='blank' " + ((this.field('type')=='blank')?"selected='true'":"") + ">Blank</option>\
+									<option value='tweet' " + ((this.field('type')=='tweet')?"selected='true'":"") + ">Tweet</option>\
+									<option value='retweet' " + ((this.field('type')=='retweet')?"selected='true'":"") + ">Retweet</option>\
+									<!-- <option value='facebookpost'>Facebook Post</option> -->\
+								</select>\
+							</div>\
+						</div>\
+						<div class='col-sm-6'>\
+							<div class='form-group'>\
+								<label for='account'>Account:&nbsp; </label> \
+								<select id='social-modal-account'  class='form-control'>";
+									for(var i = 0; i < impresslist.oauthTwitterAccounts.length; i++) {
+										var tw = impresslist.oauthTwitterAccounts[i];
+										html += "<option value='" + tw.field("id") + "' " + ((this.field('typedata').account==tw.id)?"selected='true'":"") + " >@" + tw.field("twitter_handle") + "</option>";
+									}
+		html += "				</select>\
+							</div>\
+						</div>\
+					</div>";
+
+		html += "	<div class='form-group'> \
+						<label for='timepicker'>Date &amp; Time:</label>\
+						<div class='input-group date' id='social-modal-timepicker'>\
+							<input id='social-modal-edit-timestamp' type='text' class='form-control' />\
+							<span class='input-group-addon'>\
+								<span class='glyphicon glyphicon-calendar'></span>\
+							</span>\
+						</div>\
+					</div>";
+
+
+
+			// Blank
+			html += "	<div class='social-modal-blank' style='display:none;'>";
+			html += "		<p>Please select a type...</p>";
+			html += "	</div>"
+			// Tweet
+			html += "	<div class='social-modal-tweet' style='display:none;'>";
+			html += "		<div class='form-group'>\
+								<label for='message'>Message: (<span id='social-modal-tweet-charsleft'>140</span> characters remaining)&nbsp; </label> \
+								<textarea id='social-modal-tweet-message' data-socialitem-id='" + this.id + "' class='form-control' style='height:100px;'>" + ((this.field('typedata').message)?this.field('typedata').message:"") + "</textarea>\
+							</div>";
+			html += "		<div class='form-group'>\
+								<label for='attachments'>Attachments:&nbsp; </label>\
+								<select id='social-modal-tweet-attachments' multiple='multiple'>";
+									var attachments = this.field('typedata').attachments;
+								
+									for(var i = 0; i < impresslist.socialUploads.length; ++i) {
+										var up = impresslist.socialUploads[i];
+										var hasAttachment = false;
+										if (attachments) {
+											for(var j = 0; j < attachments.length; j++) {
+												if (up.field('name') == attachments[j].file) {
+													hasAttachment = true;
+												}
+											}
+										}
+										
+										var selectedText = (hasAttachment)?"selected='true'":"";
+										html += "<option value='" + up.field('name') + "' " + selectedText + ">" + up.field('name') + "</option>";
+									}
+								//}
+			html += "			</select>\
+							</div> \
+							<div class='social-modal-tweet-attachment-preview-container' style='margin-bottom:15px;'></div>\
+						</div>";
+
+			// Retweet
+			html += "	<div class='social-modal-retweet' style='display:none;'> \
+							<div class='form-group'>\
+								<label for='account'>Tweet:&nbsp; </label> \
+								<select id='social-modal-retweet-select'  class='form-control'>";
+									for(var i = 0; i < impresslist.socialTimelineItems.length; i++) {
+										var it = impresslist.socialTimelineItems[i];
+										if (it.field('type') == 'tweet') { 
+											html += "<option value='" + it.field("id") + "' " + ((this.field('typedata').tweet==it.id)?"selected='true'":"") + " >@" + impresslist.findOAuthTwitterAccountById(parseInt(it.field('typedata').account)).field('twitter_handle') + " " + it.field('typedata').message + "</option>";
+										}
+									}
+			html += "			</select>\
+							</div> \
+						</div>";
+
+		html += "	<div class='form-group'> \
+						<label class='checkbox-inline'><input id='social-modal-edit-ready' type='checkbox' " + (((this.field('ready')==1)?"checked":"")) + "><b>Ready to send?</b></label>\
+					</div>";
+
+		// Save, close, remove.
+		html += "		<div class='oa'> \
+							<div class='fl'> \
+								<button id='save_socialitemId" + this.id + "' type='submit' class='btn btn-primary' style='margin-right:5px;'>Save</button> \
+								<button id='close_socialitemId" + this.id + "' type='submit' class='btn btn-default'>Close</button> \
+				 				</div>\
+							<div class='fr'> \
+								<button id='delete_socialitemId" + this.id + "' type='submit' class='btn btn-danger'>Remove</button> \
+							</div> \
+						</div>";
+	
+
+
+		html += "				</div> \
+							</div> \
+						</div> \
+					</div>";
+		$('#modals').html(html);
+
+		// time
+		var utime = this.field('timestamp');
+		if (utime == 0) {
+			//utime = Date.now() / 1000;
+		}
+		$('#social-modal-timepicker').datetimepicker();
+		$('#social-modal-timepicker').data("DateTimePicker").defaultDate(moment(utime, "X"));
+		$('#social-modal-timepicker').data("DateTimePicker").format("MMMM Do YYYY HH:mm zz");
+		
+		var th = this;
+		var onAttachmentsChanged = function() {
+			var selectedOptions = $('#social-modal-tweet-attachments option:selected');
+			var selectedOptionValues = $('#social-modal-tweet-attachments option:selected').map(function(a, item){return item.value;});
+        	var html = "";    
+        	for(var i = 0; i < selectedOptionValues.length; i++) {
+        		html += "<img src='images/uploads/" + selectedOptionValues[i] + "' style='width:100px;height:100px;margin-right:5px;'/>";
+        	}
+            $('.social-modal-tweet-attachment-preview-container').html(html);
+            th.testAttachments = selectedOptionValues.length;
+            th.updateTwitterCharactersLeft();
+		}
+		$('#social-modal-tweet-attachments').multiselect({
+			enableFiltering: true,
+			//includeSelectAllOption: true,
+			enableCaseInsensitiveFiltering: true,
+			onSelectAll: onAttachmentsChanged,
+			onChange: onAttachmentsChanged
+		});
+
+		var onTypeChanged = function(ty) {
+			$('.social-modal-blank').hide();
+			$('.social-modal-tweet').hide();
+			$('.social-modal-retweet').hide();
+			if (ty == 'tweet') {
+				onAttachmentsChanged();
+				$('.social-modal-tweet').show();
+			} else if (ty == 'retweet') {
+				$('.social-modal-retweet').show();
+			}
+		}
+		onTypeChanged(this.field('type'));
+
+		// update twitlen
+		th.updateTwitterCharactersLeft();
+		$('#social-modal-tweet-message').on("change keyup paste", function() {
+			th.updateTwitterCharactersLeft();	
+		});
+
+		
+		$('#social-modal-type').change(function() {
+			var vl = $(this).val();
+			onTypeChanged(vl);
+		});
+
+		// ok/close/delete
+		$("#save_socialitemId" + this.id).click(function() { th.save(); });
+		$("#close_socialitemId" + this.id).click(function() { th.close(); });
+		$("#delete_socialitemId" + this.id).click(function() { API.removeSocialTimelineItem(th); });
+
+		this.setFormEnabled(true);
+		if (//utime != 0 && Date.now() / 1000 > utime && 
+			this.field('sent') == 1) {
+			this.setFormEnabled(false);
+			$('#save_socialitemId'+this.id).hide();
+			$('#delete_socialitemId'+this.id).hide();
+		}
+		
+	}
+	SocialTimelineItem.prototype.updateRow = function() {
+		var html = "";
+		var acc = impresslist.findOAuthTwitterAccountById(parseInt(this.field('typedata').account));
+		var thedate = moment(this.field('timestamp'), "X").format("MMMM Do YYYY HH:mm zz");
+		var reldate = impresslist.util.relativetime(this.field('timestamp'));
+		if (this.field("type") == "tweet") {
+			html += "	<div class='socialqueue-item " + (this.field('ready')==1?"ready":"") + "'> \
+							<div class='oa'> \
+								<p class='fl'><b>Tweet: <a href='http://twitter.com/" + acc.field('twitter_handle') + "'>@" + acc.field('twitter_handle') + "</a></b></p>";
+			html += "			<p class='fr text-muted' style='margin-left:10px;'> <a data-socialitem-id='" + this.id + "' data-toggle='modal' data-target='.social_modal'    style='cursor:pointer' title='Edit'><i class='glyphicon glyphicon-pencil'></i></a></p>";
+			if (this.field('ready')==1) { 
+				html += "		<p class='fr text-muted' style='margin-left:10px;'> <a class='social-timeline-opensharedialog' data-socialitem-id='" + this.id + "' data-toggle='modal' data-target='.socialShare_modal' style='cursor:pointer' title='Add Shares'><i class='glyphicon glyphicon-plus'></i></a></p>";
+			}
+			html += "			<p class='fr text-muted'><i class='glyphicon glyphicon-time'></i> <span data-social-id='" + this.id + "' data-toggle='tooltip' data-placement='left' title='" + reldate + "'>" + thedate + "</span></p> \
+							</div> \
+							<div> \
+								<img class='icon' src='images/email-twitter.png'/> \
+								<p style='min-height:40px;'>" + this.field('typedata').message + "</p>";
+					
+								var attachments = this.field('typedata').attachments;
+								if (attachments.length > 0) { 
+									html += "<p class='text-muted'>Attachment/s: " + attachments.length + " <i class='glyphicon glyphicon-picture'></i></p>";
+									for(var i = 0; i < attachments.length; i++) { 
+										html += "<p class='socialqueue-imageattachment-container' data-social-id='" + this.id + "'  data-attachment-id='" + i + "'><img class='socialqueue-imageattachment' data-social-id='" + this.id + "' data-attachment-id='" + i + "' src='images/uploads/" + attachments[i].file + "'/></p>";
+									}
+								}
+
+			html += "		</div> \
+						</div>";
+		} else if (this.field("type") == "retweet") {
+			html += "	<div class='socialqueue-item indented thinnest " + (this.field('ready')==1?"ready":"") + "'> \
+							<div class='oa'> \
+								<img class='icon' src='images/email-twitter.png'/> \
+								<p class='fl'><b>Retweet by <a href='http://twitter.com/" + acc.field('twitter_handle') + "'>@" + acc.field('twitter_handle') + "</a></b></p> \
+								<p class='fr text-muted' style='margin-left:10px;'> <a data-socialitem-id='" + this.id + "' data-toggle='modal' data-target='.social_modal' style='cursor:pointer'><i class='glyphicon glyphicon-pencil'></i></a></p> \
+								<p class='fr text-muted'><i class='glyphicon glyphicon-time'></i> <span data-social-id='" + this.id + "' data-toggle='tooltip' data-placement='left' title='" + reldate + "'>" + thedate + "</span> </p> \
+							</div> \
+						</div>";
+		} else if (this.field("type") == "blank") {
+			html += "	<div class='socialqueue-item thinnest " + (this.field('ready')==1?"ready":"") + "'> \
+							<div class='oa'> \
+								<p class='fl'><b>Blank </b></p> \
+								<p class='fr text-muted' style='margin-left:10px;'> <a data-socialitem-id='" + this.id + "' data-toggle='modal' data-target='.social_modal' style='cursor:pointer'><i class='glyphicon glyphicon-pencil'></i></a></p> \
+							</div> \
+						</div>";
+		}
+		$('.socialqueue-item-container[data-social-id=' + this.id + ']').html(html);
+
+		$('.socialqueue-item-container[data-social-id=' + this.id + ']').attr("data-timestamp", this.field('timestamp'));
+		
+
+		/*$("[data-custom-toggle='social-add-shares'").unbind("click");
+		$("[data-custom-toggle='social-add-shares'").click(function() {
+			//alert('lol');
+		});*/
+	}
+	SocialTimelineItem.prototype.update = function() {
+		var th = this;
+		$('.socialqueue-imageattachment').click(function(){ 
+			var attid = $(this).attr('data-attachment-id');
+			console.log(attid);
+
+			var containerSelector = '.socialqueue-imageattachment-container[data-social-id=' + th.id + '][data-attachment-id='+attid+']';
+			var imageSelector = '.socialqueue-imageattachment[data-social-id=' + th.id + '][data-attachment-id='+attid+']';
+
+			var h = $(containerSelector).css('height');
+			if (h == '100px') { 
+				$(containerSelector).css('height', '100%'); 
+				$(imageSelector).css('margin-top', '0px'); 
+			} else {
+				$(containerSelector).css('height', '100px'); 
+				$(imageSelector).css('margin-top', '-25%'); 
+			}
+		});
+
+		$('[data-social-id=' + this.id + '][data-toggle="tooltip"]').tooltip(); 
+		
+		$(this.openSelector()).click(function(){
+			th.open();
+		});
+		$(this.openShareSelector()).click(function(){
+			th.openShareDialog();
+		});
+	}
+	SocialTimelineItem.prototype.openSelector = function() {
+		return "#social-timeline a[data-socialitem-id='" + this.id + "']";
+	}
+	SocialTimelineItem.prototype.openShareSelector = function() {
+		return ".social-timeline-opensharedialog[data-socialitem-id='" + this.id + "']";
+	}
+
+	SocialTimelineItem.prototype.close = function() {
+		$('.social_modal').modal('hide');
+	}
+	SocialTimelineItem.prototype.save = function() {
+		var type = $("#social-modal-type").val();
+		console.log('type: ' + type);
+
+		var date = new Date($('#social-modal-timepicker').data("DateTimePicker").date());
+		var timestamp = Math.floor(date.getTime() / 1000);
+		var ready = $('#social-modal-edit-ready').is(":checked");
+
+		if (type == 'tweet') {
+			var account = $("#social-modal-account").val();
+			var typedata = { 
+				message: $('#social-modal-tweet-message').val(),
+				account: account,
+				attachments: []
+			};
+
+			var selectedOptionValues = $('#social-modal-tweet-attachments option:selected').map(function(a, item){return item.value;});
+			for(var i = 0; i < selectedOptionValues.length; i++) {
+				typedata.attachments.push({
+					"type": "image",
+					"file": selectedOptionValues[i]
+				});
+			}
+			
+			API.saveSocialTimelineItem(this, type, typedata, timestamp, ready);
+		}
+		else if (type == 'retweet') {
+			var account = $("#social-modal-account").val();
+			var tw = $('#social-modal-retweet-select').val();
+			var typedata = {
+				tweet: 1,
+				account: account
+			};
+			API.saveSocialTimelineItem(this, type, typedata, timestamp, ready);
+		} 
+		else if (type == 'blank') {
+			var typedata = {};
+			API.saveSocialTimelineItem(this, type, typedata, timestamp, ready);
+		}
+		//var email   = $("[data-youtuber-id=" + this.id + "][data-input-field='email']").val();
+		//var twitter = $("[data-youtuber-id=" + this.id + "][data-input-field='twitter']").val();
+		//var notes   = $("[data-youtuber-id=" + this.id + "][data-input-field='notes']").val();
+		
+		
+	}
+
+	SocialTimelineItem.prototype.updateTwitterCharactersLeft = function() {
+		var msg = $('#social-modal-tweet-message').val();
+		var remaining = 140;
+		remaining -= twttr.txt.getTweetLength(msg, {
+			short_url_length: impresslist.config.system.twitter.short_url_length,
+			short_url_length_https: impresslist.config.system.twitter.short_url_length_https
+      	});
+
+		remaining -= Math.min(1,this.testAttachments) * impresslist.config.system.twitter.characters_reserved_per_media;
+		$('#social-modal-tweet-charsleft').html( remaining );
+	}
+
+	SocialTimelineItem.prototype.setFormEnabled = function(boo) {
+		boo = !boo;
+		$('#social-modal-type').attr("disabled", boo); 
+		$('#social-modal-account').attr("disabled", boo);
+		$('#social-modal-edit-timestamp').attr("disabled", boo);
+		$('#social-modal-tweet-message').attr("disabled", boo);
+		$('#social-modal-tweet-attachments').attr("disabled", boo);
+		//$('#social-modal-tweet-attachments').attr("disabled", boo);
+		$('#social-modal-retweet-select').attr("disabled", boo);
+		$('#social-modal-edit-ready').attr("disabled", boo);
+		$('#save_socialitemId'+this.id).attr("disabled", boo);
+		$('#delete_socialitemId'+this.id).attr("disabled", boo);
+		
+	}
+	
 
 
 var impresslist = {
@@ -3264,6 +4036,8 @@ var impresslist = {
 	coverage: [],
 	simpleMailouts: [],
 	oauthTwitterAccounts: [],
+	socialUploads: [],
+	socialTimelineItems: [],
 	loading: {
 		people: false,
 		publications: false,
@@ -3274,6 +4048,8 @@ var impresslist = {
 		users: false,
 		games: false,
 		coverage: false,
+		socialUploads: false,
+		socialTimelineItems: false,
 		set: function(type, b) {
 			impresslist.loading[type] = b;
 
@@ -3294,6 +4070,9 @@ var impresslist = {
 		API.listEmails();
 		API.listSimpleMailouts();
 		API.listOAuthTwitterAccounts();
+		API.listSocialTimeline();
+		API.listSocialUploads();
+		
 
 		// Navigation links
 		var thiz = this;
@@ -3509,6 +4288,11 @@ var impresslist = {
 		});
 
 		// Social Scheduler 
+		// Timeline 
+		$('#social-timeline-add').click(function() {
+			API.addSocialTimelineItem();
+		});
+		
 
 		// Social Account Management
 		$('#social-addtwitteraccount-link').click(function(){
@@ -3681,10 +4465,7 @@ var impresslist = {
 		this.coverage.push(obj);
 		obj.onAdded(fromInit);
 	},
-	addSimpleMailout: function(obj, fromInit) {
-		this.simpleMailouts.push(obj);
-		obj.onAdded(fromInit);
-	},
+	
 	addOAuthTwitterAccount: function(obj, fromInit) {
 		this.oauthTwitterAccounts.push(obj);
 		obj.onAdded(fromInit);
@@ -3698,6 +4479,39 @@ var impresslist = {
 				break;
 			}
 		}
+	},
+	addSocialUpload: function(obj, fromInit) {
+		this.socialUploads.push(obj);
+		obj.onAdded(fromInit);
+	},
+	removeSocialUpload: function(obj) {
+		for(var i = 0, len = this.socialUploads.length; i < len; ++i) {
+			if (this.socialUploads[i].id == obj.id) {
+				console.log('social upload removed: ' + obj.id);
+				obj.onRemoved();
+				this.socialUploads.splice(i, 1);
+				break;
+			}
+		}
+	},
+	addSocialTimelineItem: function(obj, fromInit) {
+		this.socialTimelineItems.push(obj);
+		obj.onAdded(fromInit);
+	},
+	removeSocialTimelineItem: function(obj) {
+		for(var i = 0, len = this.socialTimelineItems.length; i < len; ++i) {
+			if (this.socialTimelineItems[i].id == obj.id) {
+				console.log('social timeline item removed: ' + obj.id);
+				obj.onRemoved();
+				this.socialTimelineItems.splice(i, 1);
+				break;
+			}
+		}
+	},
+
+	addSimpleMailout: function(obj, fromInit) {
+		this.simpleMailouts.push(obj);
+		obj.onAdded(fromInit);
 	},
 	removeSimpleMailout: function(obj) {
 		for(var i = 0, len = this.simpleMailouts.length; i < len; ++i) {
@@ -3776,56 +4590,74 @@ var impresslist = {
 		}
 	},
 	findPersonById: function(id) {
-		for(var i = 0; i < this.people.length; ++i) {
+		/*for(var i = 0; i < this.people.length; ++i) {
 			if (this.people[i].id == id) {
 				return this.people[i];
 			}
-		}
+		}*/
+		var r = this.binarySearchById(this.people, id);
+		if (r != null) { return r; }
+
 		console.log("impresslist: could not findPersonById: " + id);
 		return null;
 	},
 	findPersonPublicationById: function(id) {
-		for(var i = 0, len = this.personPublications.length; i < len; ++i) {
+		/*for(var i = 0, len = this.personPublications.length; i < len; ++i) {
 			if (this.personPublications[i].id == id) {
 				return this.personPublications[i];
 			}
-		}
+		}*/
+		var r = this.binarySearchById(this.personPublications, id);
+		if (r != null) { return r; }
+
 		console.log("impresslist: could not findPersonPublicationById: " + id);
 		return null;
 	},
 	findPublicationById: function(id) {
-		for(var i = 0; i < this.publications.length; ++i) {
+		/*for(var i = 0; i < this.publications.length; ++i) {
 			if (this.publications[i].id == id) {
 				return this.publications[i];
 			}
-		}
+		}*/
+		var r = this.binarySearchById(this.publications, id);
+		if (r != null) { return r; }
+
 		console.log("impresslist: could not findPublicationById: " + id);
 		return null;
 	},
 	findYoutuberById: function(id) {
-		for(var i = 0; i < this.youtubers.length; ++i) {
+		/*for(var i = 0; i < this.youtubers.length; ++i) {
 			if (this.youtubers[i].id == id) {
 				return this.youtubers[i];
 			}
-		}
+		}*/
+		var r = this.binarySearchById(this.youtubers, id);
+		if (r != null) { return r; }
+
 		console.log("impresslist: could not findYoutuberById: " + id);
 		return null;
 	},
 	findUserById: function(id) {
-		for(var i = 0; i < this.users.length; ++i) {
+		/*for(var i = 0; i < this.users.length; ++i) {
 			if (this.users[i].id == id) {
 				return this.users[i];
 			}
-		}
+		}*/
+		var r = this.binarySearchById(this.users, id);
+		if (r != null) { return r; }
+
 		console.log("impresslist: could not findUserById: " + id);
 		return null;
 	},
 	findEmailById: function(id) {
-		for(var i = 0; i < this.emails.length; ++i) {
+		/*for(var i = 0; i < this.emails.length; ++i) {
 			if (this.emails[i].id == id) {
 				return this.emails[i];
 			}
-		}
+		}*/
+		var r = this.binarySearchById(this.emails, id);
+		if (r != null) { return r; }
+
 		console.log("impresslist: could not findEmailById: " + id);
 		return null;
 	},
@@ -3838,10 +4670,40 @@ var impresslist = {
 		console.log("impresslist: could not findGameById: " + id);
 		return null;
 	},
+	findOAuthTwitterAccountById: function(id) {
+		var r = this.binarySearchById(this.oauthTwitterAccounts, id);
+		if (r != null) { return r; }
+
+		console.log("impresslist: could not findOAuthTwitterAccountById: " + id);
+		return null;
+	},
+	// http://oli.me.uk/2014/12/17/revisiting-searching-javascript-arrays-with-a-binary-search/
+	binarySearchById: function(list, id) {
+	    var min = 0;
+	    var max = list.length - 1;
+	    var guess;
+
+	    while (min <= max) {
+	        guess = Math.floor((min + max) / 2);
+
+	        if (list[guess].id == id) {
+	            return list[guess];
+	        }
+	        else {
+	            if (list[guess].id < id) {
+	                min = guess + 1;
+	            }
+	            else {
+	                max = guess - 1;
+	            }
+	        }
+	    }
+
+	    return null;
+	},
 	backup: function() {
 
 	}
-
 
 };
 

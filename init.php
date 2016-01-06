@@ -15,6 +15,7 @@ $impresslist_version = "0.0.1";
 $cache = Cache::getInstance();
 
 // Sorts
+function sortById($a, $b) { return $a['id'] > $b['id']; }
 function sortByName($a, $b) { return $a['name'] > $b['name']; }
 function sortByUtime($a, $b) { return $a['utime'] < $b['utime']; }
 

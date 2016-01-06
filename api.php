@@ -183,6 +183,16 @@ if (!isset($_GET['endpoint'])) {
 		"/coverage/youtuber/remove/",
 
 		// Social
+		"/social/timeline/",
+		"/social/timeline/item/add/",
+		"/social/timeline/item/save/",
+		"/social/timeline/item/remove/",
+		"/social/timeline/item/add-retweets/",
+
+		// Social Uploads
+		"/social/uploads/list/",
+		"/social/uploads/add/",
+		"/social/uploads/remove/",
 		"/social/account/twitter/list/",
 		"/social/account/twitter/add/",
 		"/social/account/twitter/remove/",
@@ -190,19 +200,361 @@ if (!isset($_GET['endpoint'])) {
 		// Chat
 		"/chat/online-users/",
 		"/chat/lines/",
-		"/chat/send/"
+		"/chat/send/",
+
+		// Test...
+		"/test/test/"
 	);
 	$endpoint = $_GET['endpoint'];
 	if (!in_array($endpoint, $endpoints)) {
 		$result = api_error("API endpoint " . $endpoint . " does not exist.");
 	} else { 
 
-		if ($endpoint == "/social/account/twitter/list/") 
+		if ($endpoint == "/test/test/")  
+		{
+			$require_login = false;
+			include_once('init.php');
+
+			//$acc = db_singleOAuthTwitterByHandle($db, "ashleygwinnell");
+			//$tweet = twitter_postStatus($acc['oauth_key'], $acc['oauth_secret'], "This is another test of the Twitter API. Boop.");
+			//print_r($tweet);
+
+			//$r = twitter_helpConfiguration();
+			//$r = db_singleOAuthTwitter($db, 123);
+			//var_dump($r);
+			//print_r($r);
+
+			//$acc = db_singleOAuthTwitterByHandle($db, "ashleygwinnell");
+			//$r = twitter_retweetStatus($acc['oauth_key'], $acc['oauth_secret'], "684422428987146245");
+			//print_r($r);
+			
+
+			/*$images = array(
+				"images/uploads/CHUD.png",
+				"images/uploads/CANARD.png",
+				"images/uploads/OMR.png",
+				"images/uploads/SHAKEYJAKE.png"
+			);
+			$acc = db_singleOAuthTwitterByHandle($db, "forcehabit");
+			$tweet = twitter_postStatusWithImage($acc['oauth_key'], $acc['oauth_secret'], "Hey, do you remember when we & @cuckooclockwork did these? ;D #friendshipclub", $images);
+			print_r($tweet);*/
+
+			$result = new stdClass();
+			$result->success = true;
+			
+		} 
+		else if ($endpoint == "/social/timeline/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$includeSent = ($_GET['sent'] == "true")?1:0;
+			$sentSQL = "";
+			if (isset($_GET['sent'])) {
+				$sentSQL = " AND sent = {$includeSent} ";
+			}
+
+			$results = $db->query("SELECT * FROM socialqueue WHERE removed = 0 " . $sentSQL . " ORDER BY `timestamp` ASC;");
+		
+			$result = new stdClass();
+			$result->success = true;
+			$result->timeline = $results;
+
+			for($i = 0; $i < count($result->timeline); $i++) {
+				$result->timeline[$i]['typedata'] = json_decode($result->timeline[$i]['typedata']); 
+			}
+		} 
+		else if ($endpoint == "/social/timeline/item/add/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$stmt = $db->prepare("INSERT INTO socialqueue (id, type, typedata, user_id, `timestamp`, ready, sent, removed) 
+													VALUES ( NULL, :type, :typedata, :user_id, :ts, :ready, :sent, :removed);
+								");
+			$stmt->bindValue(":type", 		'blank', 	Database::VARTYPE_STRING);
+			$stmt->bindValue(":typedata", 	"{}", 		Database::VARTYPE_STRING);
+			$stmt->bindValue(":user_id", 	$user_id, 	Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":ts", 		0, 			Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":ready", 		0, 			Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":sent", 		0, 			Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":removed", 	0, 			Database::VARTYPE_INTEGER);
+			
+			$stmt->execute();
+
+			$itemId = $db->lastInsertRowID();
+
+			$result = new stdClass();
+			$result->success = true;
+			$result->socialTimelineItem = db_singleSocialQueueItem( $db, $itemId );
+			$result->socialTimelineItem['typedata'] = json_decode($result->socialTimelineItem['typedata']); 
+		}
+		else if ($endpoint == "/social/timeline/item/add-retweets/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$required_fields = array(
+				array('name' => 'id', 		 'type' => 'integer'),
+				array('name' => 'accounts',	 'type' => 'textarea'),
+				array('name' => 'timesep', 	 'type' => 'integer')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) 
+			{
+				$tweet = db_singleSocialQueueItem($db, $_GET['id']);
+
+				if ($tweet == null) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = "Tweet could not be found.";
+				} else if ($tweet['type'] != 'tweet') {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = "Cannot add retweets to a non-tweet item.";
+				} else { 
+					$accounts = explode(",", $_GET['accounts']);
+
+
+					$correct = true;
+					for($i = 0; $i < count($accounts); $i++) 
+					{
+						$r = db_singleOAuthTwitter($db, $accounts[$i]);
+						if (is_null($r)) {
+							$correct = false;
+							break;
+						}
+
+					}
+					if (strlen($_GET['accounts']) == 0 || count($accounts) == 0) {
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = "No accounts were passed.";
+					} else if (!$correct) {
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = "A twitter account that was passed was not found.";
+					} else {
+
+						$result = new stdClass();
+						$result->success = true;
+						$result->socialTimelineItems = array(); 
+
+						for($i = 0; $i < count($accounts); $i++) 
+						{
+							$retweet_data = array(
+								"tweet" => $_GET['id'],
+								"account" => $accounts[$i]
+							);
+							$time = $tweet['timestamp'] + (($i+1) * $_GET['timesep']);
+
+							$stmt = $db->prepare("INSERT INTO socialqueue (id, type, typedata, user_id, `timestamp`, ready, sent, removed) 
+																	VALUES ( NULL, :type, :typedata, :user_id, :ts, :ready, :sent, :removed);
+												");
+							$stmt->bindValue(":type", 		'retweet', 	Database::VARTYPE_STRING);
+							$stmt->bindValue(":typedata", 	json_encode($retweet_data), Database::VARTYPE_STRING);
+							$stmt->bindValue(":user_id", 	$user_id, 	Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":ts", 		$time, 		Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":ready", 		1, 			Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":sent", 		0, 			Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":removed", 	0, 			Database::VARTYPE_INTEGER);
+							$stmt->execute();
+
+							$itemId = $db->lastInsertRowID();
+
+							$item = db_singleSocialQueueItem($db, $itemId);
+							$item['typedata'] = json_decode($item['typedata']);
+							$result->socialTimelineItems[] = $item;
+						}
+					}
+				}
+
+			}
+
+			
+			
+		}
+		else if ($endpoint == "/social/timeline/item/save/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$required_fields = array(
+				array('name' => 'id', 		 'type' => 'integer'),
+				array('name' => 'type', 	 'type' => 'alphanumeric'),
+				array('name' => 'data', 	 'type' => 'textarea'),
+				array('name' => 'ready', 	 'type' => 'boolean'),
+				array('name' => 'timestamp', 'type' => 'integer'),
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) 
+			{
+				// TODO: validate ID is a valid item.
+				// TODO: if we're changing the timestamp. we should error if there are retweets that take place afterwards...
+
+				$ready = ($_GET['ready'] == "true")?1:0;
+				$stmt = $db->prepare("UPDATE socialqueue SET `type` = :type, `typedata` = :typedata, `ready` = :ready, `timestamp` = :timestamp WHERE id = :id ;");
+				$stmt->bindValue(":type", $_GET['type'], Database::VARTYPE_STRING); 
+				$stmt->bindValue(":typedata", $_GET['data'], Database::VARTYPE_STRING); 
+				$stmt->bindValue(":timestamp", $_GET['timestamp'], Database::VARTYPE_INTEGER); 
+				$stmt->bindValue(":ready", $ready, Database::VARTYPE_INTEGER); 
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
+				$stmt->execute();
+
+				$result = new stdClass();
+				$result->success = true;
+				$result->socialTimelineItem = db_singleSocialQueueItem($db, $_GET['id']);
+				$result->socialTimelineItem['typedata'] = json_decode($result->socialTimelineItem['typedata']); 
+			}
+		}
+		else if ($endpoint == "/social/timeline/item/remove/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$required_fields = array(
+				array('name' => 'id', 		 'type' => 'integer')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) 
+			{
+				// TODO: validate ID is a valid item.
+
+				$stmt = $db->prepare("UPDATE socialqueue SET `removed` = :removed WHERE id = :id ;");
+				$stmt->bindValue(":removed", 1, Database::VARTYPE_INTEGER); 
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
+				$stmt->execute();
+
+				$result = new stdClass();
+				$result->success = true;
+			}
+		}
+
+		else if ($endpoint == "/social/uploads/list/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+			
+			$result = new stdClass();
+			$result->success = true;
+			$result->uploads = array();
+
+			$uploads = scandir("images/uploads/");
+
+			// sort by upload date
+			function sortbyuploaddate($a, $b) {
+				return filemtime("images/uploads/".$a) > filemtime("images/uploads/".$b);
+			}
+			usort($uploads, "sortbyuploaddate");
+
+			foreach ($uploads as $upload) { 
+
+				$ext = substr($upload, strlen($upload)-3, 3);
+				if ($ext == "png" || $ext == "jpg" || $ext == "gif") {
+					$result->uploads[] = array(
+						"name" => $upload,
+						"type" => "image/{$ext}",
+						"size" => filesize("images/uploads/".$upload)
+					);
+				}
+			}
+
+
+
+		}
+		else if ($endpoint == "/social/uploads/add/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			if(isset($_FILES["file"]["type"]))
+			{
+				$validextensions = array("jpeg", "jpg", "png", "gif");
+				$temporary = explode(".", $_FILES["file"]["name"]);
+				$file_extension = end($temporary);
+				if ((
+						($_FILES["file"]["type"] == "image/png") || 
+						($_FILES["file"]["type"] == "image/jpg") || 
+						($_FILES["file"]["type"] == "image/jpeg") ||
+						($_FILES["file"]["type"] == "image/gif")
+					) && ($_FILES["file"]["size"] < 1024 * 1024 * 5) // Approx. 5mb files can be uploaded.
+					  && in_array($file_extension, $validextensions)) 
+				{
+					if ($_FILES["file"]["error"] > 0)
+					{
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = "Return Code: " . $_FILES["file"]["error"];
+					}
+					else
+					{
+						if (file_exists("images/uploads/" . $_FILES["file"]["name"])) {
+							$result = new stdClass();
+							$result->success = false;
+							$result->message = $_FILES["file"]["name"] . " already exists.";
+						}
+						else
+						{
+							$sourcePath = $_FILES['file']['tmp_name']; // Storing source path of the file in a variable
+							$targetPath = "images/uploads/".$_FILES['file']['name']; // Target path where file is to be stored
+							move_uploaded_file($sourcePath, $targetPath) ; // Moving Uploaded file
+
+							$result = new stdClass();
+							$result->success = true;
+							$result->upload = array(
+								"name" => $_FILES["file"]["name"],
+								"type" => $_FILES["file"]["type"],
+								"size" => $_FILES["file"]["size"]
+							);
+						}
+					}
+				}
+				else {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = "Invalid file size or file type.";
+				}
+			}
+
+		} 
+		else if ($endpoint == "/social/uploads/remove/") 
+		{
+			$require_login = true;
+			include_once('init.php');	
+
+			if (!isset($_GET['name'])) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = "API requires 'name' field to remove social uploads. ";
+			} else {
+				$name = $_GET['name'];	
+
+				$exists = file_exists("images/uploads/" . $name);
+				if (!$exists) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = "Social Upload {$name} does not exist. ";
+				} else {
+					$r = unlink("images/uploads/" . $name);
+					if (!$r) {
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = "Could not remove {$name} file.";
+					} else {
+						$result = new stdClass();
+						$result->success = true;
+					}
+				}
+			}
+			
+		}
+		else if ($endpoint == "/social/account/twitter/list/") 
 		{
 			$require_login = true;
 			include_once('init.php');
 
 			$results = $db->query("SELECT * FROM oauth_twitteracc WHERE removed = 0 ORDER BY id ASC;");
+			usort($results, "sortById");
 			
 			$result = new stdClass();
 			$result->success = true;
@@ -697,7 +1049,8 @@ if (!isset($_GET['endpoint'])) {
 
 			$people = $db->query("SELECT * FROM person WHERE removed = 0;");
 			$num_people = count($people);
-			usort($people, "sortByName");
+			//usort($people, "sortByName");
+			usort($people, "sortById");
 
 			for($i = 0; $i < $num_people; $i++) { 
 				$people[$i]['notes'] = utf8_encode($people[$i]['notes']);
@@ -714,7 +1067,8 @@ if (!isset($_GET['endpoint'])) {
 			include_once("init.php");
 
 			$publications = $db->query("SELECT * FROM publication WHERE removed = 0;");
-			usort($publications, "sortByName");
+			//usort($publications, "sortByName");
+			usort($publications, "sortById");
 
 			$result = new stdClass();
 			$result->success = true;
@@ -726,6 +1080,7 @@ if (!isset($_GET['endpoint'])) {
 			include_once("init.php");
 
 			$personPublications = $db->query("SELECT * FROM person_publication; ");
+			usort($personPublications, "sortById");
 			
 			$result = new stdClass();
 			$result->success = true;
@@ -737,6 +1092,7 @@ if (!isset($_GET['endpoint'])) {
 			include_once("init.php");
 
 			$personYoutubers = $db->query("SELECT * FROM person_youtuber; ");
+			usort($personYoutubers, "sortById");
 			
 			$result = new stdClass();
 			$result->success = true;
@@ -749,7 +1105,8 @@ if (!isset($_GET['endpoint'])) {
 
 			$youtubeChannels = $db->query("SELECT * FROM youtuber WHERE removed = 0;");
 			$num_youtubeChannels = count($youtubeChannels);
-			usort($youtubeChannels, "sortByName");
+			//usort($youtubeChannels, "sortByName");
+			usort($youtubeChannels, "sortById");
 
 			for($i = 0; $i < $num_youtubeChannels; $i++) { 
 				$youtubeChannels[$i]['notes'] = utf8_encode($youtubeChannels[$i]['notes']);
@@ -770,6 +1127,7 @@ if (!isset($_GET['endpoint'])) {
 			for($i = 0; $i < $num_emails; $i++) { 
 				$emails[$i]['contents'] = utf8_encode($emails[$i]['contents']);
 			}
+			usort($emails, "sortById");
 
 			$result = new stdClass();
 			$result->success = true;

@@ -61,9 +61,19 @@
 		$rs = $db->query("SELECT * FROM oauth_twitteracc WHERE id = '" . $twitterAccId . "' AND removed = 0  LIMIT 1;");
 		return $rs[0];
 	}
+	function db_singleOAuthTwitterById($db, $id) {
+		if (!is_numeric($id)) { return false; }
+		$rs = $db->query("SELECT * FROM oauth_twitteracc WHERE id = " . $id . " AND removed = 0 LIMIT 1;");
+		return $rs[0];
+	}
 	function db_singleOAuthTwitterByHandle($db, $twitterHandle) {
 		//if (!is_numeric($gameid)) { return false; }
 		$rs = $db->query("SELECT * FROM oauth_twitteracc WHERE twitter_handle = '" . $twitterHandle . "' AND removed = 0 LIMIT 1;");
+		return $rs[0];
+	}
+	function db_singleSocialQueueItem($db, $id) {
+		if (!is_numeric($id)) { return false; }
+		$rs = $db->query("SELECT * FROM socialqueue WHERE id = " . $id . " LIMIT 1;");
 		return $rs[0];
 	}
 	function db_keysassignedtotype($db, $gameid, $platform, $type, $typeid) {

@@ -271,6 +271,64 @@ function twitter_countFollowers($username)
 	return $twitter_content[0]->followers_count;
 }
 
+function twitter_postStatus($oauthtoken, $oauthsecret, $status) {
+	$url = "https://api.twitter.com/1.1/statuses/update.json";
+	$twitter_connection = twitter_getConnectionWithAccessToken($oauthtoken, $oauthsecret);
+	return $twitter_connection->post($url, array("status" => $status));
+}
+
+function twitter_retweetStatus($oauthtoken, $oauthsecret, $status_id) {
+	$url = "https://api.twitter.com/1.1/statuses/retweet/{$status_id}.json";
+	$twitter_connection = twitter_getConnectionWithAccessToken($oauthtoken, $oauthsecret);
+	return $twitter_connection->post($url, array());
+}
+function twitter_postStatusWithImage($oauthtoken, $oauthsecret, $status, $imagefiles) {
+
+	if (!is_array($imagefiles)) {
+		$imagefiles = array($imagefiles);
+	}
+	$twitter_connection = twitter_getConnectionWithAccessToken($oauthtoken, $oauthsecret);
+	
+	$media_ids = array();
+	$url = "https://upload.twitter.com/1.1/media/upload.json";
+	for($i = 0; $i < count($imagefiles); $i++) 
+	{ 
+		$contents = file_get_contents($imagefiles[$i]);
+		$contents_b64 = base64_encode($contents);
+		$image = $twitter_connection->post($url, array(
+			"media_data" => $contents_b64, 
+			"multipart/form-data" => true
+		));
+		$media_ids[] = $image->media_id_string;
+	}
+
+	$url = "https://api.twitter.com/1.1/statuses/update.json";
+	return $twitter_connection->post($url, array(
+		"status" => $status, 
+		"media_ids" => implode(",", $media_ids)
+	));
+	 
+}
+function twitter_helpConfiguration() {
+	global $twitter_oauthToken;
+	global $twitter_oauthSecret;
+
+	$url = "https://api.twitter.com/1.1/help/configuration.json";
+	$twitter_connection = twitter_getConnectionWithAccessToken($twitter_oauthToken, $twitter_oauthSecret);
+	return $twitter_connection->get($url);
+}
+function twitter_helpConfigurationSave() {
+	global $db; 
+	$r = twitter_helpConfiguration();
+	$rjson = json_encode($r);
+
+	$stmt = $db->prepare(" UPDATE settings SET `value` = :value WHERE `key` = :key; ");
+	$stmt->bindValue(":value", 	$rjson, 					Database::VARTYPE_STRING); 
+	$stmt->bindValue(":key",  	"twitter_configuration", 	Database::VARTYPE_STRING); 
+	return $stmt->execute();
+}
+
+
 function url_get_contents($url) {
 
 	$ch = curl_init();
