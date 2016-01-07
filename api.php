@@ -395,21 +395,69 @@ if (!isset($_GET['endpoint'])) {
 			if (!$error) 
 			{
 				// TODO: validate ID is a valid item.
-				// TODO: if we're changing the timestamp. we should error if there are retweets that take place afterwards...
+				// TODO: if we're changing the timestamp. 
+				// 		 we should error if there are retweets that take place afterwards...
 
-				$ready = ($_GET['ready'] == "true")?1:0;
-				$stmt = $db->prepare("UPDATE socialqueue SET `type` = :type, `typedata` = :typedata, `ready` = :ready, `timestamp` = :timestamp WHERE id = :id ;");
-				$stmt->bindValue(":type", $_GET['type'], Database::VARTYPE_STRING); 
-				$stmt->bindValue(":typedata", $_GET['data'], Database::VARTYPE_STRING); 
-				$stmt->bindValue(":timestamp", $_GET['timestamp'], Database::VARTYPE_INTEGER); 
-				$stmt->bindValue(":ready", $ready, Database::VARTYPE_INTEGER); 
-				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
-				$stmt->execute();
+				$valid = true;
 
-				$result = new stdClass();
-				$result->success = true;
-				$result->socialTimelineItem = db_singleSocialQueueItem($db, $_GET['id']);
-				$result->socialTimelineItem['typedata'] = json_decode($result->socialTimelineItem['typedata']); 
+				if ($_GET['type'] == "retweet") 
+				{
+					// make sure the timestamp is AFTER the tweet takes place.
+					$d = json_decode($_GET['data'], true);
+					$tweet = db_singleSocialQueueItem($db, $d['tweet']);
+					if ($tweet['timestamp'] > $_GET['timestamp']) {
+						$valid = false;
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = "Cannot schedule a retweet to happen before the tweet takes place.";
+					}
+
+					// check there's not a retweet by this account already.
+					//$rs = $db->query("SELECT * FROM socialqueue WHERE id = " . $id . " AND typedata = LIMIT 1;");
+					//return $rs[0];
+					$stmt1 = $db->prepare("SELECT * FROM socialqueue WHERE type = 'retweet' AND typedata = :typedata AND id != :id AND removed = 0;");
+					$stmt1->bindValue(":typedata", $_GET['data'], Database::VARTYPE_STRING); 
+					$stmt1->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
+					$existingretweet = $stmt1->query();
+					//print_r($existingretweet);
+					if (count($existingretweet) > 0) {
+						$valid = false;
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = "A retweet for this account & tweet is already scheduled.";
+					}
+
+
+					$tweetdata = json_decode($tweet['typedata'], true);
+					//print_r($tweetdata);
+					if ($d['account'] == $tweetdata['account']) {
+						$valid = false;
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = "The original tweet is from this account... so it cannot be scheduled to retweet!";	
+					}
+
+					
+				}
+
+				if (!$valid) { 
+
+				} else { 
+
+					$ready = ($_GET['ready'] == "true")?1:0;
+					$stmt = $db->prepare("UPDATE socialqueue SET `type` = :type, `typedata` = :typedata, `ready` = :ready, `timestamp` = :timestamp WHERE id = :id ;");
+					$stmt->bindValue(":type", $_GET['type'], Database::VARTYPE_STRING); 
+					$stmt->bindValue(":typedata", $_GET['data'], Database::VARTYPE_STRING); 
+					$stmt->bindValue(":timestamp", $_GET['timestamp'], Database::VARTYPE_INTEGER); 
+					$stmt->bindValue(":ready", $ready, Database::VARTYPE_INTEGER); 
+					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
+					$stmt->execute();
+
+					$result = new stdClass();
+					$result->success = true;
+					$result->socialTimelineItem = db_singleSocialQueueItem($db, $_GET['id']);
+					$result->socialTimelineItem['typedata'] = json_decode($result->socialTimelineItem['typedata']); 
+				}
 			}
 		}
 		else if ($endpoint == "/social/timeline/item/remove/") 

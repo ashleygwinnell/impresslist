@@ -134,8 +134,13 @@ h3 {
 .socialqueue-item.indented img { width:20px; height:20px; margin: 0; margin-right:5px;}
 .socialqueue-item .icon {
 	float:left;
+	max-width:40px;
+	max-height:40px;
 	margin-right:10px;
-	margin-bottom:10px;
+	/*margin-bottom:10px;*/
+}
+.socialqueue-item p.attachments {
+	margin-top:10px;
 }
 
 .socialqueue-item.ready { border-top:5px solid #5cb85c; padding-top:15px; }

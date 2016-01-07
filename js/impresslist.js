@@ -3868,11 +3868,11 @@ SocialTimelineItem = function(data) {
 							</div> \
 							<div> \
 								<img class='icon' src='" + acc.field("twitter_image") + "' /> \
-								<p style='min-height:40px;'>" + this.field('typedata').message + "</p>";
+								<p style='min-height:40px;margin-bottom:0px;'>" + this.field('typedata').message + "</p>";
 					
 								var attachments = this.field('typedata').attachments;
 								if (attachments.length > 0) { 
-									html += "<p class='text-muted'>Attachment/s: " + attachments.length + " <i class='glyphicon glyphicon-picture'></i></p>";
+									html += "<p class='text-muted attachments'>Attachment/s: " + attachments.length + " <i class='glyphicon glyphicon-picture'></i></p>";
 									for(var i = 0; i < attachments.length; i++) { 
 										html += "<p class='socialqueue-imageattachment-container' data-social-id='" + this.id + "'  data-attachment-id='" + i + "'><img class='socialqueue-imageattachment' data-social-id='" + this.id + "' data-attachment-id='" + i + "' src='images/uploads/" + attachments[i].file + "'/></p>";
 									}
