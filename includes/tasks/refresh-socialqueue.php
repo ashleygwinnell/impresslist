@@ -7,21 +7,24 @@ $require_login = false;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // List of all to-process items.
-$queue = $db->query("SELECT * FROM socialqueue WHERE `timestamp` < " . time() . " AND sent = 0 AND removed = 0;");
+$queue = $db->query("SELECT * FROM socialqueue WHERE `timestamp` < " . time() . " AND ready = 1 AND sent = 0 AND removed = 0;");
 $queueSize = count($queue);
+
+echo $queueSize . " items in queue.<br/>";
 
 for($i = 0; $i < $queueSize; $i++) {
 	$item = $queue[$i];
 	$item['typedata'] = json_decode($item['typedata'], true); 
 
 	if ($item['type'] == "tweet") {
+		echo "Tweet<br/>";
 		$message = $item['typedata']['message'];
 		$account = db_singleOAuthTwitterById($db, $item['typedata']['account']);
 
 		if (count($item['typedata']['attachments']) > 0) {
 			$attachments = $item['typedata']['attachments'];
 			for($j = 0; $j < count($attachments); $j++) {
-				$attachments[$j] = "images/uploads/" . $attachments[$j];
+				$attachments[$j] = "images/uploads/" . $attachments[$j]['file'];
 			}
 			$tweet = twitter_postStatusWithImage($account['oauth_key'], $account['oauth_secret'], $message, $attachments);
 		} else {
@@ -38,18 +41,19 @@ for($i = 0; $i < $queueSize; $i++) {
 		$rs = $stmt->execute();
 
 	} else if ($item['type'] == "retweet") {
+		echo "Retweet<br/>";
 		$tweet = $item['typedata']['tweet'];
-		$tweet['typedata'] = json_decode($tweet['typedata'], true); 
 		
 		$otheritem = db_singleSocialQueueItem($db, $tweet);
+		$otheritem['typedata'] = json_decode($otheritem['typedata'], true); 
 		$account = db_singleOAuthTwitterById($db, $item['typedata']['account']);	
 		
 		if (!is_null($otheritem) && 
 			!is_null($account) && 
-			$otheritem['sent'] && 
-			isset($tweet['typedata']['id'])
+			$otheritem['sent']==1 && 
+			isset($otheritem['typedata']['tweet']['id'])
 			) { 
-			twitter_retweetStatus($account['oauth_key'], $account['oauth_secret'], $tweet['typedata']['id']);
+			twitter_retweetStatus($account['oauth_key'], $account['oauth_secret'], $otheritem['typedata']['tweet']['id']);
 
 			$stmt = $db->prepare("UPDATE socialqueue SET sent = :sent WHERE id = :id ");
 			$stmt->bindValue(":sent", 1, Database::VARTYPE_INTEGER);

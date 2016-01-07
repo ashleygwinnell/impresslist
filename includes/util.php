@@ -295,11 +295,16 @@ function twitter_postStatusWithImage($oauthtoken, $oauthsecret, $status, $imagef
 	}
 	$twitter_connection = twitter_getConnectionWithAccessToken($oauthtoken, $oauthsecret);
 	
+	//print_r($imagefiles);
+
 	$media_ids = array();
 	$url = "https://upload.twitter.com/1.1/media/upload.json";
 	for($i = 0; $i < count($imagefiles); $i++) 
 	{ 
-		$contents = file_get_contents($imagefiles[$i]);
+		$file = $_SERVER['DOCUMENT_ROOT'] . "/" . $imagefiles[$i];
+		//echo $file;
+		$contents = file_get_contents($file);
+		//die();
 		$contents_b64 = base64_encode($contents);
 		$image = $twitter_connection->post($url, array(
 			"media_data" => $contents_b64, 
