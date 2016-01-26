@@ -71,6 +71,26 @@
 		$rs = $db->query("SELECT * FROM oauth_twitteracc WHERE twitter_handle = '" . $twitterHandle . "' AND removed = 0 LIMIT 1;");
 		return $rs[0];
 	}
+	function db_singleOAuthFacebookByFBId($db, $facebookId) {
+		//if (!is_numeric($gameid)) { return false; }
+		$rs = $db->query("SELECT * FROM oauth_facebookacc WHERE facebook_id = '" . $facebookId . "' AND removed = 0 LIMIT 1;");
+		return $rs[0];
+	}
+	function db_singleOAuthFacebookByUserId($db, $userId) {
+		//if (!is_numeric($gameid)) { return false; }
+		$rs = $db->query("SELECT * FROM oauth_facebookacc WHERE user = '" . $userId . "' AND removed = 0 LIMIT 1;");
+		return $rs[0];
+	}
+	function db_singleOAuthFacebookPageById($db, $pageId) {
+		//if (!is_numeric($gameid)) { return false; }
+		$rs = $db->query("SELECT * FROM oauth_facebookpage WHERE id = '" . $pageId . "' AND removed = 0 LIMIT 1;");
+		return $rs[0];
+	}
+	function db_singleOAuthFacebookPageByFBPId($db, $facebookPageId) {
+		//if (!is_numeric($gameid)) { return false; }
+		$rs = $db->query("SELECT * FROM oauth_facebookpage WHERE page_id = '" . $facebookPageId . "' AND removed = 0 LIMIT 1;");
+		return $rs[0];
+	}
 	function db_singleSocialQueueItem($db, $id) {
 		if (!is_numeric($id)) { return false; }
 		$rs = $db->query("SELECT * FROM socialqueue WHERE id = " . $id . " LIMIT 1;");

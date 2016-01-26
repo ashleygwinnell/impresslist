@@ -36,6 +36,11 @@ $twitter_consumerSecret = "consumer_secret";
 $twitter_oauthToken = "oauth_token";
 $twitter_oauthSecret = "oauth_secret";
 
+// https://developers.facebook.com
+$facebook_appId = "app_id";
+$facebook_appSecret = "app_secret";
+$facebook_apiVersion = "api_version";
+
 $youtube_apiKey = "youtube_api_key";
 
 $slack_enabled = true;

@@ -1,1393 +1,3 @@
-API = function() {
-
-}
-API.prototype = {
-
-}
-
-API.listSocialTimeline = function(fromInit) {
-	if (typeof fromInit == 'undefined') { fromInit = true; }
-	
-	impresslist.loading.set('socialTimelineItem', true); 
-	var url = "api.php?endpoint=/social/timeline/";
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			
-			for(var i = 0; i < json.timeline.length; ++i) { 
-				var item = new SocialTimelineItem(json.timeline[i]);
-				impresslist.addSocialTimelineItem(item, fromInit);
-			}
-			impresslist.loading.set('socialTimelineItem', false); 
-		})
-		.fail(function() {
-			API.errorMessage("Could not pull Social Timeline.");
-		});
-}
-API.addSocialTimelineItem = function() {
-	var url = "api.php?endpoint=/social/timeline/item/add/";
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Schedule Item added.");
-			console.log(json);
-
-			var item = new SocialTimelineItem(json.socialTimelineItem);
-			impresslist.addSocialTimelineItem(item, false);
-		})
-		.fail(function() {
-			API.errorMessage("Could not add Schedule Item.");
-		});
-}
-API.addSocialTimelineItemRetweets = function(obj, accounts, timesep, donecallback) {
-	var url = "api.php?endpoint=/social/timeline/item/add-retweets/" +
-				"&id=" + encodeURIComponent(obj.id) + 
-				"&accounts=" + encodeURIComponent(accounts) + 
-				"&timesep=" + encodeURIComponent(timesep);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Shares added.");
-			console.log(json);
-
-			for(var i = 0; i < json.socialTimelineItems.length; ++i) {
-				var item = new SocialTimelineItem(json.socialTimelineItems[i]);
-				impresslist.addSocialTimelineItem(item, false);	
-			}
-
-			if (typeof donecallback != 'undefined') {
-				donecallback();
-			}
-			
-		})
-		.fail(function() {
-			API.errorMessage("Could not add Shares.");
-		});
-}
-API.saveSocialTimelineItem = function(obj, type, typedata, timestamp, ready) {
-	var url = "api.php?endpoint=/social/timeline/item/save/" + 
-					"&id=" + encodeURIComponent(obj.id) + 
-					"&type=" + encodeURIComponent(type) + 
-					"&data=" + encodeURIComponent(JSON.stringify(typedata)) + 
-					"&timestamp=" + encodeURIComponent(timestamp) + 
-					"&ready=" + encodeURIComponent(ready);
-	console.log(url);
-
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return; 
-			}
-			API.successMessage("Schedule Item saved.");
-			console.log(json);
-			obj.init(json.socialTimelineItem);
-			obj.updateRow();
-			obj.update();
-			SocialTimelineItem.displaySort();
-		})
-		.fail(function() {
-			API.errorMessage("Could not save Schedule Item.");
-		});
-}
-API.removeSocialTimelineItem = function(obj) {
-	var url = "api.php?endpoint=/social/timeline/item/remove/&id=" + encodeURIComponent(obj.id);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Schedule Item removed.");
-			impresslist.removeSocialTimelineItem(obj);
-		})
-		.fail(function() {
-			API.errorMessage("Could not remove Schedule Item.");
-		});
-}
-API.listSocialUploads = function(fromInit) {
-	if (typeof fromInit == 'undefined') { fromInit = true; }
-	
-	impresslist.loading.set('socialUploads', true); 
-	var url = "api.php?endpoint=/social/uploads/list/";
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			
-			for(var i = 0; i < json.uploads.length; ++i) { 
-				var upload = new SocialUpload(json.uploads[i]);
-				impresslist.addSocialUpload(upload, fromInit);
-			}
-			impresslist.loading.set('socialUploads', false); 
-		})
-		.fail(function() {
-			API.errorMessage("Could not list Social Uploads.");
-		});
-}
-API.addSocialUpload = function(d, successCallback) {
-	var url = "api.php?endpoint=/social/uploads/add/";
-	console.log(url);
-	
-	$.ajax({
-		url: "api.php?endpoint=/social/uploads/add/", 
-		type: "POST",             
-		data: d,
-		contentType: false, 
-		cache: false,             
-		processData: false,
-		success: function(result)   
-		{
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Social Upload added.");
-			console.log(json);
-
-			var upload = new SocialUpload(json.upload);
-			impresslist.addSocialUpload(upload, false);
-
-			if (typeof successCallback != 'undefined') {
-				successCallback();
-			}
-		},
-		error: function(e, e2, e3) 
-		{
-			API.errorMessage("Could not add Social Upload.");
-			console.log("error: " + e + " " + e2 + " " + e3);
-		}
-	});
-}
-API.removeSocialUpload = function(acc) {
-	var url = "api.php?endpoint=/social/uploads/remove/&name=" + encodeURIComponent(acc.field("name"));
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
-			
-			var json = JSON.parse(result);
-			if (!json.success) { API.errorMessage(json.message); return; }
-			API.successMessage("Social Upload removed.");
-			impresslist.removeSocialUpload(acc);
-			
-		})
-		.fail(function() {
-			API.errorMessage("Could not remove Social Upload.");
-		});
-}
-
-API.listPeople = function(fromInit) {
-	if (typeof fromInit == 'undefined') { fromInit = true; }
-	
-	var url = "api.php?endpoint=/person/list/";
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			
-			for(var i = 0; i < json.people.length; ++i) { 
-				var person = new Person(json.people[i]);
-				impresslist.addPerson(person, fromInit);
-			}
-			if (fromInit) { impresslist.refreshFilter(); }
-		})
-		.fail(function() {
-			API.errorMessage("Could not list People.");
-		});
-}
-API.listPublications = function(fromInit) {
-	if (typeof fromInit == 'undefined') { fromInit = true; }
-
-	var url = "api.php?endpoint=/publication/list/";
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			
-			for(var i = 0; i < json.publications.length; ++i) { 
-				var publication = new Publication(json.publications[i]);
-				impresslist.addPublication(publication, fromInit);
-			}
-			if (fromInit) { 
-				impresslist.refreshFilter(); 
-			}
-		})
-		.fail(function() {
-			API.errorMessage("Could not list Publications.");
-		});
-}
-API.listPersonPublications = function(fromInit) {
-	if (typeof fromInit == 'undefined') { fromInit = true; }
-
-	var url = "api.php?endpoint=/person-publication/list/";
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			for(var i = 0; i < json.personPublications.length; ++i) { 
-				var publication = new PersonPublication(json.personPublications[i]);
-				impresslist.addPersonPublication(publication, fromInit);
-			}
-			if (fromInit) { impresslist.refreshFilter(); }
-		})
-		.fail(function() {
-			API.errorMessage("Could not list Person Publications.");
-		});
-}
-API.listPersonYoutubeChannels = function(fromInit) {
-	if (typeof fromInit == 'undefined') { fromInit = true; }
-
-	var url = "api.php?endpoint=/person-youtube-channel/list/";
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			for(var i = 0; i < json.personYoutubeChannels.length; ++i) { 
-				var channel = new PersonYoutubeChannel(json.personYoutubeChannels[i]);
-				impresslist.addPersonYoutubeChannel(channel, fromInit);
-			}
-			if (fromInit) { impresslist.refreshFilter(); }
-		})
-		.fail(function() {
-			API.errorMessage("Could not list Person Youtube Channels.");
-		});
-}
-API.listYoutubeChannels = function(fromInit) {
-	if (typeof fromInit == 'undefined') { fromInit = true; }
-
-	impresslist.loading.set('youtubeChannels', true); 
-	var url = "api.php?endpoint=/youtuber/list/";
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			for(var i = 0; i < json.youtubechannels.length; ++i) { 
-				var youtuber = new Youtuber(json.youtubechannels[i]);
-				impresslist.addYoutuber(youtuber, fromInit);
-			}
-			if (fromInit) { 
-				impresslist.refreshFilter(); 
-				API.listCoverage(fromInit); 
-			}
-			impresslist.loading.set('youtubeChannels', false); 
-		})
-		.fail(function() {
-			API.errorMessage("Could not list Youtubers.");
-		});
-}
-API.listEmails = function(fromInit) {
-	if (typeof fromInit == 'undefined') { fromInit = true; }
-
-	var url = "api.php?endpoint=/email/list/";
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			for(var i = 0; i < json.emails.length; ++i) { 
-				var email = new Email(json.emails[i]);
-				impresslist.addEmail(email, fromInit);
-			}
-			if (fromInit) { impresslist.refreshFilter(); }
-		})
-		.fail(function() {
-			API.errorMessage("Could not list Emails.");
-		});
-}
-API.listCoverage = function(fromInit) {
-	if (typeof fromInit == 'undefined') { fromInit = true; }
-
-	impresslist.loading.set('coverage', true); 
-	var url = "api.php?endpoint=/coverage/";
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			for(var i = 0; i < json.coverage.length; ++i) { 
-				var coverage = new Coverage(json.coverage[i]);
-				impresslist.addCoverage(coverage, fromInit);
-			}
-			if (fromInit) { impresslist.refreshFilter(); }
-			impresslist.loading.set('coverage', false); 
-		})
-		.fail(function() {
-			API.errorMessage("Could not list Emails.");
-		});
-}
-API.listKeys = function(game, platform, assigned, callbackfunction) {
-	var url = "api.php?endpoint=/keys/list/" +
-				"&game=" + encodeURIComponent(game) + 
-				"&platform=" + encodeURIComponent(platform) +
-				"&assigned=" + encodeURIComponent(assigned);
-	console.log(url);
-
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
-			
-			var json = JSON.parse(result);
-			if (!json.success) { API.errorMessage(json.message); return; }
-			
-			callbackfunction(json);
-		})
-		.fail(function() {
-			API.errorMessage("Could not list keys.");
-		});
-}
-API.addKeys = function(keys, game, platform, expiresOn, callbackfunction) {
-	var url = "api.php?endpoint=/keys/add/" +
-					"&keys=" + encodeURIComponent(keys) + 
-					"&game=" + encodeURIComponent(game) + 
-					"&platform=" + encodeURIComponent(platform) + 
-					"&expiresOn=" + encodeURIComponent(expiresOn);
-	console.log(url);
-	
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Keys added.");
-			console.log(json);
-
-			callbackfunction(json);
-
-			//var simpleMailout = new SimpleMailout(json.mailout);
-			//impresslist.addSimpleMailout(simpleMailout, false);
-		})
-		.fail(function() {
-			API.errorMessage("Could not add Keys.");
-		});
-}
-
-API.listSimpleMailouts = function(fromInit) {
-	if (typeof fromInit == 'undefined') { fromInit = true; }
-	
-	var url = "api.php?endpoint=/mailout/simple/list/";
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			
-			for(var i = 0; i < json.mailouts.length; ++i) { 
-				var mailout = new SimpleMailout(json.mailouts[i]);
-				impresslist.addSimpleMailout(mailout, fromInit);
-			}
-			
-		})
-		.fail(function() {
-			API.errorMessage("Could not list Mailouts.");
-		});
-}
-API.addSimpleMailout = function() {
-	var url = "api.php?endpoint=/mailout/simple/add/";
-	console.log(url);
-	
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Simple Mailout added.");
-			console.log(json);
-
-			var simpleMailout = new SimpleMailout(json.mailout);
-			impresslist.addSimpleMailout(simpleMailout, false);
-		})
-		.fail(function() {
-			API.errorMessage("Could not add Simple Mailout.");
-		});
-}
-API.saveSimpleMailout = function(obj, name, subject, recipients, markdown, timestamp, callbackfunction) {
-	
-	var url = "api.php?endpoint=/mailout/simple/save/" + 
-					"&id=" + encodeURIComponent(obj.id) + 
-					"&name=" + encodeURIComponent(name) + 
-					"&subject=" + encodeURIComponent(subject) + 
-					//"&recipients=" + encodeURIComponent( JSON.stringify(recipients) ) + 
-					"&recipients=look_in_post_data" + 
-					"&markdown=" + encodeURIComponent(markdown) + 
-					"&timestamp=" + encodeURIComponent(timestamp);
-	console.log(url);
-
-	$.ajax( {
-		method: 'POST',
-		url: url,
-		data: { recipients: encodeURIComponent( JSON.stringify(recipients) ) }
-	})
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return; 
-			}
-			API.successMessage("Simple Mailout saved.");
-			obj.init(json.mailout);
-			obj.update();
-			callbackfunction();
-		})
-		.fail(function() {
-			API.errorMessage("Could not save Simple Mailout.");
-		});
-}
-API.sendSimpleMailout = function(obj) {
-	var url = "api.php?endpoint=/mailout/simple/send/" + 
-					"&id=" + encodeURIComponent(obj.id);
-	console.log(url);
-
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return; 
-			}
-			API.successMessage("Simple Mailout sent!");
-			obj.init(json.mailout);
-			obj.update();
-		})
-		.fail(function() {
-			API.errorMessage("Could not send Simple Mailout.");
-		});
-}
-API.cancelSimpleMailout = function(obj) {
-	var url = "api.php?endpoint=/mailout/simple/cancel/" + 
-					"&id=" + encodeURIComponent(obj.id);
-	console.log(url);
-
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return; 
-			}
-			API.successMessage("Simple Mailout cancelled send!");
-			obj.init(json.mailout);
-			obj.update();
-		})
-		.fail(function() {
-			API.errorMessage("Could not cancel send of Simple Mailout.");
-		});
-}
-API.removeSimpleMailout = function(simpleMailout) {
-	var url = "api.php?endpoint=/mailout/simple/remove/&id=" + encodeURIComponent(simpleMailout.id);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Simple Mailout removed.");
-			impresslist.removeSimpleMailout(simpleMailout);
-		})
-		.fail(function() {
-			API.errorMessage("Could not remove Simple Mailout.");
-		});
-}
-
-API.addPerson = function() {
-	var firstname = "Blank";
-	var surnames = "Surname";
-	var email = "blank@blank.com";
-	var twitter = "";
-	var notes = "";
-	var url = "api.php?endpoint=/person/add/&firstname=" + encodeURIComponent(firstname) + "&surnames=" + encodeURIComponent(surnames) + "&email=" + encodeURIComponent(email) + "&twitter=" + encodeURIComponent(twitter) + "&notes=" + encodeURIComponent(notes);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Person added.");
-			console.log(json);
-
-			var person = new Person(json.person);
-			impresslist.addPerson(person, false);
-			$(person.openSelector()).click();
-		})
-		.fail(function() {
-			API.errorMessage("Could not add Person.");
-		});
-}
-API.addPersonPublication = function(personObj, publicationId) {
-	var url = "api.php?endpoint=/person/add-publication/" +
-				"&person=" + encodeURIComponent(personObj.id) + 
-				"&publication=" + encodeURIComponent(publicationId);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Person publication added.");
-			console.log(json);
-
-			impresslist.addPersonPublication(new PersonPublication(json.personPublication), false);			
-		})
-		.fail(function() {
-			API.errorMessage("Could not add Person.");
-		});
-}
-API.addPersonYoutubeChannel = function(personObj, youtubeChannelId) {
-	var url = "api.php?endpoint=/person/add-youtube-channel/" +
-				"&person=" + encodeURIComponent(personObj.id) + 
-				"&youtubeChannel=" + encodeURIComponent(youtubeChannelId);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Person Youtube Channel added.");
-			console.log(json);
-
-			impresslist.addPersonYoutubeChannel(new PersonYoutubeChannel(json.personYoutubeChannel), false);			
-		})
-		.fail(function() {
-			API.errorMessage("Could not add Person - Youtube Channel.");
-		});
-}
-API.removePersonYoutubeChannel = function(personYoutuberObj) {
-	var url = "api.php?endpoint=/person/remove-youtube-channel/" +
-				"&personYoutubeChannel=" + encodeURIComponent(personYoutuberObj.id);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Person Youtube Channel removed.");
-			console.log(json);
-
-			impresslist.removePersonYoutubeChannel(personYoutuberObj);			
-		})
-		.fail(function() {
-			API.errorMessage("Could not removed Person Youtube Channel.");
-		});
-}
-API.savePersonPublication = function(personPublicationObj, email) {
-	var url = "api.php?endpoint=/person/save-publication/" +
-				"&personPublication=" + encodeURIComponent(personPublicationObj.id) + 
-				"&email=" + encodeURIComponent(email);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Person publication saved.");
-			console.log(json);
-
-			personPublicationObj.init(json.personPublication);
-			personPublicationObj.update();
-		})
-		.fail(function() {
-			API.errorMessage("Could not save Person publication.");
-		});
-}
-API.removePersonPublication = function(personPublicationObj) {
-	var url = "api.php?endpoint=/person/remove-publication/" +
-				"&personPublication=" + encodeURIComponent(personPublicationObj.id);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Person publication removed.");
-			console.log(json);
-
-			impresslist.removePersonPublication(personPublicationObj);			
-		})
-		.fail(function() {
-			API.errorMessage("Could not removed Person.");
-		});
-}
-API.addPublicationCoverage = function() {
-	var url = "api.php?endpoint=/coverage/publication/add/";
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Coverage added.");
-			console.log(json);
-
-			var coverage = new Coverage(json.coverage);
-			impresslist.addCoverage(coverage, false);
-		})
-		.fail(function() {
-			API.errorMessage("Could not add Coverage.");
-		});
-}
-API.savePublicationCoverage = function(coverage, publication, person, title, url, timestamp, thanked) {
-	var url = "api.php?endpoint=/coverage/publication/save/" +
-						"&id=" + encodeURIComponent(coverage.id) + 
-						"&publication=" + encodeURIComponent(publication) + 
-						"&person=" + encodeURIComponent(person) + 
-						"&title=" + encodeURIComponent(title) + 
-						"&url=" + encodeURIComponent(url) + 
-						"&timestamp=" + encodeURIComponent(timestamp) + 
-						"&thanked=" + encodeURIComponent(thanked);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Coverage saved.");
-			console.log(json);
-
-			coverage.init(json.coverage);
-			coverage.update();		
-		})
-		.fail(function() {
-			API.errorMessage("Could not add Coverage.");
-		});
-}
-API.removePublicationCoverage = function(coverage) {
-	var url = "api.php?endpoint=/coverage/publication/remove/&id=" + encodeURIComponent(coverage.id);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Coverage removed.");
-			console.log(json);
-			impresslist.removeCoverage(coverage);
-		})
-		.fail(function() {
-			API.errorMessage("Could not remove Coverage.");
-		});
-}
-API.addYoutuberCoverage = function() {
-	var url = "api.php?endpoint=/coverage/youtuber/add/";
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Coverage added.");
-			console.log(json);
-
-			var coverage = new Coverage(json.coverage);
-			impresslist.addCoverage(coverage, false);
-		})
-		.fail(function() {
-			API.errorMessage("Could not add Coverage.");
-		});
-}
-API.saveYoutuberCoverage = function(coverage, youtuber, person, title, url, timestamp, thanked) {
-	var url = "api.php?endpoint=/coverage/youtuber/save/" +
-						"&id=" + encodeURIComponent(coverage.id) + 
-						"&youtuber=" + encodeURIComponent(youtuber) + 
-						"&person=" + encodeURIComponent(person) + 
-						"&title=" + encodeURIComponent(title) + 
-						"&url=" + encodeURIComponent(url) + 
-						"&timestamp=" + encodeURIComponent(timestamp) + 
-						"&thanked=" + encodeURIComponent(thanked);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Coverage saved.");
-			console.log(json);
-
-			coverage.init(json.coverage);
-			coverage.update();		
-		})
-		.fail(function() {
-			API.errorMessage("Could not add Coverage.");
-		});
-}
-API.removeYoutuberCoverage = function(coverage) {
-	var url = "api.php?endpoint=/coverage/youtuber/remove/&id=" + encodeURIComponent(coverage.id);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Coverage removed.");
-			console.log(json);
-			impresslist.removeCoverage(coverage);
-		})
-		.fail(function() {
-			API.errorMessage("Could not remove Coverage.");
-		});
-}
-API.setPersonPriority = function(person, priority, gameId) {
-	var url = "api.php?endpoint=/person/set-priority/" + 
-					"&id=" + encodeURIComponent(person.id) + 
-					"&priority=" + encodeURIComponent(priority) + 
-					"&game=" + encodeURIComponent(gameId);
-	console.log(url); 
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				//alert(json.message)
-				API.errorMessage(json.message);
-				return; 
-			}
-			API.successMessage("Person priority set.");
-			person.init(json.person);
-			person.update();
-		})
-		.fail(function() {
-			API.errorMessage("Could not set priority on Person.");
-		});
-}
-API.setPersonAssignment = function(person, user, gameId) {
-	var url = "api.php?endpoint=/person/set-assignment/" + 
-					"&id=" + encodeURIComponent(person.id) + 
-					"&user=" + encodeURIComponent(user);
-	console.log(url); 
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				//alert(json.message)
-				API.errorMessage(json.message);
-				return; 
-			}
-			API.successMessage("Person user-assignment set.");
-			person.init(json.person);
-			person.update();
-		})
-		.fail(function() {
-			API.errorMessage("Could not set user-assignment on Person.");
-		});
-}
-API.savePerson = function(person, firstname, surnames, email, twitter, notes, outofdate) {
-
-	var url = "api.php?endpoint=/person/save/" + 
-					"&id=" + encodeURIComponent(person.id) + 
-					"&firstname=" + encodeURIComponent(firstname) + 
-					"&surnames=" + encodeURIComponent(surnames) + 
-					"&email=" + encodeURIComponent(email) + 
-					"&twitter=" + encodeURIComponent(twitter) + 
-					"&notes=" + encodeURIComponent(notes) + 
-					"&outofdate=" + encodeURIComponent(outofdate);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				//alert(json.message)
-				API.errorMessage(json.message);
-				return; 
-			}
-			API.successMessage("Person saved.");
-			person.init(json.person);
-			person.update();
-		})
-		.fail(function() {
-			API.errorMessage("Could not save Person.");
-		});
-}
-API.removePerson = function(person) {
-	var url = "api.php?endpoint=/person/remove/&id=" + encodeURIComponent(person.id);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Person removed.");
-			impresslist.removePerson(person);
-		})
-		.fail(function() {
-			API.errorMessage("Could not remove Person.");
-		});
-}
-API.addPublication = function() {
-	var name = "Blank";
-	var url = "api.php?endpoint=/publication/add/&name=" + encodeURIComponent(name);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Publication added.");
-			console.log(json);
-
-			var publication = new Publication(json.publication);
-			impresslist.addPublication(publication, false);
-			$(publication.openSelector()).click();
-		})
-		.fail(function() {
-			API.errorMessage("Could not add Publication.");
-		});
-}
-API.setPublicationPriority = function(publication, priority, gameId) {
-	var url = "api.php?endpoint=/publication/set-priority/" + 
-					"&id=" + encodeURIComponent(publication.id) + 
-					"&priority=" + encodeURIComponent(priority) + 
-					"&game=" + encodeURIComponent(gameId);
-	console.log(url); 
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				//alert(json.message)
-				API.errorMessage(json.message);
-				return; 
-			}
-			API.successMessage("Publication priority set.");
-			publication.init(json.publication);
-			publication.update();
-		})
-		.fail(function() {
-			API.errorMessage("Could not set priority on Publication.");
-		});
-}
-API.savePublication = function(publication, name, url, rssfeedurl, twitter, notes) {
-
-	var url = "api.php?endpoint=/publication/save/" + 
-					"&id=" + encodeURIComponent(publication.id) + 
-					"&name=" + encodeURIComponent(name) + 
-					"&url=" + encodeURIComponent(url) + 
-					"&rssfeedurl=" + encodeURIComponent(rssfeedurl) + 
-					"&twitter=" + encodeURIComponent(twitter) + 
-					"&notes=" + encodeURIComponent(notes);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return; 
-			}
-			console.log(json);
-
-			API.successMessage("Publication saved.");
-			publication.init(json.publication);
-			publication.update();
-		})
-		.fail(function() {
-			API.errorMessage("Could not save Publication.");
-		});
-}
-API.removePublication = function(publication) {
-	var url = "api.php?endpoint=/publication/remove/&id=" + encodeURIComponent(publication.id);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Publication removed.");
-			impresslist.removePublication(publication);
-		})
-		.fail(function() {
-			API.errorMessage("Could not remove Publication.");
-		});
-}
-
-API.addYoutuber = function() {
-	var name = "Blank";
-	var url = "api.php?endpoint=/youtuber/add/&channel=youtube";
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Youtuber added.");
-			console.log(json);
-
-			var youtuber = new Youtuber(json.youtubechannel);
-			impresslist.addYoutuber(youtuber, false);
-			$(youtuber.openSelector()).click();
-		})
-		.fail(function() {
-			API.errorMessage("Could not add Youtuber.");
-		});
-}
-API.setYoutuberPriority = function(youtuber, priority, gameId) {
-	var url = "api.php?endpoint=/youtuber/set-priority/" + 
-					"&id=" + encodeURIComponent(youtuber.id) + 
-					"&priority=" + encodeURIComponent(priority) + 
-					"&game=" + encodeURIComponent(gameId);
-	console.log(url); 
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return; 
-			}
-			console.log(json.youtubechannel);
-			API.successMessage("Youtuber priority set.");
-			youtuber.init(json.youtubechannel);
-			youtuber.update();
-		})
-		.fail(function() {
-			API.errorMessage("Could not set priority on Youtuber.");
-		});
-}
-API.saveYoutuber = function(youtuber, channel, email, twitter, notes) {
-
-	var url = "api.php?endpoint=/youtuber/save/" + 
-					"&id=" + encodeURIComponent(youtuber.id) + 
-					"&channel=" + encodeURIComponent(channel) + 
-					"&email=" + encodeURIComponent(email) + 
-					"&twitter=" + encodeURIComponent(twitter) + 
-					"&notes=" + encodeURIComponent(notes);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return; 
-			}
-			console.log(json);
-
-			API.successMessage("Youtuber saved.");
-			youtuber.init(json.youtubechannel);
-			youtuber.update();
-		})
-		.fail(function() {
-			API.errorMessage("Could not save Youtuber.");
-		});
-}
-API.removeYoutuber = function(youtuber) {
-	var url = "api.php?endpoint=/youtuber/remove/&id=" + encodeURIComponent(youtuber.id);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			}
-			API.successMessage("Youtuber removed.");
-			impresslist.removeYoutuber(youtuber);
-		})
-		.fail(function() {
-			API.errorMessage("Could not remove Youtuber.");
-		});
-}
-API.userChangeIMAPSettings = function(user, smtpServer, imapServer, imapPassword) {
-	var url = "api.php?endpoint=/user/change-imap-settings/";
-	url += "&id=" + encodeURIComponent(user.id);
-	url += "&smtpServer=" + encodeURIComponent(smtpServer);
-	url += "&imapServer=" + encodeURIComponent(imapServer);
-	url += "&imapPassword=" + encodeURIComponent(imapPassword);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			} 
-			API.successMessage("IMAP settings changed.");
-		})
-		.fail(function() {
-			API.errorMessage("Could not change IMAP settings.");
-		});
-}
-API.userChangePassword = function(user, currentPassword, newPassword) {
-	var url = "api.php?endpoint=/user/change-password/&id=" + encodeURIComponent(user.id) + "&currentPassword=" + encodeURIComponent(currentPassword) + "&newPassword=" + encodeURIComponent(newPassword);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			} 
-			API.successMessage("Password changed.");
-		})
-		.fail(function() {
-			API.errorMessage("Could not change Password.");
-		});
-}
-API.listOAuthTwitterAccounts = function(fromInit) {
-	if (typeof fromInit == 'undefined') { fromInit = true; }
-	
-	var url = "api.php?endpoint=/social/account/twitter/list/";
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
-			var json = JSON.parse(result);
-			if (!json.success) { API.errorMessage(json.message); return; }
-			
-			for(var i = 0; i < json.twitteraccs.length; ++i) { 
-				var twacc = new OAuthTwitterAccount(json.twitteraccs[i]);
-				impresslist.addOAuthTwitterAccount(twacc, fromInit);
-			}
-
-			$('#social-homepage-twitteracc-list-loading').hide();
-			if (json.twitteraccs.length == 0) {
-				$('#social-homepage-twitteracc-list-none').show();
-			}
-			
-		})
-		.fail(function() {
-			API.errorMessage("Could not list OAuth Twitter Accounts.");
-		});
-}
-API.addOAuthTwitterAccount = function(request_token, request_token_secret, pin) {
-	var url = "api.php?endpoint=/social/account/twitter/add/" + 
-				"&request_token=" + encodeURIComponent(request_token) +
-				"&request_token_secret=" + encodeURIComponent(request_token_secret) +
-				"&pin=" + encodeURIComponent(pin);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
-			
-			var json = JSON.parse(result);
-			if (!json.success) { API.errorMessage(json.message); return; }
-			
-
-			if (typeof json.updated == 'undefined') { 
-				API.successMessage("Twitter Account added.");
-				console.log(json);
-
-				var oauthtwitter = new OAuthTwitterAccount(json.twitteracc);
-				impresslist.addOAuthTwitterAccount(oauthtwitter, false);
-			} else {
-				API.successMessage("Twitter Account updated.");
-				console.log(json);
-
-				var oauthtwitter = impresslist.findOAuthTwitterAccountById(json.twitteracc.id);
-				oauthtwitter.init(json.twitteracc);
-				$('#social-homepage-twitteracc-list-none').hide();
-			}
-		})
-		.fail(function() {
-			API.errorMessage("Could not add Twitter Account.");
-		});
-}
-API.removeOAuthTwitterAccount = function(acc) {
-	var url = "api.php?endpoint=/social/account/twitter/remove/&id=" + encodeURIComponent(acc.id);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
-			
-			var json = JSON.parse(result);
-			if (!json.success) { API.errorMessage(json.message); return; }
-			API.successMessage("Twitter Account removed.");
-			impresslist.removeOAuthTwitterAccount(acc);
-			
-		})
-		.fail(function() {
-			API.errorMessage("Could not remove Twitter Account.");
-		});
-}
-API.sqlQuery = function(query) {
-	var url = "api.php?endpoint=/admin/sql-query/&query=" + encodeURIComponent(query);
-	console.log(url);
-	$.ajax( url )
-		.done(function(result) {
-			if (result.substr(0, 1) != '{') { 
-				API.errorMessage(result);
-				return;
-			}
-			var json = JSON.parse(result);
-			if (!json.success) {
-				API.errorMessage(json.message);
-				return;
-			} 
-			API.successMessage("Query successful.");
-			
-		})
-		.fail(function() {
-			API.errorMessage("Could not execute query.");
-		});
-}
-
-API.successMessage = function(message) {
-	$.bootstrapGrowl(message, { type: 'success',  offset: {from: 'top', amount: 70}, align:'center', delay: 2000});
-}
-API.errorMessage = function(message) {
-	$.bootstrapGrowl(message, { type: 'danger',  offset: {from: 'top', amount: 70}, align:'center', delay: 10000});
-}
-
 
 Priority = {};
 Priority.name = function(v) {
@@ -3458,7 +2068,7 @@ OAuthTwitterAccount = function(data) {
 	OAuthTwitterAccount.prototype.createItem = function(fromInit) {
 		var html = "";
 		html += "<p id='social-twitteracc-" + this.id + "'>";
-		html += "	<img src='" + this.field("twitter_image") + "' /> <a href='http://twitter.com/" + this.field("twitter_name") + "'>@" + this.field("twitter_name") + "</a>";
+		html += "	<img src='" + this.field("twitter_image") + "' /> <a href='http://twitter.com/" + this.field("twitter_name") + "' target='new'>@" + this.field("twitter_name") + "</a>";
 		html += "	<button id='social-remove-twitteracc-" + this.id + "' class='btn btn-sm btn-danger fr'>X</button>";
 		html += "</p>";
 		$('#social-homepage-twitteracc-list').append(html);
@@ -3471,6 +2081,90 @@ OAuthTwitterAccount = function(data) {
 		var th = this;
 		$("#social-remove-twitteracc-" + this.id).click(function(){
 			API.removeOAuthTwitterAccount(th);
+		});
+	}
+
+OAuthFacebookAccount = function(data) {
+	DBO.call(this, data); 
+}
+	OAuthFacebookAccount.prototype = Object.create(DBO.prototype)
+	OAuthFacebookAccount.prototype.constructor = OAuthFacebookAccount;
+	OAuthFacebookAccount.prototype.init = function(data) {
+		DBO.prototype.init.call(this, data);
+		this.id = parseInt(this.field('id'));
+	}
+	OAuthFacebookAccount.prototype.onAdded = function(fromInit) {
+		this.createItem(fromInit);
+		$('#social-homepage-facebookacc-list-none').hide();
+		if (!fromInit) {
+			$('#social-addfacebookaccount-cancel').click();
+		}
+	}
+	OAuthFacebookAccount.prototype.onRemoved = function() {
+		this.removeItem();
+
+		if (impresslist.oauthFacebookAccounts.length - 1 == 0) {
+			$('#social-homepage-facebookacc-list-none').show();
+		}
+	}
+	OAuthFacebookAccount.prototype.createItem = function(fromInit) {
+		var html = "";
+		html += "<p id='social-facebookacc-" + this.id + "'>";
+		html += "	<img src='" + this.field("facebook_image") + "' /> <a href='http://facebook.com/" + this.field("facebook_id") + "' target='new'>" + this.field("facebook_name") + "</a>";
+		html += "	<button id='social-remove-facebookacc-" + this.id + "' class='btn btn-sm btn-danger fr'>X</button>";
+		html += "</p>";
+		$('#social-homepage-twitteracc-list').append(html);
+		this.update();
+	}
+	OAuthFacebookAccount.prototype.removeItem = function() {
+		$("#social-facebookacc-" + this.id).remove();
+	}
+	OAuthFacebookAccount.prototype.update = function() {
+		var th = this;
+		$("#social-remove-facebookacc-" + this.id).click(function(){
+			API.removeOAuthFacebookAccount(th);
+		});
+	}
+
+OAuthFacebookPage = function(data) {
+	DBO.call(this, data); 
+}
+	OAuthFacebookPage.prototype = Object.create(DBO.prototype)
+	OAuthFacebookPage.prototype.constructor = OAuthFacebookPage;
+	OAuthFacebookPage.prototype.init = function(data) {
+		DBO.prototype.init.call(this, data);
+		this.id = parseInt(this.field('id'));
+	}
+	OAuthFacebookPage.prototype.onAdded = function(fromInit) {
+		this.createItem(fromInit);
+		$('#social-homepage-twitteracc-list-none').hide();
+		//if (!fromInit) {
+		//	$('#social-addfacebookpage-cancel').click();
+		//}
+	}
+	OAuthFacebookPage.prototype.onRemoved = function() {
+		this.removeItem();
+
+		if (impresslist.oauthFacebookPages.length - 1 == 0) {
+			$('#social-homepage-twitteracc-list-none').show();
+		}
+	}
+	OAuthFacebookPage.prototype.createItem = function(fromInit) {
+		var html = "";
+		html += "<p id='social-facebookpage-" + this.id + "'>";
+		html += "	<img src='" + this.field("page_image") + "' /> <a href='http://facebook.com/" + this.field("page_id") + "' target='new'>" + this.field("page_name") + "</a>";
+		html += "	<button id='social-remove-facebookpage-" + this.id + "' class='btn btn-sm btn-danger fr'>X</button>";
+		html += "</p>";
+		$('#social-homepage-twitteracc-list').append(html);
+		this.update();
+	}
+	OAuthFacebookPage.prototype.removeItem = function() {
+		$("#social-facebookacc-" + this.id).remove();
+	}
+	OAuthFacebookPage.prototype.update = function() {
+		var th = this;
+		$("#social-remove-facebookpage-" + this.id).click(function(){
+			API.removeOAuthFacebookPage(th);
 		});
 	}
 
@@ -3681,7 +2375,8 @@ SocialTimelineItem = function(data) {
 									<option value='blank' " + ((this.field('type')=='blank')?"selected='true'":"") + ">Blank</option>\
 									<option value='tweet' " + ((this.field('type')=='tweet')?"selected='true'":"") + ">Tweet</option>\
 									<option value='retweet' " + ((this.field('type')=='retweet')?"selected='true'":"") + ">Retweet</option>\
-									<!-- <option value='facebookpost'>Facebook Post</option> -->\
+									<option value='fbpost' " + ((this.field('type')=='fbpost')?"selected='true'":"") + ">Facebook Post</option>\
+									<option value='fbshare' " + ((this.field('type')=='fbshare')?"selected='true'":"") + ">Facebook Share</option>\
 								</select>\
 							</div>\
 						</div>\
@@ -3689,10 +2384,16 @@ SocialTimelineItem = function(data) {
 							<div class='form-group'>\
 								<label for='account'>Account:&nbsp; </label> \
 								<select id='social-modal-account'  class='form-control'>";
+								/*html += "<option value='---'> --- Twitter Accounts ---</option>";
 									for(var i = 0; i < impresslist.oauthTwitterAccounts.length; i++) {
 										var tw = impresslist.oauthTwitterAccounts[i];
 										html += "<option value='" + tw.field("id") + "' " + ((this.field('typedata').account==tw.id)?"selected='true'":"") + " >@" + tw.field("twitter_handle") + "</option>";
 									}
+									html += "<option value='---'> --- Facebook Pages ---</option>";
+									for(var i = 0; i < impresslist.oauthFacebookPages.length; i++) {
+										var fbp = impresslist.oauthFacebookPages[i];
+										html += "<option value='" + fbp.field("id") + "' " + ((this.field('typedata').account==fbp.id)?"selected='true'":"") + " >" + fbp.field("page_name") + " (Page)</option>";
+									}*/
 		html += "				</select>\
 							</div>\
 						</div>\
@@ -3714,6 +2415,7 @@ SocialTimelineItem = function(data) {
 			html += "	<div class='social-modal-blank' style='display:none;'>";
 			html += "		<p>Please select a type...</p>";
 			html += "	</div>"
+
 			// Tweet
 			html += "	<div class='social-modal-tweet' style='display:none;'>";
 			html += "		<div class='form-group'>\
@@ -3760,6 +2462,53 @@ SocialTimelineItem = function(data) {
 							</div> \
 						</div>";
 
+			// Facebook Post
+			html += "	<div class='social-modal-fbpost' style='display:none;'>";
+			html += "		<div class='form-group'>\
+								<label for='message'>Message: </label> \
+								<textarea id='social-modal-fbpost-message' data-socialitem-id='" + this.id + "' class='form-control' style='height:100px;'>" + ((this.field('typedata').message)?this.field('typedata').message:"") + "</textarea>\
+							</div>";
+			html += "		<div class='form-group'>\
+								<label for='attachments'>Attachments:&nbsp; </label>\
+								<select id='social-modal-fbpost-attachments' multiple='multiple'>";
+									var attachments = this.field('typedata').attachments;
+								
+									for(var i = 0; i < impresslist.socialUploads.length; ++i) {
+										var up = impresslist.socialUploads[i];
+										var hasAttachment = false;
+										if (attachments) {
+											for(var j = 0; j < attachments.length; j++) {
+												if (up.field('name') == attachments[j].file) {
+													hasAttachment = true;
+												}
+											}
+										}
+										
+										var selectedText = (hasAttachment)?"selected='true'":"";
+										html += "<option value='" + up.field('name') + "' " + selectedText + ">" + up.field('name') + "</option>";
+									}
+								//}
+			html += "			</select>\
+							</div> \
+							<div class='social-modal-fbpost-attachment-preview-container' style='margin-bottom:15px;'></div>\
+						</div>";
+
+			// Facebook Share
+			html += "	<div class='social-modal-fbshare' style='display:none;'> \
+							<div class='form-group'>\
+								<label for='account'>Post:&nbsp; </label> \
+								<select id='social-modal-fbshare-select'  class='form-control'>";
+									for(var i = 0; i < impresslist.socialTimelineItems.length; i++) {
+										var it = impresslist.socialTimelineItems[i];
+										if (it.field('type') == 'fbpost') { 
+											html += "<option value='" + it.field("id") + "' " + ((this.field('typedata').tweet==it.id)?"selected='true'":"") + " >" + impresslist.findOAuthFacebookPageById(parseInt(it.field('typedata').account)).field('page_name') + " " + it.field('typedata').message + "</option>";
+										}
+									}
+			html += "			</select>\
+							</div> \
+						</div>";
+
+
 		html += "	<div class='form-group'> \
 						<label class='checkbox-inline'><input id='social-modal-edit-ready' type='checkbox' " + (((this.field('ready')==1)?"checked":"")) + "><b>Ready to send?</b></label>\
 					</div>";
@@ -3793,14 +2542,14 @@ SocialTimelineItem = function(data) {
 		$('#social-modal-timepicker').data("DateTimePicker").format("MMMM Do YYYY HH:mm zz");
 		
 		var th = this;
-		var onAttachmentsChanged = function() {
-			var selectedOptions = $('#social-modal-tweet-attachments option:selected');
-			var selectedOptionValues = $('#social-modal-tweet-attachments option:selected').map(function(a, item){return item.value;});
+		var onAttachmentsChanged = function(type) {
+			var selectedOptions = $('#social-modal-'+type+'-attachments option:selected');
+			var selectedOptionValues = $('#social-modal-'+type+'-attachments option:selected').map(function(a, item){return item.value;});
         	var html = "";    
         	for(var i = 0; i < selectedOptionValues.length; i++) {
         		html += "<img src='images/uploads/" + selectedOptionValues[i] + "' style='width:100px;height:100px;margin-right:5px;'/>";
         	}
-            $('.social-modal-tweet-attachment-preview-container').html(html);
+            $('.social-modal-'+type+'-attachment-preview-container').html(html);
             th.testAttachments = selectedOptionValues.length;
             th.updateTwitterCharactersLeft();
 		}
@@ -3808,19 +2557,50 @@ SocialTimelineItem = function(data) {
 			enableFiltering: true,
 			//includeSelectAllOption: true,
 			enableCaseInsensitiveFiltering: true,
-			onSelectAll: onAttachmentsChanged,
-			onChange: onAttachmentsChanged
+			onSelectAll: function() { onAttachmentsChanged('tweet'); },
+			onChange: function() { onAttachmentsChanged('tweet'); }
+		});
+		$('#social-modal-fbpost-attachments').multiselect({
+			enableFiltering: true,
+			enableCaseInsensitiveFiltering: true,
+			onSelectAll: function() { onAttachmentsChanged('fbpost'); },
+			onChange: function() { onAttachmentsChanged('fbpost'); }
 		});
 
 		var onTypeChanged = function(ty) {
 			$('.social-modal-blank').hide();
 			$('.social-modal-tweet').hide();
 			$('.social-modal-retweet').hide();
+			$('.social-modal-fbpost').hide();
+			$('.social-modal-fbshare').hide();
 			if (ty == 'tweet') {
-				onAttachmentsChanged();
+				onAttachmentsChanged(ty);
 				$('.social-modal-tweet').show();
 			} else if (ty == 'retweet') {
 				$('.social-modal-retweet').show();
+			} else if (ty == 'fbpost') {
+				onAttachmentsChanged(ty);
+				$('.social-modal-fbpost').show();
+			} else if (ty == 'fbshare') {
+				$('.social-modal-fbshare').show();
+			}
+
+			$('#social-modal-account').html("");
+			if (ty == "tweet" || ty == "retweet") {
+				var html = "<option value='---'> --- Twitter Accounts ---</option>";
+				for(var i = 0; i < impresslist.oauthTwitterAccounts.length; i++) {
+					var tw = impresslist.oauthTwitterAccounts[i];
+					html += "<option value='" + tw.field("id") + "' " + ((th.field('typedata').account==tw.id)?"selected='true'":"") + " >@" + tw.field("twitter_handle") + "</option>";
+				}
+				$('#social-modal-account').html(html);
+			}
+			if (ty == "fbpost" || ty == "fbshare") {
+				var html = "<option value='---'> --- Facebook Pages ---</option>";
+				for(var i = 0; i < impresslist.oauthFacebookPages.length; i++) {
+					var fbp = impresslist.oauthFacebookPages[i];
+					html += "<option value='" + fbp.field("id") + "' " + ((th.field('typedata').account==fbp.id)?"selected='true'":"") + " >" + fbp.field("page_name") + " (Page)</option>";
+				}
+				$('#social-modal-account').html(html);
 			}
 		}
 		onTypeChanged(this.field('type'));
@@ -3853,10 +2633,11 @@ SocialTimelineItem = function(data) {
 	}
 	SocialTimelineItem.prototype.updateRow = function() {
 		var html = "";
-		var acc = impresslist.findOAuthTwitterAccountById(parseInt(this.field('typedata').account));
+		var acc;
 		var thedate = moment(this.field('timestamp'), "X").format("MMMM Do YYYY HH:mm zz");
 		var reldate = impresslist.util.relativetime(this.field('timestamp'));
 		if (this.field("type") == "tweet") {
+			acc = impresslist.findOAuthTwitterAccountById(parseInt(this.field('typedata').account));
 			html += "	<div class='socialqueue-item " + (this.field('ready')==1?"ready":"") + "'> \
 							<div class='oa'> \
 								<p class='fl'><b>Tweet: <a href='http://twitter.com/" + acc.field('twitter_handle') + "'>@" + acc.field('twitter_handle') + "</a></b></p>";
@@ -3881,10 +2662,46 @@ SocialTimelineItem = function(data) {
 			html += "		</div> \
 						</div>";
 		} else if (this.field("type") == "retweet") {
+			acc = impresslist.findOAuthTwitterAccountById(parseInt(this.field('typedata').account));
 			html += "	<div class='socialqueue-item indented thinnest " + (this.field('ready')==1?"ready":"") + "'> \
 							<div class='oa'> \
 								<img class='icon' src='" + acc.field("twitter_image") + "'/> \
 								<p class='fl'><b>Retweet by <a href='http://twitter.com/" + acc.field('twitter_handle') + "'>@" + acc.field('twitter_handle') + "</a></b></p> \
+								<p class='fr text-muted' style='margin-left:10px;'> <a data-socialitem-id='" + this.id + "' data-toggle='modal' data-target='.social_modal' style='cursor:pointer'><i class='glyphicon glyphicon-pencil'></i></a></p> \
+								<p class='fr text-muted'><i class='glyphicon glyphicon-time'></i> <span data-social-id='" + this.id + "' data-toggle='tooltip' data-placement='left' title='" + reldate + "'>" + thedate + "</span> </p> \
+							</div> \
+						</div>";
+		} else if (this.field("type") == "fbpost") {
+			acc = impresslist.findOAuthFacebookPageById(parseInt(this.field('typedata').account));
+			html += "	<div class='socialqueue-item " + (this.field('ready')==1?"ready":"") + "'> \
+							<div class='oa'> \
+								<p class='fl'><b>Facebook: <a href='http://facebook.com/" + acc.field('page_id') + "'>" + acc.field('page_name') + "</a></b></p>";
+			html += "			<p class='fr text-muted' style='margin-left:10px;'> <a data-socialitem-id='" + this.id + "' data-toggle='modal' data-target='.social_modal'    style='cursor:pointer' title='Edit'><i class='glyphicon glyphicon-pencil'></i></a></p>";
+			if (this.field('ready')==1) { 
+				html += "		<p class='fr text-muted' style='margin-left:10px;'> <a class='social-timeline-opensharedialog' data-socialitem-id='" + this.id + "' data-toggle='modal' data-target='.socialShare_modal' style='cursor:pointer' title='Add Shares'><i class='glyphicon glyphicon-plus'></i></a></p>";
+			}
+			html += "			<p class='fr text-muted'><i class='glyphicon glyphicon-time'></i> <span data-social-id='" + this.id + "' data-toggle='tooltip' data-placement='left' title='" + reldate + "'>" + thedate + "</span></p> \
+							</div> \
+							<div> \
+								<img class='icon' src='" + acc.field("page_image") + "' /> \
+								<p style='min-height:40px;margin-bottom:0px;'>" + this.field('typedata').message + "</p>";
+					
+								var attachments = this.field('typedata').attachments;
+								if (attachments.length > 0) { 
+									html += "<p class='text-muted attachments'>Attachment/s: " + attachments.length + " <i class='glyphicon glyphicon-picture'></i></p>";
+									for(var i = 0; i < attachments.length; i++) { 
+										html += "<p class='socialqueue-imageattachment-container' data-social-id='" + this.id + "'  data-attachment-id='" + i + "'><img class='socialqueue-imageattachment' data-social-id='" + this.id + "' data-attachment-id='" + i + "' src='images/uploads/" + attachments[i].file + "'/></p>";
+									}
+								}
+
+			html += "		</div> \
+						</div>";
+		} else if (this.field("type") == "fbshare") {
+			acc = impresslist.findOAuthFacebookPageById(parseInt(this.field('typedata').account));
+			html += "	<div class='socialqueue-item indented thinnest " + (this.field('ready')==1?"ready":"") + "'> \
+							<div class='oa'> \
+								<img class='icon' src='" + acc.field("page_image") + "'/> \
+								<p class='fl'><b>Facebook Share by <a href='http://facebook.com/" + acc.field('page_id') + "'>" + acc.field('page_name') + "</a></b></p> \
 								<p class='fr text-muted' style='margin-left:10px;'> <a data-socialitem-id='" + this.id + "' data-toggle='modal' data-target='.social_modal' style='cursor:pointer'><i class='glyphicon glyphicon-pencil'></i></a></p> \
 								<p class='fr text-muted'><i class='glyphicon glyphicon-time'></i> <span data-social-id='" + this.id + "' data-toggle='tooltip' data-placement='left' title='" + reldate + "'>" + thedate + "</span> </p> \
 							</div> \
@@ -3975,7 +2792,34 @@ SocialTimelineItem = function(data) {
 			var account = $("#social-modal-account").val();
 			var tw = $('#social-modal-retweet-select').val();
 			var typedata = {
-				tweet: 1,
+				tweet: tw,
+				account: account
+			};
+			API.saveSocialTimelineItem(this, type, typedata, timestamp, ready);
+		} 
+		else if (type == 'fbpost') {
+			var account = $("#social-modal-account").val();
+			var typedata = { 
+				message: $('#social-modal-fbpost-message').val(),
+				account: account,
+				attachments: []
+			};
+
+			var selectedOptionValues = $('#social-modal-fbpost-attachments option:selected').map(function(a, item){return item.value;});
+			for(var i = 0; i < selectedOptionValues.length; i++) {
+				typedata.attachments.push({
+					"type": "image",
+					"file": selectedOptionValues[i]
+				});
+			}
+			
+			API.saveSocialTimelineItem(this, type, typedata, timestamp, ready);
+		}
+		else if (type == 'fbshare') {
+			var account = $("#social-modal-account").val();
+			var fbpid = $('#social-modal-fbshare-select').val();
+			var typedata = {
+				post: fbpid,
 				account: account
 			};
 			API.saveSocialTimelineItem(this, type, typedata, timestamp, ready);
@@ -4047,6 +2891,8 @@ var impresslist = {
 	coverage: [],
 	simpleMailouts: [],
 	oauthTwitterAccounts: [],
+	oauthFacebookAccounts: [],
+	oauthFacebookPages: [],
 	socialUploads: [],
 	socialTimelineItems: [],
 	loading: {
@@ -4073,6 +2919,10 @@ var impresslist = {
 	},
 	init: function() {
 		//API.listJobs();
+		API.listOAuthTwitterAccounts();
+		API.listOAuthFacebookAccounts();
+		API.listOAuthFacebookPages();
+
 		API.listPeople();
 		API.listPublications();
 		API.listPersonPublications();
@@ -4080,7 +2930,6 @@ var impresslist = {
 		API.listYoutubeChannels();
 		API.listEmails();
 		API.listSimpleMailouts();
-		API.listOAuthTwitterAccounts();
 		API.listSocialTimeline();
 		API.listSocialUploads();
 		
@@ -4320,6 +3169,73 @@ var impresslist = {
 			var pin 		= $('#social-addtwitteraccount-pin').val();
 			API.addOAuthTwitterAccount(token, tokenSecret, pin);
 		});
+		$('#social-addfacebookpage').click(function() {
+			
+			var html = "<div class='modal fade addfacebookpage_modal' tabindex='-1' role='dialog'> \
+							<div class='modal-dialog'> \
+								<div class='modal-content' style='padding:5px;'> \
+									<div style='min-height:100px;padding:20px;'> \
+										<h3>Add Facebook Page</h3> \
+										<form id='social-addfacebookpage-form' role='form' class='oa' onsubmit='return false;'>\
+											<p>Loading...</p>";
+								/*			<div class='form-group'>\
+												<label for='password-current'>Current Password: </label> \
+												<input id='user-change-password-current' class='form-control' type='password' name='password-current' value='' />\
+											</div>\
+											<div class='form-group'>\
+												<label for='password-new'>New Password:</label> \
+												<input id='user-change-password-new' class='form-control' type='password' name='password-new' value='' />\
+											</div>\
+											<div class='fl'> \
+												<button id='user-change-password-submit' type='submit' class='btn btn-primary'>Save</button> \
+												&nbsp;<button id='user-change-password-close' type='submit' class='btn btn-default'>Close</button> \
+											</div>\*/
+			html += "					</form> \
+									</div>\
+								</div>\
+							</div>\
+						</div>";
+			$('#modals').append(html);
+
+			//$('#social-addfacebookpage').attr('disabled', 'disabled');
+			API.queryOAuthFacebookPages(function(data){
+				var html = "";
+				for(var i = 0; i < data.length; i++) {
+					html += "<p id='social-officialfacebookpage-" + data[i].id + "'>";
+					html += "	<img src='" + data[i].image + "' /> <a href='http://facebook.com/" + data[i].id + "' target='new'>" + data[i].name + "</a>";
+					html += "	<button id='social-add-officialfacebookpage-" + data[i].id + "' class='btn btn-lg btn-primary fr' style='margin-top:2px;' \
+									data-page-id='" + data[i].id + "' \
+									data-page-name='" + data[i].name + "' \
+									data-page-accessToken='" + data[i].access_token + "' \
+									data-page-image='" + data[i].image + "' \
+									\
+								>Add</button>";
+					html += "</p>";
+				}
+				if (data.length == 0) {
+					html += "<p>No pages...</p>";
+				}
+				$('#social-addfacebookpage-form').html(html);
+
+				for(var i = 0; i < data.length; i++) {
+					$('#social-add-officialfacebookpage-' + data[i].id).click(function() {
+						var th = this;
+						API.addOAuthFacebookPage(
+							$(this).attr("data-page-id"), 
+							$(this).attr("data-page-name"), 
+							$(this).attr("data-page-accessToken"), 
+							$(this).attr("data-page-image"), 
+							function(dt) {
+								$("#social-officialfacebookpage-" + dt.facebookpage.page_id).remove();
+							}
+						);
+						
+					});
+				}
+
+			});
+		});
+
 
 		// Chat functionality
 		this.chat.init();
@@ -4487,6 +3403,34 @@ var impresslist = {
 				console.log('oauth twitter removed: ' + obj.id);
 				obj.onRemoved();
 				this.oauthTwitterAccounts.splice(i, 1);
+				break;
+			}
+		}
+	},
+	addOAuthFacebookAccount: function(obj, fromInit) {
+		this.oauthFacebookAccounts.push(obj);
+		obj.onAdded(fromInit);
+	},
+	removeOAuthFacebookAccount: function(obj) {
+		for(var i = 0, len = this.oauthFacebookAccounts.length; i < len; ++i) {
+			if (this.oauthFacebookAccounts[i].id == obj.id) {
+				console.log('oauth facebook removed: ' + obj.id);
+				obj.onRemoved();
+				this.oauthFacebookAccounts.splice(i, 1);
+				break;
+			}
+		}
+	},
+	addOAuthFacebookPage: function(obj, fromInit) {
+		this.oauthFacebookPages.push(obj);
+		obj.onAdded(fromInit);
+	},
+	removeOAuthFacebookPage: function(obj) {
+		for(var i = 0, len = this.oauthFacebookPages.length; i < len; ++i) {
+			if (this.oauthFacebookPages[i].id == obj.id) {
+				console.log('oauth facebook page removed: ' + obj.id);
+				obj.onRemoved();
+				this.oauthFacebookPages.splice(i, 1);
 				break;
 			}
 		}
@@ -4688,6 +3632,18 @@ var impresslist = {
 		console.log("impresslist: could not findOAuthTwitterAccountById: " + id);
 		return null;
 	},
+	findOAuthFacebookAccountById: function(id) {
+		var r = this.binarySearchById(this.oauthFacebookAccounts, id);
+		if (r != null) { return r; }
+		console.log("impresslist: could not findOAuthFacebookAccountById: " + id);
+		return null;
+	},
+	findOAuthFacebookPageById: function(id) {
+		var r = this.binarySearchById(this.oauthFacebookPages, id);
+		if (r != null) { return r; }
+		console.log("impresslist: could not findOAuthFacebookPageById: " + id);
+		return null;
+	},
 	// http://oli.me.uk/2014/12/17/revisiting-searching-javascript-arrays-with-a-binary-search/
 	binarySearchById: function(list, id) {
 	    var min = 0;
@@ -4790,6 +3746,7 @@ impresslist.jobs = {
 
 
 impresslist.chat = {
+	enabled: false,
 	online_users: new Array(),
 	current_filesize: 0,
 	latest_message_time: (new Date().getTime() / 1000) - (60*60*12), // last 12 hours of chat!
@@ -4800,6 +3757,7 @@ impresslist.chat = {
 		button: "#chat .submit-message"
 	},
 	init: function() {
+		if (!this.enabled) { return; }
 		this.updateOnlineUsers();
 		setInterval(this.updateOnlineUsers, 30 * 1000);
 

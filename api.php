@@ -1,7 +1,5 @@
 <?php
 
-
-
 function api_error($message) {
 	$error = new stdClass();
 	$error->success = false;
@@ -107,6 +105,18 @@ function api_checkRequiredGETFieldsWithTypes($fields, &$result) {
 	return false;
 }
 
+function api_result($r) {
+	$var = json_encode($r, true);
+	if ($var === FALSE) {
+		$lasterr = json_last_error();
+		echo json_encode(api_error("utf8 error -- could not encode data... " . $lasterr));
+		print_r($r);
+	} else {
+		echo $var;
+	}
+	die();
+}
+
 $result = null;
 if (!isset($_GET['endpoint'])) {
 	$result = api_error("endpoint was not set.");
@@ -193,9 +203,19 @@ if (!isset($_GET['endpoint'])) {
 		"/social/uploads/list/",
 		"/social/uploads/add/",
 		"/social/uploads/remove/",
+
 		"/social/account/twitter/list/",
 		"/social/account/twitter/add/",
 		"/social/account/twitter/remove/",
+
+		"/social/account/facebook/list/",
+		"/social/account/facebook/add/",
+		"/social/account/facebook/add-callback/",
+		"/social/account/facebook/remove/",
+		"/social/account/facebook-page/query/",
+		"/social/account/facebook-page/add/",
+		"/social/account/facebook-page/remove/",
+		"/social/account/facebook-page/list/",
 
 		// Chat
 		"/chat/online-users/",
@@ -248,6 +268,394 @@ if (!isset($_GET['endpoint'])) {
 			$result->success = true;
 			
 		} 
+		else if ($endpoint == "/social/account/facebook-page/query/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			require_once __DIR__ . '/libs/facebook-sdk-v5/autoload.php';
+
+			$fb = new Facebook\Facebook([
+				'app_id' => $facebook_appId,
+				'app_secret' => $facebook_appSecret,
+				'default_graph_version' => $facebook_apiVersion,
+			]);
+
+			//echo $user_id;
+			$fbuser = db_singleOAuthFacebookByUserId($db, $user_id);
+			if (is_null($fbuser)) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = "You cannot link a Page until linking your personal account.";
+				api_result($result);
+			}
+			//print_r($fbuser);
+			$accessToken = $fbuser['facebook_accessToken'];
+
+			try {
+				// Returns a `Facebook\FacebookResponse` object
+				$response = $fb->get('/' . $fbuser['facebook_id'] . '/accounts', $accessToken);
+			} catch(Facebook\Exceptions\FacebookResponseException $e) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = 'Graph returned an error: ' . $e->getMessage();
+				api_result($result);
+			} catch(Facebook\Exceptions\FacebookSDKException $e) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = 'Facebook SDK returned an error: ' . $e->getMessage();
+				api_result($result);
+				exit;
+			}
+
+
+
+			$validPages = array();
+			$bodyJson = $response->getBody();
+			//echo $bodyJson;
+			$body = json_decode($bodyJson, true);
+			for($i = 0; $i < count($body['data']); $i++) {
+				$item = $body['data'][$i];
+				//echo $item['name'] . "<br/>";
+				//echo $item['access_token'];
+				//echo $item['id'];
+
+				
+
+				$foundBasicAdmin = false;
+				$foundCreateContent = false;
+				$foundModerateContent = false;
+				for ($j = 0; $j < count($item['perms']); $j++) {
+					if ($item['perms'][$j] == "BASIC_ADMIN") { $foundBasicAdmin = true; }
+					if ($item['perms'][$j] == "CREATE_CONTENT") { $foundCreateContent = true; }
+					if ($item['perms'][$j] == "MODERATE_CONTENT") { $foundModerateContent = true; }
+				}
+				if ($foundBasicAdmin && $foundCreateContent && $foundModerateContent) {
+					unset($item['perms']);
+					$item['image'] = "http://graph.facebook.com/" . $item['id'] . "/picture?type=square";
+					$validPages[] = $item;
+				}
+			}
+
+			$result = new stdClass;
+			$result->success = true;
+			$result->facebookpages = $validPages;
+
+		}
+		else if ($endpoint == "/social/account/facebook-page/list/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$results = $db->query("SELECT * FROM oauth_facebookpage WHERE removed = 0 ORDER BY id ASC;");
+			usort($results, "sortById");
+			
+			$result = new stdClass();
+			$result->success = true;
+			$result->facebookpages = $results;
+		}
+		else if ($endpoint == "/social/account/facebook-page/add/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+			
+			$required_fields = array(
+				array('name' => 'page_id', 	 		'type' => 'integer'),
+				array('name' => 'page_name', 		'type' => 'textarea'),
+				array('name' => 'page_accessToken',	'type' => 'alphanumeric')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) 
+			{
+				// TODO: 
+				// don't blindly trust the client.
+
+				$image_url = "http://graph.facebook.com/" . $_GET['page_id'] . "/picture?type=square";
+
+				$exists = db_singleOAuthFacebookPageByFBPId($db, $_GET['page_id']);
+				if (!is_null($exists)) {
+
+					$stmt = $db->prepare("UPDATE oauth_facebookpage SET page_name = :page_name, page_image = :page_image, page_accessToken = :page_accessToken, lastSync = :lastSync, removed = :removed WHERE page_id = :page_id; ");
+										
+					$stmt->bindValue(":page_name", 			$_GET['page_name'], 		Database::VARTYPE_STRING); 
+					$stmt->bindValue(":page_image", 		$image_url, 				Database::VARTYPE_STRING); 
+					$stmt->bindValue(":page_accessToken",  	$_GET['page_accessToken'], 	Database::VARTYPE_STRING); 
+					$stmt->bindValue(":page_id", 			$user['id'], 				Database::VARTYPE_STRING); 
+					$stmt->bindValue(":lastSync", 			time(), 					Database::VARTYPE_INTEGER); 
+					$stmt->bindValue(":removed", 			0, 							Database::VARTYPE_INTEGER); 
+					$stmt->execute();
+
+					$result = new stdClass();
+					$result->success = true;
+					$result->facebookpage = $exists;
+					$result->updated = true;
+					
+				} else {
+
+					$stmt = $db->prepare("INSERT INTO oauth_facebookpage (id, page_id, page_name, page_image, page_accessToken, lastSync, removed) 
+															VALUES ( NULL, :page_id, :page_name, :page_image, :page_accessToken, :lastSync, :removed);");
+					$stmt->bindValue(":page_id", 			$_GET['page_id'], 			Database::VARTYPE_STRING); 
+					$stmt->bindValue(":page_name", 			$_GET['page_name'], 		Database::VARTYPE_STRING); 
+					$stmt->bindValue(":page_image", 		$image_url, 				Database::VARTYPE_STRING); 
+					$stmt->bindValue(":page_accessToken",  	$_GET['page_accessToken'], 	Database::VARTYPE_STRING); 
+					$stmt->bindValue(":lastSync",  			time(), 					Database::VARTYPE_INTEGER); 
+					$stmt->bindValue(":removed", 			0, 							Database::VARTYPE_INTEGER); 
+					$stmt->execute();
+
+					$facebookPageId = $db->lastInsertRowID();
+
+					$result = new stdClass();
+					$result->success = true;
+					$result->facebookpage = db_singleOAuthFacebookPageById( $db, $facebookPageId );
+				}
+			}
+		} 
+		else if ($endpoint == "/social/account/facebook-page/remove/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$required_fields = array( array('name' => 'id', 'type' => 'alphanumeric') );
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) 
+			{
+				$stmt = $db->prepare(" UPDATE oauth_facebookpage SET removed = :removed WHERE id = :id; ");
+				$stmt->bindValue(":removed", 	1, 				Database::VARTYPE_INTEGER); 
+				$stmt->bindValue(":id", 		$_GET['id'], 	Database::VARTYPE_STRING); 
+				$stmt->execute();	
+
+				$result = new stdClass();
+				$result->success = true;
+			}
+		}
+		else if ($endpoint == "/social/account/facebook/list/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$results = $db->query("SELECT * FROM oauth_facebookacc WHERE removed = 0 ORDER BY id ASC;");
+			usort($results, "sortById");
+			
+			$result = new stdClass();
+			$result->success = true;
+			$result->facebookaccs = $results;
+		} 
+		else if ($endpoint == "/social/account/facebook/add/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			require_once __DIR__ . '/libs/facebook-sdk-v5/autoload.php';
+
+			$fb = new Facebook\Facebook([
+				'app_id' => $facebook_appId,
+				'app_secret' => $facebook_appSecret,
+				'default_graph_version' => $facebook_apiVersion,
+			]);
+
+			$helper = $fb->getRedirectLoginHelper();
+
+			$permissions = ['email', "manage_pages", "publish_pages", "publish_actions"]; // Optional permissions
+			$loginUrl = $helper->getLoginUrl("http://".$_SERVER['HTTP_HOST'] . '/api.php?endpoint=/social/account/facebook/add-callback/', $permissions);
+
+			// echo '<a href="' . htmlspecialchars($loginUrl) . '">Log in with Facebook!</a>';
+			header("Location: " . $loginUrl);
+			die();
+
+		}
+		else if ($endpoint == "/social/account/facebook/remove/") 
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$result = new stdClass();
+			$result->success = false;
+			$result->message = "Removing Facebook accounts is not yet implemented.";
+		}
+		else if ($endpoint == "/social/account/facebook/add-callback/") {
+
+			$require_login = true;
+			include_once('init.php');
+
+			require_once __DIR__ . '/libs/facebook-sdk-v5/autoload.php';
+
+			$fb = new Facebook\Facebook([
+				'app_id' => $facebook_appId,
+				'app_secret' => $facebook_appSecret,
+				'default_graph_version' => $facebook_apiVersion,
+			]);
+
+			$helper = $fb->getRedirectLoginHelper();
+
+			$accessToken = "";
+			try {
+			  	$accessToken = $helper->getAccessToken();
+			} catch(Facebook\Exceptions\FacebookResponseException $e) {
+			  	// When Graph returns an error
+			  	$result = new stdClass();
+				$result->success = false;
+				$result->message = 'Graph returned an error: ' . $e->getMessage();
+			  	api_result($result);
+			  	
+			} catch(Facebook\Exceptions\FacebookSDKException $e) {
+				// When validation fails or other local issues
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = 'Facebook SDK returned an error: ' . $e->getMessage();
+			  	api_result($result);
+			}
+
+			if (! isset($accessToken)) {
+			  if ($helper->getError()) {
+			    header('HTTP/1.0 401 Unauthorized');
+			    echo "Error: " . $helper->getError() . "\n";
+			    echo "Error Code: " . $helper->getErrorCode() . "\n";
+			    echo "Error Reason: " . $helper->getErrorReason() . "\n";
+			    echo "Error Description: " . $helper->getErrorDescription() . "\n";
+			  } else {
+			    header('HTTP/1.0 400 Bad Request');
+			    echo 'Bad request';
+			  }
+			  exit;
+			}
+
+			// Logged in
+			//echo '<h3>Access Token</h3>';
+			//var_dump($accessToken->getValue());
+
+			// The OAuth 2.0 client handler helps us manage access tokens
+			$oAuth2Client = $fb->getOAuth2Client();
+
+			// Get the access token metadata from /debug_token
+			$tokenMetadata = $oAuth2Client->debugToken($accessToken);
+			//echo '<h3>Metadata</h3>';
+			//var_dump($tokenMetadata);
+
+			// Validation (these will throw FacebookSDKException's when they fail)
+			$tokenMetadata->validateAppId($facebook_appId);
+
+			// If you know the user ID this access token belongs to, you can validate it here
+			//$tokenMetadata->validateUserId('123');
+			//$tokenMetadata->validateExpiration();
+
+			if (! $accessToken->isLongLived()) {
+				// Exchanges a short-lived access token for a long-lived one
+				try {
+					$accessToken = $oAuth2Client->getLongLivedAccessToken($accessToken);
+				} catch (Facebook\Exceptions\FacebookSDKException $e) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = "Error getting long-lived access token: " . $helper->getMessage();
+					api_result($result);
+				}
+
+				//echo '<h3>Long-lived</h3>';
+				//var_dump($accessToken->getValue());
+			}
+
+			//$_SESSION['fb_access_token'] = (string) $accessToken;
+
+			//
+
+
+			// User is logged in with a long-lived access token.
+			// You can redirect them to a members-only page.
+			//header('Location: https://example.com/members.php');
+
+			try {
+				// Returns a `Facebook\FacebookResponse` object
+				$response = $fb->get('/me?fields=id,name', $accessToken->getValue());
+			} catch(Facebook\Exceptions\FacebookResponseException $e) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = 'Graph returned an error: ' . $e->getMessage();
+				api_result($result);
+			} catch(Facebook\Exceptions\FacebookSDKException $e) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = 'Facebook SDK returned an error: ' . $e->getMessage();
+				api_result($result);
+				exit;
+			}
+
+			$user = $response->getGraphUser();
+			$image_url = "http://graph.facebook.com/" . $user['id'] . "/picture?type=square";
+
+			// This facebook account is in the db already. cool. update it.
+			$exists = db_singleOAuthFacebookByFBId($db, $user['id']);
+			if (!is_null($exists)) {
+
+				$stmt = $db->prepare("UPDATE oauth_facebookacc SET facebook_image = :facebook_image, facebook_accessToken = :facebook_accessToken, removed = :removed WHERE facebook_id = :facebook_id; ");
+									
+				$stmt->bindValue(":facebook_image", 		$image_url, 				Database::VARTYPE_STRING); 
+				$stmt->bindValue(":facebook_accessToken",  	$accessToken->getValue(), 	Database::VARTYPE_STRING); 
+				$stmt->bindValue(":facebook_id", 			$user['id'], 				Database::VARTYPE_STRING); 
+				$stmt->bindValue(":removed", 				0, 							Database::VARTYPE_INTEGER); 
+				$stmt->execute();
+
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = "Facebook account already exists and was updated. You should now close this window and refresh impress[].";
+				api_result($result);
+				//echo "<script type='text/javascript'>window.close();</script>";
+
+			} 
+
+			// If this user has a Facebook linked already (don't let them add another. note that to get to here the facebook id would be different, so it would be multiple accounts).
+			$exists2 = db_singleOAuthFacebookByUserId($db, $user_id);
+			if ($exists2) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = "You have already linked a Facebook account so cannot add another. You should now close this window and refresh impress[].";
+				api_result($result);
+			}
+
+
+			$stmt = $db->prepare("INSERT INTO oauth_facebookacc (id, user, facebook_id, facebook_name, facebook_image, facebook_accessToken, removed) 
+													VALUES ( NULL, :user, :facebook_id, :facebook_name, :facebook_image, :facebook_accessToken, :removed);
+								");
+			$stmt->bindValue(":user", 					$user_id, 					Database::VARTYPE_STRING); 
+			$stmt->bindValue(":facebook_id", 			$user['id'], 				Database::VARTYPE_STRING); 
+			$stmt->bindValue(":facebook_name", 			$user['name'], 				Database::VARTYPE_STRING); 
+			$stmt->bindValue(":facebook_image", 		$image_url, 				Database::VARTYPE_STRING); 
+			$stmt->bindValue(":facebook_accessToken",  	$accessToken->getValue(), 	Database::VARTYPE_STRING); 
+			$stmt->bindValue(":removed", 				0, 							Database::VARTYPE_INTEGER); 
+			$stmt->execute();
+
+			$facebookAccId = $db->lastInsertRowID();
+
+			$result = new stdClass();
+			$result->success = true;
+			$result->facebookacc = db_singleOAuthFacebookByFBId( $db, $user['id'] );
+			$result->message = "You should now close this window and refresh impress[].";
+			
+			/*
+			echo 'ID: ' . $user['id'] . "<br/>";
+			echo 'Name: ' . $user['name'] . "<br/>";
+			//print_r($user);
+			echo "<br/>";
+
+			
+			echo $image_url;
+			//$accessToken = $helper->getAccessToken();
+			
+			try {
+				$response2 = $fb->get("/".$user['id']."/accounts", $accessToken);
+				print_r($response2);
+			} catch(Facebook\Exceptions\FacebookResponseException $e) {
+				echo 'Graph returned an error: ' . $e->getMessage();
+				exit;
+			} catch(Facebook\Exceptions\FacebookSDKException $e) {
+				echo 'Facebook SDK returned an error: ' . $e->getMessage();
+				exit;
+			}*/
+
+
+			// http://localhost/api.php?endpoint=%2Fsocial%2Faccount%2Ffacebook%2Fadd-callback%2F
+			//  &code=AQAUO_7pi431flBKMMqtZx2eBZLEMWrjiOPp4QT5pEVSI5tMmRyiPxRkjz4JKiOBYX7ErcgcCIffSrCAoYvDoE0R0r07psP4zimEclKaPBGWlTE1AxDvprCBFMWQGz7_YpIbDfliN6cI6KPC871fvgrCTjf3R5J4RrtDwD66ET_dNHNKDHcsKo8HVTWUMWu90aYKArXusG5cQhDTMohqeK-peEZnYjoiTPIFyJzntxH--IFC2VB6bJRpdP_62L5gJND7xFAVIcutxqt3JqDvRW_ZnqDdH47DhNrrtxgpyqN5M_pymeFPNe0RQIjNmRRojDA
+			//  &state=5d02cfffba84ffa2d620b5c430607af9#_=_
+		}
+
 		else if ($endpoint == "/social/timeline/") 
 		{
 			$require_login = true;
@@ -259,7 +667,7 @@ if (!isset($_GET['endpoint'])) {
 				$sentSQL = " AND sent = {$includeSent} ";
 			}
 
-			$results = $db->query("SELECT * FROM socialqueue WHERE removed = 0 " . $sentSQL . " ORDER BY `timestamp` ASC;");
+			$results = $db->query("SELECT * FROM socialqueue WHERE `timestamp` > " . (time()-86400). " AND removed = 0 " . $sentSQL . " ORDER BY `timestamp` ASC;");
 		
 			$result = new stdClass();
 			$result->success = true;
@@ -268,7 +676,7 @@ if (!isset($_GET['endpoint'])) {
 			for($i = 0; $i < count($result->timeline); $i++) {
 				$result->timeline[$i]['typedata'] = json_decode($result->timeline[$i]['typedata']); 
 			}
-		} 
+		}
 		else if ($endpoint == "/social/timeline/item/add/") 
 		{
 			$require_login = true;
@@ -404,6 +812,13 @@ if (!isset($_GET['endpoint'])) {
 				{
 					// make sure the timestamp is AFTER the tweet takes place.
 					$d = json_decode($_GET['data'], true);
+					if (!is_numeric($d['account'])) {
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = "Please select a Twitter account from the list.";
+						api_result($result);
+					}
+
 					$tweet = db_singleSocialQueueItem($db, $d['tweet']);
 					if ($tweet['timestamp'] > $_GET['timestamp']) {
 						$valid = false;
@@ -435,6 +850,51 @@ if (!isset($_GET['endpoint'])) {
 						$result = new stdClass();
 						$result->success = false;
 						$result->message = "The original tweet is from this account... so it cannot be scheduled to retweet!";	
+					}
+
+					
+				} else if ($_GET['type'] == "fbshare") 
+				{
+					// make sure the timestamp is AFTER the tweet takes place.
+					$d = json_decode($_GET['data'], true);
+					if (!is_numeric($d['account'])) {
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = "Please select a Facebook Page from the list.";
+						api_result($result);
+					}
+
+					$tweet = db_singleSocialQueueItem($db, $d['post']);
+					if ($tweet['timestamp'] > $_GET['timestamp']) {
+						$valid = false;
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = "Cannot schedule a share to happen before the post takes place.";
+					}
+
+					// check there's not a retweet by this account already.
+					//$rs = $db->query("SELECT * FROM socialqueue WHERE id = " . $id . " AND typedata = LIMIT 1;");
+					//return $rs[0];
+					$stmt1 = $db->prepare("SELECT * FROM socialqueue WHERE type = 'fbshare' AND typedata = :typedata AND id != :id AND removed = 0;");
+					$stmt1->bindValue(":typedata", $_GET['data'], Database::VARTYPE_STRING); 
+					$stmt1->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER); 
+					$existingretweet = $stmt1->query();
+					//print_r($existingretweet);
+					if (count($existingretweet) > 0) {
+						$valid = false;
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = "A share for this page & post is already scheduled.";
+					}
+
+
+					$tweetdata = json_decode($tweet['typedata'], true);
+					//print_r($tweetdata);
+					if ($d['account'] == $tweetdata['account']) {
+						$valid = false;
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = "The original post is from this page... so it cannot be scheduled to share!";	
 					}
 
 					
@@ -2449,14 +2909,8 @@ if (!isset($_GET['endpoint'])) {
 
 }
 
-$var = json_encode($result, true);
-if ($var === FALSE) {
-	$lasterr = json_last_error();
-	echo json_encode(api_error("utf8 error -- could not encode data... " . $lasterr));
-	print_r($result);
-} else {
-	echo $var;
-}
+
+api_result($result);
 
 //$db->close();
 //die();
