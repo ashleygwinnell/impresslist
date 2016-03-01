@@ -1,3 +1,3 @@
 # README
 
-Uses PHPMailer: https://github.com/PHPMailer/PHPMailer (LGPL 2.1)
+* Uses Composer dependency manager for PHP.

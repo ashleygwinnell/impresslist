@@ -2,6 +2,8 @@
 
 session_start();
 
+include_once("vendor/autoload.php");
+
 include_once("includes/database.class.php");
 include_once("includes/cache.class.php");
 
@@ -24,7 +26,7 @@ function sortByUtime($a, $b) { return $a['utime'] < $b['utime']; }
 //	die();
 //}
 global $require_login;
-if ($require_login) { 
+if ($require_login) {
 
 	if (!isset($_SESSION['user']) || !$_SESSION['user']) {
 
@@ -46,15 +48,15 @@ if ($require_login) {
 				$count = count($results);
 				if ($count == 0) {
 					$errors[] = "Invalid email address / password combination. ";
-				} else if ($count > 1 || $count < 0) { 
+				} else if ($count > 1 || $count < 0) {
 					$errors[] = "Invalid email address / password combination. ";
-				} else { 
+				} else {
 					$_SESSION['user'] = $results[0]['id'];
 					header("Location: /");
 					die();
 				}
 			}
-		} 
+		}
 		if (strpos($_SERVER['REQUEST_URI'], "api.php") !== FALSE) {
 			$api_logout = new stdClass();
 			$api_logout->success = false;
@@ -66,10 +68,10 @@ if ($require_login) {
 		include_once("includes/login.html");
 		die();
 
-	} else { 
+	} else {
 		$user = db_singleuser($db, $_SESSION['user']);
 
-		if ($user == null) { 
+		if ($user == null) {
 			include_once("includes/login.html");
 			die();
 		}

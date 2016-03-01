@@ -5,17 +5,13 @@ ini_set('display_errors', 1);
 
 $require_login = false;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
-include_once($_SERVER['DOCUMENT_ROOT'] . "/libs/Parsedown-1.6.0.php");
-include_once($_SERVER['DOCUMENT_ROOT'] . "/libs/phpmailer/class.phpmailer.php");
-include_once($_SERVER['DOCUMENT_ROOT'] . "/libs/phpmailer/class.smtp.php");
-include_once($_SERVER['DOCUMENT_ROOT'] . "/libs/phpmailer/class.pop3.php");
 
 $queue = $db->query("SELECT * FROM emailcampaignsimple WHERE ready = 1 AND sent = 0 AND removed = 0 AND `timestamp` <= " . time() . " ORDER BY `timestamp` LIMIT 10;");
 //print_r($queue);
 
 $Parsedown = new Parsedown();
 
-for ($i = 0; $i < count($queue); $i++) 
+for ($i = 0; $i < count($queue); $i++)
 {
 	$campaign = $queue[$i];
 	$recipients = json_decode($campaign['recipients'], true);
@@ -23,9 +19,9 @@ for ($i = 0; $i < count($queue); $i++)
 
 	util_setIV($user['emailIMAPPasswordIV']);
 	$userPassword = util_decrypt($user['emailIMAPPassword'], $user['emailIMAPPasswordSalt']);
-	
-	/* 
-	
+
+	/*
+
 	This doesn't appear to work on our live server. Take it out and use phpmailer.
 
 	imap_timeout(IMAP_OPENTIMEOUT, 5);
@@ -52,19 +48,19 @@ X-Mailer: impresslist/" . $impresslist_version;
 	//print_r($recipients);
 
 	$all_sent = true;
-	for($j = 0; $j < count($recipients); $j++) 
+	for($j = 0; $j < count($recipients); $j++)
 	{
-		if ($recipients[$j]['sent'] == 0) 
+		if ($recipients[$j]['sent'] == 0)
 		{
 			$all_sent = false;
 			$person = null;
 			$person_email = "";
-			if ($recipients[$j]['type'] == "person") 
+			if ($recipients[$j]['type'] == "person")
 			{
 				$person = db_singleperson($db, $recipients[$j]['person_id']);
 				$person_email = $person['email'];
 			}
-			else if ($recipients[$j]['type'] == "personPublication") 
+			else if ($recipients[$j]['type'] == "personPublication")
 			{
 				$perpub = db_singlepersonpublication($db, $recipients[$j]['personPublication_id']);
 				$person = db_singleperson($db, $perpub['person']);
@@ -74,10 +70,10 @@ X-Mailer: impresslist/" . $impresslist_version;
 				echo "Skipping e-mail line: " . json_encode($recipients[$j]);
 				continue;
 			}
-				
+
 			echo "<hr/>";
 			echo "Sending e-mail <i>" . $campaign['subject'] . "</i> to " . $person['firstname'] . " " . $person['surnames'] . " (" . $person_email . "). <br/>\n";
-			
+
 			// templates
 			$markdown = $campaign['markdown'];
 			$markdown = str_replace("{{first_name}}", $person['firstname'], $markdown);
@@ -91,10 +87,10 @@ X-Mailer: impresslist/" . $impresslist_version;
 				$assignsSingleSteamKey_id = $availableKey['id'];
 				$assignsSingleSteamKey_code = $availableKey['keystring'];
 				$markdown = str_replace("{{steam_key}}", $assignsSingleSteamKey_code, $markdown);
-			} 
+			}
 			else if (strpos($markdown, "{{steam_keys}}") !== false) {
 				echo "Replacing {{steam_keys}} (plural) in email.<br/>\n";
-				$keysForContact = db_keysassignedtotype($db, $user['currentGame'], 'steam', 'person', $person['id']); 
+				$keysForContact = db_keysassignedtotype($db, $user['currentGame'], 'steam', 'person', $person['id']);
 				//print_r($keysForContact);
 
 				if (count($keysForContact) == 0) {
@@ -106,7 +102,7 @@ X-Mailer: impresslist/" . $impresslist_version;
 					$assignsSingleSteamKey = true;
 					$assignsSingleSteamKey_id = $availableKey['id'];
 					$assignsSingleSteamKey_code = $availableKey['keystring'];
-					
+
 					$steam_keys_md = "**Steam Key:**\n\n";
 					$steam_keys_md .= "* {$assignsSingleSteamKey_code}\n\n";
 					$markdown = str_replace("{{steam_keys}}", $steam_keys_md, $markdown);
@@ -122,23 +118,23 @@ X-Mailer: impresslist/" . $impresslist_version;
 					$markdown = str_replace("{{steam_keys}}", $steam_keys_md, $markdown);
 				}
 			}
-			
+
 
 			$html_contents = $Parsedown->text($markdown);
-			
+
 			$urlroot = (isset($_SERVER['HTTPS'])?"https://":"http://") . $_SERVER['HTTP_HOST'];
 			$html_message = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 								<html>
 									<head>
 										<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 										<meta http-equiv="Content-Language" content="en-us">
-									</head> 
+									</head>
 									<body>' . $html_contents . '<img src="' . $urlroot . '/pixel.php?type=simple-mailout&id=' . $campaign['id'] . '&recipient=' . $person_email . '"/></body>
 								</html>';
 
-			// Try to send the email with the user's IMAP connection, 
+			// Try to send the email with the user's IMAP connection,
 			// otherwise revert to standard ol' webmail.
-		
+
 			$mail = new PHPMailer(); // create a new object
 			$mail->IsSMTP(); // enable SMTP
 			$mail->Host = $user['emailSMTPServer'];//  "smtp.gmail.com";
@@ -149,18 +145,18 @@ X-Mailer: impresslist/" . $impresslist_version;
 			$mail->SMTPSecure = 'tls'; // secure transfer enabled REQUIRED for GMail (or tls)
 			$mail->Username = $user['email'];
 			$mail->Password = $userPassword;
-			
+
 			$mail->setFrom($user['email'], $user['forename'] . " " . $user['surname']);
 			$mail->addAddress($person_email, $person['firstname'] . " " . $person['surnames']);
-			//$mail->addBCC( $impresslist_emailAddress ); // We add this manually. 
-			
+			//$mail->addBCC( $impresslist_emailAddress ); // We add this manually.
+
 			$mail->IsHTML(true);
-			
+
 			$mail->XMailer = "impresslist/{$impresslist_version}";
 			$mail->Subject = $campaign['subject'];
 			$mail->Body = $html_message;
 			$mail->AltBody = $markdown;
-			
+
 			if(!$mail->Send())
 			{
 				echo "Mailer Error: " . $mail->ErrorInfo;
@@ -174,15 +170,15 @@ X-Mailer: impresslist/" . $impresslist_version;
 				echo "Message has been sent.<br/>";
 				$recipients[$j]['sent'] = true;
 
-				$stmt = $db->prepare(" 	UPDATE emailcampaignsimple 
+				$stmt = $db->prepare(" 	UPDATE emailcampaignsimple
 										SET
 											recipients = :recipients
 										WHERE id = :id;");
-				$stmt->bindValue(":recipients", json_encode($recipients), Database::VARTYPE_STRING); 
-				$stmt->bindValue(":id", $campaign['id'], Database::VARTYPE_INTEGER); 
+				$stmt->bindValue(":recipients", json_encode($recipients), Database::VARTYPE_STRING);
+				$stmt->bindValue(":id", $campaign['id'], Database::VARTYPE_INTEGER);
 				$stmt->execute();
 
-				// Add this email to the general list of e-mails between people. 
+				// Add this email to the general list of e-mails between people.
 				$stmt = $db->prepare("INSERT INTO email (id, 	user_id, 	person_id, 	utime, 	from_email,  to_email, 	subject,  contents, unmatchedrecipient   )
 													VALUES  (NULL, :user_id, 	:person_id, :utime, :from_email, :to_email, :subject, :contents, :unmatchedrecipient );");
 				$stmt->bindValue(":user_id", $user['id'], Database::VARTYPE_INTEGER);
@@ -212,11 +208,11 @@ X-Mailer: impresslist/" . $impresslist_version;
 
 				// Assign the steam key/s
 				if ($assignsSingleSteamKey) {
-					$stmt = $db->prepare("UPDATE game_key 
-											SET assigned = :assigned, 
+					$stmt = $db->prepare("UPDATE game_key
+											SET assigned = :assigned,
 												assignedToType = :assignedToType,
-												assignedToTypeId = :assignedToTypeId, 
-												assignedByUser = :assignedByUser, 
+												assignedToTypeId = :assignedToTypeId,
+												assignedByUser = :assignedByUser,
 												assignedByUserTimestamp = :assignedByUserTimestamp
 											WHERE id = :id ");
 					$stmt->bindValue(":id", $assignsSingleSteamKey_id, Database::VARTYPE_INTEGER);
@@ -228,16 +224,16 @@ X-Mailer: impresslist/" . $impresslist_version;
 					$stmt->execute();
 				}
 			}
-		}	
+		}
 	}
 
 	if ($all_sent) {
 		$stmt = $db->prepare(" 	UPDATE emailcampaignsimple SET sent = '1', `timestamp` = '" . time() . "' WHERE id = :id;");
-		$stmt->bindValue(":id", $campaign['id'], Database::VARTYPE_INTEGER); 
-		$stmt->execute();	
+		$stmt->bindValue(":id", $campaign['id'], Database::VARTYPE_INTEGER);
+		$stmt->execute();
 	}
 
-	
+
 }
 echo "<hr/>\n";
 echo "Done!";

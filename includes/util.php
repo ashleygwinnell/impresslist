@@ -18,7 +18,7 @@ if (strpos($ua, 'Android')) {
 	$os = "mac";
 } else if (strpos($ua, 'Windows')) {
 	$os = "windows";
-} 
+}
 
 error_reporting(E_ALL ^ E_NOTICE);
 
@@ -30,7 +30,7 @@ function getMIMEType($extension) {
 		case "exe":
 			return "application/octet-stream";
 			break;
-		case "zip": 
+		case "zip":
 			return "application/zip";
 			break;
 		case "mp3":
@@ -52,7 +52,7 @@ function getMIMEType($extension) {
 		default:
 			return "application/text";
 			break;
-	}		
+	}
 }
 
 
@@ -110,8 +110,8 @@ function util_isAlphaNumeric($string)
 	if ($string == "") {
 		return false;
 	}
-	$chararray = array(	"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", 
-						"n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", 
+	$chararray = array(	"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+						"n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
 						"1", "2", "3", "4", "5", "6", "7", "8", "9", "0");
   	for ($i = 0; $i < strlen($string); $i++) {
 		for ($j = 0; $j < count($chararray); $j++) {
@@ -129,19 +129,19 @@ function util_isAlphaNumeric($string)
 	return true;
 }
 
-function util_isAlphaNumericWithSpaces($field, $string, $maxlength, $minlength) 
+function util_isAlphaNumericWithSpaces($field, $string, $maxlength, $minlength)
 {
 	return util_isAlphaNumericWithExtras($string, array(" "), $maxlength, $minlength);
 }
-function util_isAlphaNumericWithExtras($string, $extras, $maxlength, $minlength) 
+function util_isAlphaNumericWithExtras($string, $extras, $maxlength, $minlength)
 {
 	$string = strtolower($string);
 	// cannot be left empty either.
 	if ($string == "") {
 		return false;
 	}
-	$chararray = array(	"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", 
-						"n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", 
+	$chararray = array(	"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+						"n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
 						"1", "2", "3", "4", "5", "6", "7", "8", "9", "0");
 	$chararray = array_merge($chararray, $extras);
   	for ($i = 0; $i < strlen($string); $i++) {
@@ -167,16 +167,16 @@ function util_isAlphaNumericWithExtras($string, $extras, $maxlength, $minlength)
 
 function serve_file($filename, $contents, $format) {
 	header("HTTP/1.1 200 OK\r\n");
-	header("Cache-Control: no-cache, must-revalidate\r\n"); 
-	header("Content-Type: " . getMIMEType($format) . "\r\n");		 
-	header("Content-Length: " . strlen($contents) . "\r\n"); 
+	header("Cache-Control: no-cache, must-revalidate\r\n");
+	header("Content-Type: " . getMIMEType($format) . "\r\n");
+	header("Content-Length: " . strlen($contents) . "\r\n");
 
 	//if ($format != "apk") {
 		header("Content-Disposition: attachment; filename=" . str_replace(" ", "_", $filename) . "\r\n");
 	//}
-	 
-	header("Connection: close\r\n\r\n" ); 
-	
+
+	header("Connection: close\r\n\r\n" );
+
 	echo $contents;
 }
 
@@ -213,7 +213,7 @@ function util_getIV($new) {
 }
 function util_setIV($iv) {
 	global $impresslist_encryption_iv;
-	$impresslist_encryption_iv = $iv;	
+	$impresslist_encryption_iv = $iv;
 }
 function util_getSalt() {
 	return strtr(base64_encode(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM)), '+', '.');
@@ -231,8 +231,7 @@ function util_decrypt($sValue, $sSecretKey) {
 // ----------------------------------------------------------------------------
 // Twitter
 // ----------------------------------------------------------------------------
-include_once($_SERVER['DOCUMENT_ROOT'] . "/libs/twitter/twitteroauth.php");
-function twitterDate($d) { 
+function twitterDate($d) {
 	$bits = explode(" ", $d);
 	return $bits[2] . " " . $bits[1];
 }
@@ -240,7 +239,7 @@ function twitterDate($d) {
 function twitterLinks($text)
 {
 	// convert URLs into links
-	$text = preg_replace("#(https?://([-a-z0-9]+\.)+[a-z]{2,5}([/?][-a-z0-9!\#()/?&+]*)?)#i", "<a href='$1' target='_blank'>$1</a>", $text);	
+	$text = preg_replace("#(https?://([-a-z0-9]+\.)+[a-z]{2,5}([/?][-a-z0-9!\#()/?&+]*)?)#i", "<a href='$1' target='_blank'>$1</a>", $text);
 	// convert protocol-less URLs into links
 	$text = preg_replace("#(?!https?://|<a[^>]+>)(^|\s)(([-a-z0-9]+\.)+[a-z]{2,5}([/?][-a-z0-9!\#()/?&+.]*)?)\b#i", "$1<a href='http://$2'>$2</a>", $text);
 	// convert @mentions into follow links
@@ -253,11 +252,11 @@ function twitterLinks($text)
 function twitter_getConnectionWithAccessToken($oauth_token, $oauth_token_secret) {
   	global $twitter_consumerKey;
   	global $twitter_consumerSecret;
-  	$connection = new TwitterOAuth($twitter_consumerKey, $twitter_consumerSecret, $oauth_token, $oauth_token_secret);
+  	$connection = new Abraham\TwitterOAuth\TwitterOAuth($twitter_consumerKey, $twitter_consumerSecret, $oauth_token, $oauth_token_secret);
   	return $connection;
-} 
- 
-function twitter_countFollowers($username) 
+}
+
+function twitter_countFollowers($username)
 {
 	global $twitter_oauthToken;
 	global $twitter_oauthSecret;
@@ -266,7 +265,7 @@ function twitter_countFollowers($username)
 	$twitter_connection = twitter_getConnectionWithAccessToken($twitter_oauthToken, $twitter_oauthSecret);
 	$twitter_content = $twitter_connection->get("users/lookup.json?callback=?&screen_name=" . $username . "&count=1");
 	if (isset($twitter_content->errors)) { return 0; }
-	
+
 	//echo json_encode($twitter_content);
 	return $twitter_content[0]->followers_count;
 }
@@ -294,20 +293,20 @@ function twitter_postStatusWithImage($oauthtoken, $oauthsecret, $status, $imagef
 		$imagefiles = array($imagefiles);
 	}
 	$twitter_connection = twitter_getConnectionWithAccessToken($oauthtoken, $oauthsecret);
-	
+
 	//print_r($imagefiles);
 
 	$media_ids = array();
 	$url = "https://upload.twitter.com/1.1/media/upload.json";
-	for($i = 0; $i < count($imagefiles); $i++) 
-	{ 
+	for($i = 0; $i < count($imagefiles); $i++)
+	{
 		$file = $_SERVER['DOCUMENT_ROOT'] . "/" . $imagefiles[$i];
 		//echo $file;
 		$contents = file_get_contents($file);
 		//die();
 		$contents_b64 = base64_encode($contents);
 		$image = $twitter_connection->post($url, array(
-			"media_data" => $contents_b64, 
+			"media_data" => $contents_b64,
 			"multipart/form-data" => true
 		));
 		$media_ids[] = $image->media_id_string;
@@ -315,10 +314,10 @@ function twitter_postStatusWithImage($oauthtoken, $oauthsecret, $status, $imagef
 
 	$url = "https://api.twitter.com/1.1/statuses/update.json";
 	return $twitter_connection->post($url, array(
-		"status" => $status, 
+		"status" => $status,
 		"media_ids" => implode(",", $media_ids)
 	));
-	 
+
 }
 function twitter_helpConfiguration() {
 	global $twitter_oauthToken;
@@ -329,13 +328,13 @@ function twitter_helpConfiguration() {
 	return $twitter_connection->get($url);
 }
 function twitter_helpConfigurationSave() {
-	global $db; 
+	global $db;
 	$r = twitter_helpConfiguration();
 	$rjson = json_encode($r);
 
 	$stmt = $db->prepare(" UPDATE settings SET `value` = :value WHERE `key` = :key; ");
-	$stmt->bindValue(":value", 	$rjson, 					Database::VARTYPE_STRING); 
-	$stmt->bindValue(":key",  	"twitter_configuration", 	Database::VARTYPE_STRING); 
+	$stmt->bindValue(":value", 	$rjson, 					Database::VARTYPE_STRING);
+	$stmt->bindValue(":key",  	"twitter_configuration", 	Database::VARTYPE_STRING);
 	return $stmt->execute();
 }
 
@@ -368,7 +367,7 @@ function url_get_contents($url) {
 // ----------------------------------------------------------------------------
 function youtube_getInformation($channel) {
 	if (strlen($channel) == 0) { return 0; }
-	
+
 	$url = "http://gdata.youtube.com/feeds/api/users/" . $channel . "?alt=json";
 	$text = file_get_contents($url);
 	if (substr($text, 0, 1) != "{") {
@@ -383,15 +382,15 @@ function youtube_getInformation($channel) {
 		"subscribers" => $content['entry']['yt$statistics']['subscriberCount'],
 		"views" => $content['entry']['yt$statistics']['totalUploadViews']
 	);
-	
+
 	return $result;
 }
 function youtube_getUploads($channel) {
 	if (strlen($channel) == 0) { return 0; }
-	
+
 	$url = "http://gdata.youtube.com/feeds/api/users/" . $channel . "/uploads?alt=json";
 	$text = file_get_contents($url);
-	if (substr($text, 0, 1) != "{") { 
+	if (substr($text, 0, 1) != "{") {
 		return 0;
 	}
 	$content = json_decode($text, JSON_ASSOC);
@@ -408,7 +407,7 @@ function youtube_v3_getInformation($channel) {
 
 	$url = "https://www.googleapis.com/youtube/v3/channels?forUsername=" .$channel . "&key=" . $youtube_apiKey . "&part=contentDetails,snippet,statistics&maxResults=50";
 	$text = url_get_contents($url);
-	if (substr($text, 0, 1) != "{") { 
+	if (substr($text, 0, 1) != "{") {
 		return 0;
 	}
 	$content = json_decode($text, JSON_ASSOC);
@@ -435,7 +434,7 @@ function youtube_v3_getUploads($playlist) {
 
 	$url = "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=" . $playlist . "&key=" . $youtube_apiKey;
 	$text = url_get_contents($url);
-	if (substr($text, 0, 1) != "{") { 
+	if (substr($text, 0, 1) != "{") {
 		return 0;
 	}
 	//$text = utf8_decode($text);
@@ -465,7 +464,7 @@ function youtube_v3_getUploads($playlist) {
 
 	util_getIV(true);
 
-	if (util_isLocalhost()) { 
+	if (util_isLocalhost()) {
 		$sent = false;
 	}
 
@@ -505,8 +504,8 @@ function email_new_coverage($fromName, $url, $time) {
 function email_new_youtube_coverage($youtuberName, $url, $time) {
 	global $impresslist_emailAddress;
 	global $db;
-	
-	// email queue. 
+
+	// email queue.
 	$reply_to = "no-reply" . substr($impresslist_emailAddress, strpos($impresslist_emailAddress, "@"));
 	$headers  = "MIME-Version: 1.0" . "\r\n";
 	$headers .= "Content-type: text/html; charset=iso-8859-1" . "\r\n";
@@ -527,21 +526,21 @@ function email_new_youtube_coverage($youtuberName, $url, $time) {
 
 	// Get users who have coverage alerts on.
 	$users = $db->query("SELECT * FROM user WHERE coverageNotifications = 1;");
-	for($i = 0; $i < count($users); $i++) 
+	for($i = 0; $i < count($users); $i++)
 	{
-		// insert into e-mail queue. 
-		$stmt = $db->prepare("INSERT INTO emailqueue (id, subject, to_address, headers, message, `timestamp`, sent) 
+		// insert into e-mail queue.
+		$stmt = $db->prepare("INSERT INTO emailqueue (id, subject, to_address, headers, message, `timestamp`, sent)
 											VALUES (NULL, :subject, :to_address, :headers, :message, :utime, 0 ); ");
-		$stmt->bindValue(":subject", "impress[] - Coverage Alert!", Database::VARTYPE_STRING); 
-		$stmt->bindValue(":to_address", $users[$i]['email'], Database::VARTYPE_STRING); 
-		$stmt->bindValue(":headers", $headers, Database::VARTYPE_STRING); 
-		$stmt->bindValue(":message", $message, Database::VARTYPE_STRING); 
-		$stmt->bindValue(":utime", $time, Database::VARTYPE_INTEGER); 
+		$stmt->bindValue(":subject", "impress[] - Coverage Alert!", Database::VARTYPE_STRING);
+		$stmt->bindValue(":to_address", $users[$i]['email'], Database::VARTYPE_STRING);
+		$stmt->bindValue(":headers", $headers, Database::VARTYPE_STRING);
+		$stmt->bindValue(":message", $message, Database::VARTYPE_STRING);
+		$stmt->bindValue(":utime", $time, Database::VARTYPE_INTEGER);
 		$stmt->execute();
 	}
 
 	return true;
-	
+
 }
 
 
@@ -581,14 +580,14 @@ function mail_attachment($filename, $path, $mailto, $from_mail, $from_name, $rep
 
 
 function slack_incomingWebhook($data) {
-	global $slack_enabled; 
+	global $slack_enabled;
 	global $slack_apiUrl;
 
 	if (!$slack_enabled) { return ""; }
 
 	$fields = array("payload" => urlencode(json_encode($data)));
-	foreach($fields as $key => $value) { 
-		$fields_string .= $key . '=' . $value . '&'; 
+	foreach($fields as $key => $value) {
+		$fields_string .= $key . '=' . $value . '&';
 	}
 	rtrim($fields_string, '&');
 
@@ -628,7 +627,7 @@ function slack_coverageAlert($fromName, $coverageTitle, $url) {
 			)
 		)
 	);
-	return slack_incomingWebhook($data);	
+	return slack_incomingWebhook($data);
 }
 function slack_jobsChanged($arr, $fromUser) {
 	global $slack_enabled;
@@ -656,7 +655,7 @@ function slack_jobsChanged($arr, $fromUser) {
 			)
 		)
 	);
-	return slack_incomingWebhook($data);	
+	return slack_incomingWebhook($data);
 }
 
 
