@@ -1,0 +1,33 @@
+{
+  "name": "impresslist",
+  "homepage": "https://github.com/ashleygwinnell/impresslist",
+  "authors": [
+    "Ashley Gwinnell <ashley@forceofhab.it>"
+  ],
+  "description": "A tool for managing your team-based PR campaigns & social media.",
+  "main": "",
+  "moduleType": [],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "js/vendor/",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "^2.2.1",
+    "bootstrap": "^3.3.6",
+    "eonasdan-bootstrap-datetimepicker": "^4.17.37",
+    "markdown": "^0.5.0",
+    "twitter-text-js": "twitter-text#^1.13.3",
+    "bootstrap-sortable": "^2.0.0",
+    "bootstrap-table": "^1.10.1",
+    "bootstrap-fileinput": "^4.3.1",
+    "bootstrap-growl": "^1.1.0",
+    "jquery.scrollTo": "^2.1.2",
+    "moment": "^2.11.2"
+  },
+  "private": true
+}

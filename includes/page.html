@@ -2,11 +2,11 @@
 <html lang="en-gb">
 	<head>
 		<?php include_once("head.html"); ?>
-		
+
       	<script type='text/javascript'>
-      		
-        	$().ready(function() { 
-	        	
+
+        	$().ready(function() {
+
 	        	impresslist.config.system.email = "<?php echo $impresslist_emailAddress; ?>";
 	        	impresslist.config.system.backups.lastmanual = <?php echo $settings['manual_backup_lastbackedupon']; ?>;
 	        	impresslist.config.system.twitter = <?php echo $settings['twitter_configuration']; ?>;
@@ -25,12 +25,12 @@
         		<?php endfor; ?>
 
         		impresslist.init();
-      			
+
         	});
         </script>
 
 	</head>
-	<body> 
+	<body>
 		<nav class="navbar navbar-default navbar-fixed-top">
 			<div class="container mywidecontainer">
 				<!-- Brand and toggle get grouped for better mobile display -->
@@ -47,13 +47,13 @@
 				<!-- Collect the nav links, forms, and other content for toggling -->
 
 				<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-			      
+
 					<ul class="nav navbar-nav navbar-right">
 				    	<li><a id='nav-home' data-nav-page='home' href="javascript:;">Home</a></li>
 				    	<li><a id='nav-social' data-nav-page='social' href="javascript:;">Social</a></li>
 				    	<li><a id='nav-mailout' data-nav-page='mailout' href="javascript:;">Mailout</a></li>
 
-				    	
+
 
 				    	<li class="dropdown">
 				    		<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Add <span class="caret"></span></a>
@@ -67,7 +67,7 @@
 								<li class="divider"></li>
 								<li><a id='nav-importtool' data-nav-page="importtool" href="javascript:;">Import</a></li>
 								<!-- <li><a id='nav-add-coverage-youtuber' href="javascript:;">Coverage (Youtuber)</a></li> -->
-				    			
+
 				    		</ul>
 				    	</li>
 
@@ -87,7 +87,7 @@
 				    				<li><a id='nav-admin' data-nav-page='admin' href="javascript:;">Admin Panel</a></li>
 				    				<li class="divider"></li>
 				    			<?php endif;?>
-				    			
+
 				    			<li><a id='nav-user-changepassword' href="#" data-toggle='modal' data-target='.password_modal'>Change Password</a></li>
 				    			<li><a id='nav-user-changeimapsettings' href="#" data-toggle='modal' data-target='.imapsettings_modal'>Change IMAP Settings</a></li>
 				    			<li class="divider"></li>
@@ -114,12 +114,12 @@
 			&nbsp;
 		</div>
 
-		
+
 
 		<!-- Home page -->
 		<div id='home-page' data-type-page='true' data-page='home'>
 
-			
+
 
 			<div id='current-project' class='container mycontainer'>
 				<div class='filters' style='float:left;text-align:left;'>
@@ -135,8 +135,8 @@
 					<div class='filter-item'>People assigned to me - <input id='filter-assigned-self' type='checkbox'/></div>
 					<div class='filter-item'>People who are out-of-date - <input id='filter-show-outofdate' type='checkbox'/></div>
 				</div>
-			</div><br/>	
-			
+			</div><br/>
+
 			<div class='container mycontainer'>
 				<ul class="nav nav-pills" role='tablist'>
 					<li role="presentation"><a href="#jobs-pill" aria-controls="jobs-pill" role="tab" data-toggle="pill">Jobs</a></li>
@@ -145,7 +145,7 @@
 					<li role="presentation"><a href="#youtubers-pill" aria-controls="youtubers-pill" role="tab" data-toggle="pill">YouTubers</a></li>
 					<li role="presentation"><a href="#chat-pill" aria-controls="chat-pill" role="tab" data-toggle="pill">Chat</a></li>
 				</ul><br/>
-				
+
 				<div class="tab-content">
 					<div role="tabpanel" class="tab-pane active" id="people-pill">
 
@@ -153,27 +153,27 @@
 						<div id='people-container'>
 							<div class="panel panel-default">
 				  				<div class="panel-heading oa">
-				  					
-				  					
-				  					<span 
-				  						id='nav-select-edit' 
-				  						data-type='person' 
-				  						title='Select People' 
+
+
+				  					<span
+				  						id='nav-select-edit'
+				  						data-type='person'
+				  						title='Select People'
 				  						class='nav-table-topright-item glyphicon glyphicon-edit'
 				  						></span>
 
-				  					<span 
+				  					<span
 										id='nav-deselect-all'
 				  						data-type='person'
 				  						title='Deselect All'
 				  						class='nav-table-topright-item glyphicon glyphicon-unchecked checkbox-column'></span>
-				  					<span 
+				  					<span
 				  						id='nav-select-all'
 				  						data-type='person'
 				  						title='Select All'
 				  						class='nav-table-topright-item glyphicon glyphicon-check checkbox-column'
 				  						></span>
-				  					
+
 				  					<span class='fl'>People</span>
 
 				  					<span id='people-count' class='fr'>(0)</span>
@@ -189,7 +189,7 @@
 										</tr>
 									</thead>
 									<tbody id='people'>
-										
+
 									</tbody>
 									<tfoot id='people-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
 								</table>
@@ -215,7 +215,7 @@
 										</tr>
 									</thead>
 									<tbody id='publications'>
-										
+
 									</tbody>
 									<tfoot id='publications-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
 								</table>
@@ -244,7 +244,7 @@
 										</tr>
 									</thead>
 									<tbody id='youtubers'>
-										
+
 									</tbody>
 									<tfoot id='youtubers-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
 								</table>
@@ -256,7 +256,7 @@
 
 					<div role="tabpanel" id='jobs-pill' class='tab-pane'>
 						<div id='jobs-container'>
-							
+
 							<div class='row'>
 								<div class='col-sm-12'>
 									<div><b>Jobs:</b></div>
@@ -297,7 +297,7 @@
 										<button class='btn btn-primary submit-message' style='width:100%'>Chat</button>
 									</div>
 								</div>
-								
+
 							</div>
 						</div>
 						<br/>
@@ -307,10 +307,10 @@
 				</div>
 			</div>
 
-			
 
-		
-			
+
+
+
 
 
 		</div>
@@ -320,8 +320,8 @@
 			<div class='container mycontainer'>
 				<p><b>Help:</b></p>
 				<!-- <p>Everybody knows by now that you can't just carpet-bomb the entire games press with a single non-personalised email, especially so if you're not part of the infamous (and totally fictional) indie elite. That is why this tool was created, and why it doesn't include an "email all" feature.</p>
-				
-				
+
+
 
 				<p><b>Tips</b></p>-->
 				<p>Using this tool is hopefully pretty self-explanatory, so instead we decided it would be better of us to list a bunch of really useful articles that help you hone your story, and make you think a bit more about how you approach your PR and Marketing.</p><p> As below:</p>
@@ -333,7 +333,7 @@
 					<li><a href='http://gillen.cream.org/wordpress_html/assorted-essays/how-to-use-and-abuse-the-games-press-and-how-the-games-press-wants-to-use-and-abuse-you/' target='new'>How to use and abuse the gaming press and how the gaming press wants to use and abuse you</a> - Kieron Gillen</li>
 					<li>...and of course, <a href='http://www.pixelprospector.com/the-big-list-of-indie-game-marketing/'>The Big List of Indie Game Marketing</a> - Pixel Prospector</li>
 
-					<!-- 
+					<!--
 						Kids review sites lists
 						http://www.reviewfordev.com/list-of-review-sites-to-find-the-best-educational-apps-for-kids.php
 
@@ -342,11 +342,11 @@
 					-->
 
 
-					
+
 				</ul>
 			</div>
-			
-		</div>	
+
+		</div>
 
 
 		<!-- Keys -->
@@ -407,7 +407,7 @@
 							<label class='radio-inline'><input id='keys-radio-expiry-never' type='radio' name='keys-expiry-radio' value='never' checked/>Never</label>
 							<label class='radio-inline'><input id='keys-radio-expiry-time' type='radio' name='keys-expiry-radio' value='time'/>Time</label>
 						</p>
-					
+
 
 						<div class='input-group date' id='keys-timepicker'>
 							<input id='keys-edit-timestamp' type='text' class='form-control' />
@@ -418,13 +418,13 @@
 
 					</div>
 				</div><br/>
-		
-				
-				
+
+
+
 
 				<button id='keys-add-submit' class='btn btn-primary fr'>Add Keys</button>
 
-			</div>	
+			</div>
 		</div>
 
 		<!-- Coverage -->
@@ -433,7 +433,7 @@
 				<div class='filters' style='float:left;text-align:left;'>
 					<div class='filter-item'><b>Project Coverage</b></div>
 				</div>
-			</div><br/>	
+			</div><br/>
 
 			<div class='container mycontainer'>
 				<div id='coverage-loading-true'>
@@ -445,15 +445,15 @@
 				</div>
 				<div id='coverage-loading-false'>
 					<div id='coverage'>
-						
+
 					</div>
 					<div id='coverage-footer'>
 						<div class="alert alert-info" role="alert">
 							<span class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
 							<span class="sr-only">Error:</span>
-							Dang! There is currently no coverage for your project. 
+							Dang! There is currently no coverage for your project.
 						</div>
-						<!-- 
+						<!--
 							<div class='row'>
 								<div class='col-sm-3 fr'>
 									<button class='btn btn-primary add-coverage' style='width:100%'>Add Coverage</button>
@@ -463,7 +463,7 @@
 					</div>
 				</div>
 
-				
+
 			</div>
 			<br/><br/>
 
@@ -475,14 +475,14 @@
 				<div id='social-homepage' class='row'>
 					<div class='col-sm-9'>
 						<p><b>Social Scheduler</b></p>
-						
+
 						<ul class="nav nav-pills" role='tablist'>
 							<li role="presentation" class="active"><a href="#timeline-pill" aria-controls="timeline-pill" role="tab" data-toggle="pill">Timeline</a></li>
 							<li role="presentation"><a href="#uploads-pill" aria-controls="uploads-pill" role="tab" data-toggle="pill">Uploads</a></li>
 							<li role="presentation"><a href="#accounts-pill" aria-controls="accounts-pill" role="tab" data-toggle="pill">Accounts</a></li>
 						</ul>
 
-						
+
 					</div>
 
 				</div>
@@ -503,9 +503,9 @@
 
 							</div>
 						</div>
-						
+
 					</div>
-					
+
 					<div role="tabpanel" id='uploads-pill' class='tab-pane'>
 						<div class='row'>
 							<div class='col-sm-12'>
@@ -545,16 +545,16 @@
 
 					<div role="tabpanel" id='accounts-pill' class='tab-pane'>
 						<div class='row'>
-							
+
 							<div class='col-sm-9'>
 								<p><b>Accounts</b></p>
 								<div id='social-homepage-twitteracc-list'>
 								</div>
 								<div id='social-homepage-twitteracc-list-none' style='display:none;'>
-									<p>No linked accounts.</p> 
+									<p>No linked accounts.</p>
 								</div>
 								<div id='social-homepage-twitteracc-list-loading'>
-									<p>Loading...</p> 
+									<p>Loading...</p>
 								</div>
 								<!-- <p><img src='images/email-twitter.png' /> @ashleygwinnell</p> -->
 								<!-- <p><img src='images/email-facebook.png' /> Force Of Habit (page)</p>-->
@@ -562,10 +562,10 @@
 							<div class='col-sm-3'>
 								<p><b>Add</b></p>
 								<?php
-									$connection = new TwitterOAuth($twitter_consumerKey, $twitter_consumerSecret);
-									$arr = $connection->getRequestToken('oob');
-									//print_r($arr);
-									$authoriseurl = $connection->getAuthorizeURL($arr['oauth_token']);
+									$connection = new Abraham\TwitterOAuth\TwitterOAuth($twitter_consumerKey, $twitter_consumerSecret);
+									$arr = $connection->oauth('oauth/request_token', array('oauth_callback' => 'oob'));
+
+									$authoriseurl = $connection->url('oauth/authorize', array('oauth_token' => $arr['oauth_token']) );
 								?>
 								<div id='social-addtwitteraccount-buttonpage'>
 									<a id='social-addtwitteraccount-link' href="<?php echo $authoriseurl; ?>" target='new'><button class='btn btn-primary'>Twitter Account</button></a>
@@ -586,11 +586,11 @@
 									<p><button id='social-addtwitteraccount-submit' class='btn btn-primary'>Add</button> <button id='social-addtwitteraccount-cancel' class='btn btn-danger'>Cancel</button></p>
 								</div>
 
-								
-								
+
+
 							</div>
 
-							
+
 						</div>
 					</div>
 				</div>
@@ -639,8 +639,8 @@
 
 						<p><b>{{steam_key}}</b><br/>Gives a new Steam key.</p>
 						<p><b>{{steam_keys}}</b><br/>List all Steam keys sent to this contact. Assigns a new one if never sent any.</p>
-						
-						
+
+
 					</div>
 					<div class='col-sm-9'>
 						<p><b>Name:</b></p>
@@ -660,7 +660,7 @@
 								<textarea id='mailout-content' class='messages form-control' style='margin-top:10px;margin-bottom:10px;min-height:100px; overflow:scroll;' placeholder="Use Markdown..."></textarea>
 							</div>
 							<div id="mailout-preview" class="tab-pane fade" style=''>
-								
+
 							</div>
 						</div>
 
@@ -676,7 +676,7 @@
 							</span>
 						</div><br/>
 
-						
+
 
 						<div id='mailout-recipients' class='panel panel-default'>
 							<div class="panel-heading oa">
@@ -696,7 +696,7 @@
 							</table>
 						</div>
 						<div id='mailout-recipients-none'><p><button id='nav-mailout-addrecipients' class='btn btn-primary' data-nav-page='home'>Add Recipients</button></p></div>
-						
+
 
 						<div>
 							<button id='mailout-writepage-save' class='btn btn-primary'>Save</button>
@@ -710,9 +710,9 @@
 						</div><br/>
 					</div>
 				</div>
-				
 
-				
+
+
 			</div>
 			<br/>
 			<br/>
@@ -724,8 +724,8 @@
 			<div class='container mycontainer'>
 				<p><b>Import</b></p>
 				<div id='importtool-type-container'>
-					<!-- <input type='radio' name='importtype' value='imp'/> SQL (impress[] export) &nbsp; --> 
-					<input id='importtool-type-csv' type='radio' name='importtool-type' value='csv'/> CSV (Comma separated values) &nbsp; 
+					<!-- <input type='radio' name='importtype' value='imp'/> SQL (impress[] export) &nbsp; -->
+					<input id='importtool-type-csv' type='radio' name='importtool-type' value='csv'/> CSV (Comma separated values) &nbsp;
 					<input id='importtool-type-tsv' type='radio' name='importtool-type' value='tsv'/> TSV (Tab separated values)
 				</div>
 				<textarea id='importtool-maintext' class='messages form-control' style='margin-top:10px;margin-bottom:10px;min-height:100px; overflow:scroll;' placeholder="Paste contents here..."></textarea>
@@ -748,14 +748,14 @@
 				</select>
 
 				<div id='importtool-order' style='margin-bottom:10px;'>
-					
+
 				</div>
 
 				<!-- <select id='importtool-selectorder' multiple type="text" class='form-control' data-role="tagsinput">
 				</select> -->
 
 				<button id='importtool-submit' class='btn btn-primary'>Import</button>
-				
+
 
 			</div>
 		</div>
@@ -766,21 +766,21 @@
 				<div class='filters' style='float:left;text-align:left;'>
 					<div class='filter-item'><b>Admin Panel</b></div>
 				</div>
-			</div><br/>	
+			</div><br/>
 
 			<div class='container mycontainer'>
 				<div class="panel panel-default">
 					<div class="panel-heading">Users:</div>
 					<div class='pady padx'>
 						<div class='admin-users-list'>
-							<?php 
+							<?php
 								echo "<p><i>TODO: User management, stats, etc.</i></p>";
 
 								foreach ($users as &$user) {
 									echo "<p>" . $user['id'] . ". <b style='color:" . $user['color'] . "'>" . $user['forename'] . "</b></p>";
 								}
-								
-							?>	
+
+							?>
 						</div>
 					</div>
 				</div>
@@ -793,8 +793,8 @@
 						<a href='includes/tasks/refresh-email.php' target='new'><button class='btn btn-primary'>Refresh Emails</button></a>
 						<a href='includes/tasks/refresh-rss.php' target='new'><button class='btn btn-primary'>Refresh RSS Feeds</button></a>
 						<a href='includes/tasks/refresh-twitter.php' target='new'><button class='btn btn-primary'>Refresh Twitter Followers</button></a>
-						
-						
+
+
 					</div>
 				</div>
 			</div>
@@ -812,7 +812,7 @@
 						<p><a href='/api.php?endpoint=/backup/'><button id='save-backup-submit' type='submit' class='btn btn-primary'>Save Backup Now!</button></a></p>
 						<p><a href='/api.php?endpoint=/backup-sql/'><button id='save-backup-submit' type='submit' class='btn btn-primary'>Save Backup (SQL) Now!</button></a></p>
 						<p><a href='includes/tasks/backup-email.php' target='new'><button class='btn btn-primary'>Email Backup Now!</button></a></p>
-						
+
 					</div>
 				</div>
 			</div>

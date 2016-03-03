@@ -223,7 +223,7 @@ if (!isset($_GET['endpoint'])) {
 		"/chat/send/",
 
 		// Test...
-		"/test/test/"
+		"/test/test/",
 		"/test/phpinfo/"
 	);
 	$endpoint = $_GET['endpoint'];
@@ -235,6 +235,9 @@ if (!isset($_GET['endpoint'])) {
 		{
 			$require_login = false;
 			include_once('init.php');
+
+			$var = twitter_countFollowers("forcehabit");
+			print_r($var);
 
 			//$acc = db_singleOAuthTwitterByHandle($db, "ashleygwinnell");
 			//$tweet = twitter_postStatus($acc['oauth_key'], $acc['oauth_secret'], "This is another test of the Twitter API. Boop.");
@@ -1091,7 +1094,7 @@ if (!isset($_GET['endpoint'])) {
 			if (!$error)
 			{
 				$pin = $_GET['pin'];
-				$connection = new TwitterOAuth($twitter_consumerKey, $twitter_consumerSecret, $_GET['request_token'], $_GET['request_token_secret']);
+				$connection = new Abraham\TwitterOAuth\TwitterOAuth($twitter_consumerKey, $twitter_consumerSecret, $_GET['request_token'], $_GET['request_token_secret']);
 				$token = $connection->getAccessToken($pin);
 
 				if (!isset($token['screen_name'])) {
