@@ -1,0 +1,14 @@
+<tr class='table-list' >
+	<td data-value='{{ person.fullname() }}'>
+		<span data-field='name' >{{ person.fullname() }}</span>
+		<div data-field='email-list'></div>
+	</td>
+	<td data-field='priority' data-value='{{ person.priority() | priority }}'  >{{ person.priority() | priority }}</td>
+	<td data-field='twitter_followers' data-value='{{ person.twitter_followers }}'>
+		<span ng-hide="person.twitter.length > 0">N/A</span>
+		<a ng-show="person.twitter.length > 0" href='http://twitter.com/{{ person.twitter }}' target='new'>{{ person.twitter_followers_formatted }}</a>
+	</td>
+	<td data-field='last_contacted' data-value='{{person.lastcontacted}}'>{{ person.lastcontacted | relativetime }}
+		<span ng-show='person.lastcontacted != 0' >by <span style='color:{{ person.lastcontactedby_color }}'>{{ person.lastcontactedby_forename }}</span></span>
+	</td>
+</tr>

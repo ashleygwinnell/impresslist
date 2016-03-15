@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+	<head>
+		<?php include_once("head.html"); ?>
+	</head>
+	<body>
+
+		<?php include_once("navbar.html"); ?>
+
+
+		<!-- Spacer -->
+		<div class='container mycontainer' style='margin-top:50px;'>
+			&nbsp;
+		</div>
+
+
+		<!-- Admin panel -->
+		<div>
+			<div class='container mycontainer'>
+				<h2><?= $impresslist_company_name ?></h2>
+
+				<p>Email:<br/> <?= $impresslist_company_emailAddress; ?> </p>
+				<p>Twitter:<br/> <?= $impresslist_company_twitter; ?> </p>
+				<p>Facebook:<br/> <?= $impresslist_company_facebook; ?> </p>
+				<br/>
+
+				<h3>Signup:</h3>
+
+						<div class='form-group'>
+							<label for='name'>Name:</label>
+							<input class='form-control' name='name'	/>
+						</div>
+						<div class='form-group'>
+							<label for='email'>Email Address:</label>
+							<input class='form-control' name='email' />
+						</div>
+					</div>
+
+
+
+			</div>
+
+		</div>
+
+
+
+
+
+
+
+		<footer class="footer">
+			<div class="container mywidecontainer">
+				<p class="text-muted">&copy; Made with love by <a href='http://forceofhab.it/'>Force Of Habit</a></p>
+			</div>
+		</footer>
+	</body>
+</html>

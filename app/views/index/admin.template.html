@@ -1,0 +1,73 @@
+<!-- Admin panel -->
+		<div id='admin-page' impress-show="admin" >
+			<div id='current-project' class='container mycontainer'>
+				<div class='filters' style='float:left;text-align:left;'>
+					<div class='filter-item'><b>Admin Panel</b></div>
+				</div>
+			</div><br/>
+
+			<div class='container mycontainer'>
+				<div class="panel panel-default">
+					<div class="panel-heading">Users:</div>
+					<div class='pady padx'>
+						<div class='admin-users-list'>
+							<?php
+								echo "<p><i>TODO: User management, stats, etc.</i></p>";
+
+								foreach ($users as &$user) {
+									echo "<p>" . $user['id'] . ". <b style='color:" . $user['color'] . "'>" . $user['forename'] . "</b></p>";
+								}
+
+							?>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class='container mycontainer'>
+				<div class="panel panel-default">
+					<div class="panel-heading">Manual Tasks:</div>
+					<div class='pady padx'>
+						<a href='includes/tasks/refresh-email.php' target='new'><button class='btn btn-primary'>Refresh Emails</button></a>
+						<a href='includes/tasks/refresh-rss.php' target='new'><button class='btn btn-primary'>Refresh RSS Feeds</button></a>
+						<a href='includes/tasks/refresh-twitter.php' target='new'><button class='btn btn-primary'>Refresh Twitter Followers</button></a>
+
+
+					</div>
+				</div>
+			</div>
+
+			<div class='container mycontainer'>
+				<div class="panel panel-default">
+					<div class="panel-heading">Backup Settings:</div>
+					<div class='pady padx'>
+						<!-- <div class='form-group'>
+							<label>Email Backups:</label><input type='checkbox' class='form-control'/>
+						</div> -->
+						<!-- impresslist.config.system.backups.lastmanual -->
+						<p><i>TODO: Automatic email backups.</i></p>
+						<p><b>Last Backup On: </b><span data-last-backup='true'></p>
+						<p><a href='/api.php?endpoint=/backup/'><button id='save-backup-submit' type='submit' class='btn btn-primary'>Save Backup Now!</button></a></p>
+						<p><a href='/api.php?endpoint=/backup-sql/'><button id='save-backup-submit' type='submit' class='btn btn-primary'>Save Backup (SQL) Now!</button></a></p>
+						<p><a href='includes/tasks/backup-email.php' target='new'><button class='btn btn-primary'>Email Backup Now!</button></a></p>
+
+					</div>
+				</div>
+			</div>
+
+			<div class='container mycontainer'>
+				<div class="panel panel-default">
+					<div class="panel-heading">SQL Query:</div>
+					<div class='pady padx'>
+						<form role='form' onsubmit='return false;'>
+							<div class='form-group'>
+								<p>You must use double-quotes.</p>
+								<textarea id='sql-query-text' class='form-control' style='min-height:75px;'></textarea>
+							</div>
+						</form>
+						<button id='sql-query-submit' type='submit' class='btn btn-danger'>Live Dangerously</button>
+					</div>
+				</div>
+			</div>
+
+		</div>

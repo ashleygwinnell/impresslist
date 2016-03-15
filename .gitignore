@@ -1,5 +1,7 @@
-data/database.sql
-data/backups/*
-images/uploads/*
-includes/config.php
-vendor
+/node_modules/
+backend/data/database.sql
+backend/data/backups/*
+backend/data/uploads/*
+backend/includes/config.php
+backend/vendor/*
+app/vendor/*

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang='en' ng-app="App" ng-controller='AppController'>
+	<head>
+		<meta charset='utf-8'/>
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+		<!-- Base tag required -->
+		<base href="/">
+
+		<!-- https://github.com/ftlabs/fastclick#when-it-isnt-needed -->
+		<meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
+
+		<!-- Add to homescreen for Chrome on Android -->
+		<meta name="mobile-web-app-capable" content="yes">
+		<link rel="icon" sizes="192x192" href="app/images/chrome-touch-icon-192x192.png">
+
+		<!-- Add to homescreen for Safari on iOS -->
+		<meta name="apple-mobile-web-app-title" content="impress[]">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+		<link rel="apple-touch-icon-precomposed" href="app/images/apple-touch-icon-precomposed.png">
+
+		<!-- Tile icon for Win8 (144x144 + tile color) -->
+		<meta name="msapplication-TileImage" content="app/images/ms-touch-icon-144x144-precomposed.png">
+		<meta name="msapplication-TileColor" content="#ffffff">
+
+		<!-- http://blogs.windows.com/windows_phone/b/wpdev/archive/2012/11/15/adapting-your-webkit-optimized-site-for-internet-explorer-10.aspx#step5 -->
+		<meta name="msapplication-tap-highlight" content="no">
+
+		<link rel='icon' href='app/images/favicon.png' type='image/x-icon' />
+		<link rel='shortcut icon' href='app/images/favicon.png' type='image/x-icon' />
+
+		<meta name="author" content="Force Of Habit">
+		<meta name="description" lang="en" content="impress[]. A list of people you want to impress." />
+		<meta name="keywords" lang="en" content="impress, impresslist, indie games, gamedev, press, list, contacts, pr, marketing, tool. " />
+		<title>impress[]</title>
+
+		<!-- bower'd stylesheets -->
+		<link href="app/vendor/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+		<link href="app/vendor/bootstrap-table/dist/bootstrap-table.min.css" rel="stylesheet">
+		<link href="app/vendor/bootstrap-sortable/Contents/bootstrap-sortable.css" rel="stylesheet">
+		<link href="app/vendor/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css" rel="stylesheet" />
+		<link href="app/vendor/bootstrap-multiselect/dist/css/bootstrap-multiselect.css" rel="stylesheet" />
+		<link href="app/vendor/bootstrap-fileinput/css/fileinput.min.css" rel="stylesheet">
+
+		<link href="app/css/bootstrap-timeline-responsive.css" rel="stylesheet" />
+		<link href="app/css/sticky-footer.css" rel="stylesheet">
+		<link href="app/css/impresslist.css" rel="stylesheet">
+		<style>
+			.bootstrap-datetimepicker-widget {
+				z-index: 10;
+			}
+		</style>
+
+		<!-- Put themes and/or any custom css here -->
+		<!-- <link href="css/bootstrap-theme-flatly.min.css" rel="stylesheet"> -->
+
+	</head>
+	<body>
+
+		<impress-nav></impress-nav>
+		<div ng-include src="'app/views/index/index.template.html'"></div>
+		<impress-footer></impress-footer>
+
+		<script type='text/javascript' src='app/vendor/angular/angular.js'></script>
+		<script type='text/javascript' src='app/vendor/angular-ui-router/release/angular-ui-router.js'></script>
+		<script type='text/javascript' src='app/vendor/lodash/dist/lodash.min.js'></script>
+
+		<script type="text/javascript" src="app/vendor/jquery/dist/jquery.min.js"></script>
+		<script type="text/javascript" src="app/vendor/moment/min/moment.min.js"></script>
+		<script type="text/javascript" src="app/vendor/bootstrap/dist/js/bootstrap.min.js"></script>
+		<script type="text/javascript" src="app/vendor/bootstrap-table/dist/bootstrap-table.min.js"></script>
+		<script type="text/javascript" src="app/vendor/bootstrap-sortable/Scripts/bootstrap-sortable.js"></script>
+		<script type="text/javascript" src="app/vendor/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js"></script>
+		<script type="text/javascript" src="app/vendor/bootstrap-multiselect/dist/js/bootstrap-multiselect.js"></script>
+		<script type="text/javascript" src="app/vendor/bootstrap-growl/jquery.bootstrap-growl.min.js"></script>
+		<script type="text/javascript" src="app/vendor/markdown/lib/markdown.js"></script>
+		<script type="text/javascript" src="app/vendor/bootstrap-fileinput/js/fileinput.min.js"></script>
+		<script type="text/javascript" src="app/vendor/twitter-text-js/js/twitter-text.js"></script>
+
+		<script type="text/javascript" src="app/js/impresslist_util.js"></script>
+		<script type='text/javascript' src='impress.js'></script>
+
+	</body>
+</html>

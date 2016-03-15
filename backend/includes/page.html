@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+	<head>
+		<?php include_once("head.html"); ?>
+
+      	<script type='text/javascript'>
+
+        	$().ready(function() {
+
+	        	impresslist.config.system.email = "<?php echo $impresslist_emailAddress; ?>";
+	        	impresslist.config.system.backups.lastmanual = <?php echo $settings['manual_backup_lastbackedupon']; ?>;
+	        	impresslist.config.system.twitter = <?php echo $settings['twitter_configuration']; ?>;
+        		impresslist.config.user.id = <?php echo $user_id; ?>;
+        		impresslist.config.user.game = <?php echo $user_currentGame; ?>;
+      			impresslist.config.user.gmail = <?php echo $user_gmailIndex; ?>;
+      			impresslist.config.user.imapServer = "<?php echo $user_imapServer; ?>";
+      			impresslist.config.user.smtpServer = "<?php echo $user_smtpServer; ?>";
+
+      			<?php for($i = 0; $i < $num_users; $i++): ?>
+	        		impresslist.addUser(new User(<?php echo json_encode($users[$i]); ?>), true);
+        		<?php endfor; ?>
+
+        		<?php for($i = 0; $i < $num_games; $i++): ?>
+	        		impresslist.addGame(new Game(<?php echo json_encode($games[$i]); ?>), true);
+        		<?php endfor; ?>
+
+        		impresslist.init();
+
+        	});
+        </script>
+
+	</head>
+	<body>
+		<?php include_once("navbar.html"); ?>
+
+		<!-- Spacer -->
+		<div class='container mycontainer' style='margin-top:50px;'>
+			&nbsp;
+		</div>
+
+
+
+		<!-- Home page -->
+		<div id='home-page' data-type-page='true' data-page='home'>
+
+
+
+			<div id='current-project' class='container mycontainer'>
+				<div class='filters' style='float:left;text-align:left;'>
+					<div class='filter-item'><b>Logged in as:</b> <span id='current-user-name'></span></div>
+					<div class='filter-item'><b>Current Project:</b> <span id='current-project-name'></span></div>
+				</div>
+				<div class='filters'>
+					<div class='filter-item'><b>Filters:</b></div>
+					<div class='filter-item'>Not recently contacted (1 week) - <input id='filter-recent-contact' type='checkbox'/></div>
+					<div class='filter-item'>High Priority - <input id='filter-high-priority' type='checkbox'/></div>
+					<div class='filter-item'>People I've contacted - <input id='filter-personal-contact' type='checkbox'/></div>
+					<div class='filter-item'>People with Email Addresses - <input id='filter-email-attached' type='checkbox'/></div>
+					<div class='filter-item'>People assigned to me - <input id='filter-assigned-self' type='checkbox'/></div>
+					<div class='filter-item'>People who are out-of-date - <input id='filter-show-outofdate' type='checkbox'/></div>
+				</div>
+			</div><br/>
+
+			<div class='container mycontainer'>
+				<ul class="nav nav-pills" role='tablist'>
+					<li role="presentation"><a href="#jobs-pill" aria-controls="jobs-pill" role="tab" data-toggle="pill">Jobs</a></li>
+					<li role="presentation" class="active"><a href="#people-pill" aria-controls="people-pill" role="tab" data-toggle="pill">People</a></li>
+					<li role="presentation"><a href="#publications-pill" aria-controls="publications-pill" role="tab" data-toggle="pill">Publications</a></li>
+					<li role="presentation"><a href="#youtubers-pill" aria-controls="youtubers-pill" role="tab" data-toggle="pill">YouTubers</a></li>
+					<li role="presentation"><a href="#chat-pill" aria-controls="chat-pill" role="tab" data-toggle="pill">Chat</a></li>
+				</ul><br/>
+
+				<div class="tab-content">
+					<div role="tabpanel" class="tab-pane active" id="people-pill">
+
+						<!-- People -->
+						<div id='people-container'>
+							<div class="panel panel-default">
+				  				<div class="panel-heading oa">
+
+
+				  					<span
+				  						id='nav-select-edit'
+				  						data-type='person'
+				  						title='Select People'
+				  						class='nav-table-topright-item glyphicon glyphicon-edit'
+				  						></span>
+
+				  					<span
+										id='nav-deselect-all'
+				  						data-type='person'
+				  						title='Deselect All'
+				  						class='nav-table-topright-item glyphicon glyphicon-unchecked checkbox-column'></span>
+				  					<span
+				  						id='nav-select-all'
+				  						data-type='person'
+				  						title='Select All'
+				  						class='nav-table-topright-item glyphicon glyphicon-check checkbox-column'
+				  						></span>
+
+				  					<span class='fl'>People</span>
+
+				  					<span id='people-count' class='fr'>(0)</span>
+				  				</div>
+								<table class='table table-striped sortable' >
+									<thead>
+										<tr>
+											<!-- <th data-defaultsort="desc">ID</th> -->
+											<th data-defaultsort="asc">Name</th>
+											<th>Priority</th>
+											<th>Twitter</th>
+											<th>Last Contacted</th>
+										</tr>
+									</thead>
+									<tbody id='people'>
+
+									</tbody>
+									<tfoot id='people-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+								</table>
+							</div>
+						</div>
+
+					</div>
+					<div role="tabpanel" class="tab-pane" id="publications-pill">
+
+						<!-- Publications / Sites -->
+						<div id='publications-container' >
+							<div class="panel panel-default">
+				  				<div class="panel-heading oa"><span class='fl'>Publications / Sites</span><span id='publication-count' class='fr'>(0)</span></div>
+								<table class='table table-striped sortable' >
+									<thead>
+										<tr>
+											<!-- <th data-defaultsort="asc">ID</th> -->
+											<th data-defaultsort="asc">Name</th>
+											<th>Priority</th>
+											<th>Url</th>
+											<th>Twitter</th>
+											<th>Last Posted On</th>
+										</tr>
+									</thead>
+									<tbody id='publications'>
+
+									</tbody>
+									<tfoot id='publications-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+								</table>
+							</div>
+						</div><br/>
+
+					</div>
+					<div role="tabpanel" class="tab-pane" id="youtubers-pill">
+
+
+
+						<!-- Youtubers -->
+						<div id='youtubers-container'>
+							<div class="panel panel-default">
+				  				<div class="panel-heading oa"><span class='fl'>YouTubers</span><span id='youtuber-count' class='fr'>(0)</span></div>
+								<table class='table table-striped sortable' >
+									<thead>
+										<tr>
+											<!-- <th data-defaultsort="asc">ID</th> -->
+											<th data-defaultsort="asc">Channel Name</th>
+											<th>Priority</th>
+											<th>Subscribers</th>
+											<th>Views</th>
+											<th>Twitter</th>
+											<th>Last Uploaded On</th>
+										</tr>
+									</thead>
+									<tbody id='youtubers'>
+
+									</tbody>
+									<tfoot id='youtubers-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+								</table>
+							</div>
+						</div><br/>
+
+
+					</div>
+
+					<div role="tabpanel" id='jobs-pill' class='tab-pane'>
+						<div id='jobs-container'>
+
+							<div class='row'>
+								<div class='col-sm-12'>
+									<div><b>Jobs:</b></div>
+									<p></p>
+									<textarea id='jobs-textarea' class='messages form-control' style='min-height:100px; overflow:scroll;'>Loading...</textarea>
+								</div>
+							</div>
+							<p></p>
+
+							<div class='row'>
+								<div class='col-sm-12'>
+									<button id='jobs-save-all' class='btn btn-primary' style='width:100%' disabled>Save</button>
+								</div>
+							</div>
+						</div>
+						<br/>
+
+					</div>
+
+					<div role="tabpanel" id='chat-pill' class='tab-pane'>
+						<div id='chat-container'>
+							<div id='chat'>
+								<div class='row'>
+									<div class='col-sm-12'>
+										<div><b>Online Users:</b> <span class='online-users'></span></div>
+										<p></p>
+										<div class='messages form-control' style='min-height:100px; overflow:scroll;'>
+										</div>
+									</div>
+								</div>
+								<p></p>
+
+								<div class='row'>
+									<div class='col-sm-10'>
+										<input type='text' class='form-control message'/>
+									</div>
+									<div class='col-sm-2'>
+										<button class='btn btn-primary submit-message' style='width:100%'>Chat</button>
+									</div>
+								</div>
+
+							</div>
+						</div>
+						<br/>
+
+					</div>
+
+				</div>
+			</div>
+
+
+
+
+
+
+
+		</div>
+
+		<!-- Admin panel -->
+		<div id='help-page' data-type-page='true' data-page='help'>
+			<div class='container mycontainer'>
+				<p><b>Help:</b></p>
+				<!-- <p>Everybody knows by now that you can't just carpet-bomb the entire games press with a single non-personalised email, especially so if you're not part of the infamous (and totally fictional) indie elite. That is why this tool was created, and why it doesn't include an "email all" feature.</p>
+
+
+
+				<p><b>Tips</b></p>-->
+				<p>Using this tool is hopefully pretty self-explanatory, so instead we decided it would be better of us to list a bunch of really useful articles that help you hone your story, and make you think a bit more about how you approach your PR and Marketing.</p><p> As below:</p>
+				<ul>
+					<li><a href='http://indiegames.com/2013/07/five_pr_tips_indies_really_nee.html' target='new'>Five PR tips indies really need</a> - Leigh Alexander, indiegames.com</li>
+					<li><a href='http://www.gamasutra.com/view/news/198381/How_to_talk_to_the_video_game_press_in_2013.php' target='new'>How to talk to the video game press in 2013</a> - Mike Rose, gamasutra.com</li>
+					<li><a href='http://forceofhab.it/blog/launch-meet-the-games-press/' target='new'>How to talk to games press</a> - Force Of Habit</li>
+					<li><a href='http://joostdevblog.blogspot.co.uk/2012/11/the-indie-marketing-plan.html' target='new'>The indie marketing plan</a> - Joost van Dongen</li>
+					<li><a href='http://gillen.cream.org/wordpress_html/assorted-essays/how-to-use-and-abuse-the-games-press-and-how-the-games-press-wants-to-use-and-abuse-you/' target='new'>How to use and abuse the gaming press and how the gaming press wants to use and abuse you</a> - Kieron Gillen</li>
+					<li>...and of course, <a href='http://www.pixelprospector.com/the-big-list-of-indie-game-marketing/'>The Big List of Indie Game Marketing</a> - Pixel Prospector</li>
+
+					<!--
+						Kids review sites lists
+						http://www.reviewfordev.com/list-of-review-sites-to-find-the-best-educational-apps-for-kids.php
+
+						tinyBuild big list of Twitch streamers.
+						http://tinybuild.com/twitch
+					-->
+
+
+
+				</ul>
+			</div>
+
+		</div>
+
+
+		<!-- Keys -->
+		<div id='keys-page' data-type-page='true' data-page='keys'>
+			<div class='container mycontainer'>
+				<p><b>Project Keys</b></p>
+
+				<!-- <div id='keys-loading-true'>
+					<div class="alert alert-info" role="alert">
+						<span class="glyphicon glyphicon-loading" aria-hidden="true"></span>
+						<span class="sr-only"></span>
+						Loading...
+					</div>
+				</div>
+				<div id='keys-loading-false'>
+				</div> -->
+
+				<?php
+					// keys
+					echo "<p><b>Steam:</b></p>";
+					echo "<p>Assigned: <span id='steam_keys_assigned_count'>loading...</span></p>";
+					echo "<p>Available: <span id='steam_keys_available_count'>loading...</span></p>";
+				?>
+				<hr/>
+				<p><b>Add Keys</b></p>
+				<div class='row'>
+					<div class='col-sm-2'>
+						<p><b>Platform:</b></p>
+					</div>
+					<div class='col-sm-10'>
+						<select id='keys-add-platform' class='form-control'>
+							<option value='---'>---</option>
+							<option value='steam'>Steam</option>
+							<!-- <option value='gamejolt'>Game Jolt</option> -->
+							<!-- <option value='ios'>iOS App Store</option> -->
+							<!-- <option value='mac'>Windows Store</option> -->
+							<!-- <option value='mac'>Mac App Store</option> -->
+							<!-- <option value='xboxone'>Xbox One</option> -->
+							<!-- <option value='ps4'>PS4</option> -->
+							<!-- <option value='wiiu'>Wii U</option> -->
+						</select>
+					</div>
+				</div>
+				<div class='row'>
+					<div class='col-sm-2'>
+						<p><b>Keys:</b></p>
+					</div>
+					<div class='col-sm-10'>
+						<textarea id='keys-add-textfield' class='form-control' style='margin-top:10px;min-height:100px; overflow:scroll;' placeholder="Enter one key per line..."></textarea>
+					</div>
+				</div>
+				<div class='row'>
+					<div class='col-sm-2'>
+						<p><b>Expiry:</b></p>
+					</div>
+					<div class='col-sm-10' style='margin-top:7px;'>
+						<p>
+							<label class='radio-inline'><input id='keys-radio-expiry-never' type='radio' name='keys-expiry-radio' value='never' checked/>Never</label>
+							<label class='radio-inline'><input id='keys-radio-expiry-time' type='radio' name='keys-expiry-radio' value='time'/>Time</label>
+						</p>
+
+
+						<div class='input-group date' id='keys-timepicker'>
+							<input id='keys-edit-timestamp' type='text' class='form-control' />
+							<span class='input-group-addon'>
+								<span class='glyphicon glyphicon-calendar'></span>
+							</span>
+						</div>
+
+					</div>
+				</div><br/>
+
+
+
+
+				<button id='keys-add-submit' class='btn btn-primary fr'>Add Keys</button>
+
+			</div>
+		</div>
+
+		<!-- Coverage -->
+		<div id='coverage-page' data-type-page='true' data-page='coverage'>
+			<div class='container mycontainer'>
+				<div class='filters' style='float:left;text-align:left;'>
+					<div class='filter-item'><b>Project Coverage</b></div>
+				</div>
+			</div><br/>
+
+			<div class='container mycontainer'>
+				<div id='coverage-loading-true'>
+					<div class="alert alert-info" role="alert">
+						<span class="glyphicon glyphicon-loading" aria-hidden="true"></span>
+						<span class="sr-only"></span>
+						Loading...
+					</div>
+				</div>
+				<div id='coverage-loading-false'>
+					<div id='coverage'>
+
+					</div>
+					<div id='coverage-footer'>
+						<div class="alert alert-info" role="alert">
+							<span class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
+							<span class="sr-only">Error:</span>
+							Dang! There is currently no coverage for your project.
+						</div>
+						<!--
+							<div class='row'>
+								<div class='col-sm-3 fr'>
+									<button class='btn btn-primary add-coverage' style='width:100%'>Add Coverage</button>
+								</div>
+							</div>
+						-->
+					</div>
+				</div>
+
+
+			</div>
+			<br/><br/>
+
+		</div>
+
+		<!-- Mailout -->
+		<div id='social-page' data-type-page='true' data-page='social'>
+			<div class='container mycontainer'>
+				<div id='social-homepage' class='row'>
+					<div class='col-sm-9'>
+						<p><b>Social Scheduler</b></p>
+
+						<ul class="nav nav-pills" role='tablist'>
+							<li role="presentation" class="active"><a href="#timeline-pill" aria-controls="timeline-pill" role="tab" data-toggle="pill">Timeline</a></li>
+							<li role="presentation"><a href="#uploads-pill" aria-controls="uploads-pill" role="tab" data-toggle="pill">Uploads</a></li>
+							<li role="presentation"><a href="#accounts-pill" aria-controls="accounts-pill" role="tab" data-toggle="pill">Accounts</a></li>
+						</ul>
+
+
+					</div>
+
+				</div>
+				<hr/>
+				<div class="tab-content">
+					<div role="tabpanel" id='timeline-pill' class='tab-pane active'>
+						<div class='row'>
+							<div class='col-sm-3'>
+								<p><b>Timeline</b></p>
+								<p>Schedule tweets &amp; retweets, Facebook posts/shares.</p>
+								<button id='social-timeline-add' class='btn btn-primary'>Add</button>
+							</div>
+							<div class='col-sm-9'>
+
+								<div id='social-timeline-loading'><p><b>Loading...</b></p></div>
+								<div id='social-timeline-none' style='display:none;'>No scheduled posts.</div>
+								<div id='social-timeline'></div>
+
+							</div>
+						</div>
+
+					</div>
+
+					<div role="tabpanel" id='uploads-pill' class='tab-pane'>
+						<div class='row'>
+							<div class='col-sm-12'>
+								<p><b>Upload</b></p>
+								<form id="social-uploadimage" action="" method="post" enctype="multipart/form-data">
+									<div id="selectImage">
+										<input id='input-id' type="file" name="file" id="file" class='file' data-show-preview="false" required />
+									</div>
+								</form>
+								<script type='text/javascript'>
+									$(document).ready(function (e) {
+										$("#input-id").fileinput();
+
+										$("#social-uploadimage").on('submit',(function(e) {
+											e.preventDefault();
+											console.log("submitted");
+											//$("#message").empty();
+											//$('#loading').show();
+											API.addSocialUpload(new FormData(this), function() {
+												$('#social-uploadimage').trigger("reset");
+											});
+										}));
+									});
+								</script>
+							</div>
+						</div><br/>
+
+						<div class='row'>
+							<div class='col-sm-12'>
+								<p><b>Uploads</b></p>
+								<p id='socialUploads-list-loading'>Loading...</p>
+								<p id='social-uploads-list-none' style='display:none;' >No uploads.</p>
+								<div id='social-uploads-list'></div>
+							</div>
+						</div>
+					</div>
+
+					<div role="tabpanel" id='accounts-pill' class='tab-pane'>
+						<div class='row'>
+
+							<div class='col-sm-9'>
+								<p><b>Accounts</b></p>
+								<div id='social-homepage-twitteracc-list'>
+								</div>
+								<div id='social-homepage-twitteracc-list-none' style='display:none;'>
+									<p>No linked accounts.</p>
+								</div>
+								<div id='social-homepage-twitteracc-list-loading'>
+									<p>Loading...</p>
+								</div>
+								<!-- <p><img src='images/email-twitter.png' /> @ashleygwinnell</p> -->
+								<!-- <p><img src='images/email-facebook.png' /> Force Of Habit (page)</p>-->
+							</div>
+							<div class='col-sm-3'>
+								<p><b>Add</b></p>
+								<?php
+									$connection = new Abraham\TwitterOAuth\TwitterOAuth($twitter_consumerKey, $twitter_consumerSecret);
+									$arr = $connection->oauth('oauth/request_token', array('oauth_callback' => 'oob'));
+
+									$authoriseurl = $connection->url('oauth/authorize', array('oauth_token' => $arr['oauth_token']) );
+								?>
+								<div id='social-addtwitteraccount-buttonpage'>
+									<a id='social-addtwitteraccount-link' href="<?php echo $authoriseurl; ?>" target='new'><button class='btn btn-primary'>Twitter Account</button></a>
+								</div>
+								<div id='social-addfacebookaccount-buttonpage' style='margin-top:10px'>
+									<a id='social-addfacebookaccount-link' href="api.php?endpoint=/social/account/facebook/add/" target='new'><button class='btn btn-primary'>Facebook Account</button></a>
+								</div>
+								<div id='social-addfacebookpage-buttonpage' style='margin-top:10px'>
+									<button id='social-addfacebookpage' data-toggle='modal' data-target='.addfacebookpage_modal' class='btn btn-primary'>Facebook Page</button>
+								</div>
+								<div id='social-addtwitteraccount-verifypage' style='display:none;'>
+									<p><b>Twitter Account</b></p>
+									<p>
+										<input id='social-addtwitteraccount-requesttoken' type='text' class='form-control' style='display:none;' value='<?php echo $arr["oauth_token"]; ?>'/>
+										<input id='social-addtwitteraccount-requesttokensecret' type='text' class='form-control' style='display:none;' value='<?php echo $arr["oauth_token_secret"]; ?>'/>
+
+										<input id='social-addtwitteraccount-pin' type='text' class='form-control' placeholder='Enter PIN...'/></p>
+									<p><button id='social-addtwitteraccount-submit' class='btn btn-primary'>Add</button> <button id='social-addtwitteraccount-cancel' class='btn btn-danger'>Cancel</button></p>
+								</div>
+
+
+
+							</div>
+
+
+						</div>
+					</div>
+				</div>
+				<br/>
+				<br/>
+			</div>
+		</div>
+
+		<!-- Mailout -->
+		<div id='mailout-page' data-type-page='true' data-page='mailout'>
+			<div class='container mycontainer'>
+				<div id='mailout-homepage' class='row'>
+					<div class='col-sm-3'>
+						<p><b>Simple Mailouts</b></p>
+						<p>Send an email out to multiple contacts.</p>
+						<button id='nav-add-simplemailout' class='btn btn-primary'>Add</button>
+					</div>
+					<div class='col-sm-9'>
+						<div class='panel panel-default'>
+							<div class="panel-heading oa">
+				  				<span class="fl"><b>Mailouts:</b></span>
+							</div>
+							<table class='table table-striped'>
+								<thead>
+									<tr>
+										<th>Name</th>
+										<th># Recipients</th>
+										<th>Open %</th>
+										<th>Status</th>
+									</tr>
+								</thead>
+								<tbody id='mailout-list-tbody'>
+
+								</tbody>
+								<tfoot id='mailout-list-footer'><tr><td colspan='4'>No mailouts.</td></tr></tfoot>
+							</table>
+						</div>
+					</div>
+				</div>
+				<div id='mailout-writepage' class='row'>
+					<div class='col-sm-3'>
+						<p><b>Simple Mailout</b></p>
+						<p>Tags available for mail merge features.</p>
+
+						<p><b>{{first_name}}</b><br/>Use contact's first name.</p><br/>
+
+						<p><b>{{steam_key}}</b><br/>Gives a new Steam key.</p>
+						<p><b>{{steam_keys}}</b><br/>List all Steam keys sent to this contact. Assigns a new one if never sent any.</p>
+
+
+					</div>
+					<div class='col-sm-9'>
+						<p><b>Name:</b></p>
+						<input id='mailout-name' class='form-control' name='mailout-name' placeholder='' /><br/>
+
+						<p><b>Subject line:</b></p>
+						<input id='mailout-subject' class='form-control' name='mailout-subject' placeholder='' /><br/>
+
+						<p><b>Basic Content:</b></p>
+						<ul class="nav nav-tabs">
+							<li class="active"><a data-toggle="tab" href="#mailout-write">Write</a></li>
+							<li><a id='mailout-preview-tab' data-toggle="tab" href="#mailout-preview">Preview</a></li>
+						</ul>
+
+						<div class="tab-content">
+							<div id="mailout-write" class="tab-pane fade in active">
+								<textarea id='mailout-content' class='messages form-control' style='margin-top:10px;margin-bottom:10px;min-height:100px; overflow:scroll;' placeholder="Use Markdown..."></textarea>
+							</div>
+							<div id="mailout-preview" class="tab-pane fade" style=''>
+
+							</div>
+						</div>
+
+						<p><b>Time:</b></p>
+						<p>
+							<input id='mailout-radio-time-asap' type='radio' name='mailout-time-radio' value='now' checked/> ASAP&nbsp;
+							<input id='mailout-radio-time-scheduled' type='radio' name='mailout-time-radio' value='later'/> Scheduled Time
+						</p>
+						<div class='input-group date' id='mailout-timepicker'>
+							<input id='mailout-edit-timestamp' type='text' class='form-control' />
+							<span class='input-group-addon'>
+								<span class='glyphicon glyphicon-calendar'></span>
+							</span>
+						</div><br/>
+
+
+
+						<div id='mailout-recipients' class='panel panel-default'>
+							<div class="panel-heading oa">
+				  				<span class="fl"><b>Recipients:</b></span>
+							</div>
+							<table class='table table-striped'>
+								<thead>
+									<tr>
+										<th>Name</th>
+										<th>Publication/Channel</th>
+										<th class='mailout-readflags'>Opened</th>
+									</tr>
+								</thead>
+								<tbody id='mailout-recipients-tbody'>
+
+								</tbody>
+							</table>
+						</div>
+						<div id='mailout-recipients-none'><p><button id='nav-mailout-addrecipients' class='btn btn-primary' data-nav-page='home'>Add Recipients</button></p></div>
+
+
+						<div>
+							<button id='mailout-writepage-save' class='btn btn-primary'>Save</button>
+							<button id='mailout-writepage-back' class='btn btn-default'>Close</button>
+							<!-- <button class='btn btn-info fr'>Send Test Email</button> -->
+							<div class='fr'>
+								<button id='mailout-writepage-send' class='btn btn-success'>Send</button>
+								<button id='mailout-writepage-cancelsend' class='btn btn-warning'>Cancel Send</button>
+								<button id='mailout-writepage-remove' class='btn btn-danger'>Remove</button>
+							</div>
+						</div><br/>
+					</div>
+				</div>
+
+
+
+			</div>
+			<br/>
+			<br/>
+			<br/>
+		</div>
+
+		<!-- Import tool -->
+		<div id='importtool-page' data-type-page='true' data-page='importtool'>
+			<div class='container mycontainer'>
+				<p><b>Import</b></p>
+				<div id='importtool-type-container'>
+					<!-- <input type='radio' name='importtype' value='imp'/> SQL (impress[] export) &nbsp; -->
+					<input id='importtool-type-csv' type='radio' name='importtool-type' value='csv'/> CSV (Comma separated values) &nbsp;
+					<input id='importtool-type-tsv' type='radio' name='importtool-type' value='tsv'/> TSV (Tab separated values)
+				</div>
+				<textarea id='importtool-maintext' class='messages form-control' style='margin-top:10px;margin-bottom:10px;min-height:100px; overflow:scroll;' placeholder="Paste contents here..."></textarea>
+				<p><b><i>Please specify input format:</i></b></p>
+
+				<select id='importtool-fieldselect' class='form-control' style='margin-bottom:10px;'>
+					<option value='---'>---</option>
+					<option value='person_firstname'>Person - First Name</option>
+					<option value='person_surname'>Person - Surname</option>
+					<option value='person_email'>Person - Email</option>
+					<option value='person_twitter'>Person - Twitter</option>
+					<option value='person_notes'>Person - Notes</option>
+					<option value='person_unknown'>Person - Unlisted field</option>
+					<option value='publication_name'>Publication - Name</option>
+					<option value='publication_website'>Publication - Website</option>
+					<option value='publication_rssfeed'>Publication - RSS URL</option>
+					<option value='publication_twitter'>Publication - Twitter</option>
+					<option value='publication_notes'>Publication - Notes</option>
+					<option value='publication_unknown'>Publication - Unlisted field</option>
+				</select>
+
+				<div id='importtool-order' style='margin-bottom:10px;'>
+
+				</div>
+
+				<!-- <select id='importtool-selectorder' multiple type="text" class='form-control' data-role="tagsinput">
+				</select> -->
+
+				<button id='importtool-submit' class='btn btn-primary'>Import</button>
+
+
+			</div>
+		</div>
+
+		<!-- Admin panel -->
+		<div id='admin-page' data-type-page='true' data-page='admin'>
+			<div id='current-project' class='container mycontainer'>
+				<div class='filters' style='float:left;text-align:left;'>
+					<div class='filter-item'><b>Admin Panel</b></div>
+				</div>
+			</div><br/>
+
+			<div class='container mycontainer'>
+				<div class="panel panel-default">
+					<div class="panel-heading">Users:</div>
+					<div class='pady padx'>
+						<div class='admin-users-list'>
+							<?php
+								echo "<p><i>TODO: User management, stats, etc.</i></p>";
+
+								foreach ($users as &$user) {
+									echo "<p>" . $user['id'] . ". <b style='color:" . $user['color'] . "'>" . $user['forename'] . "</b></p>";
+								}
+
+							?>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class='container mycontainer'>
+				<div class="panel panel-default">
+					<div class="panel-heading">Manual Tasks:</div>
+					<div class='pady padx'>
+						<a href='includes/tasks/refresh-email.php' target='new'><button class='btn btn-primary'>Refresh Emails</button></a>
+						<a href='includes/tasks/refresh-rss.php' target='new'><button class='btn btn-primary'>Refresh RSS Feeds</button></a>
+						<a href='includes/tasks/refresh-twitter.php' target='new'><button class='btn btn-primary'>Refresh Twitter Followers</button></a>
+
+
+					</div>
+				</div>
+			</div>
+
+			<div class='container mycontainer'>
+				<div class="panel panel-default">
+					<div class="panel-heading">Backup Settings:</div>
+					<div class='pady padx'>
+						<!-- <div class='form-group'>
+							<label>Email Backups:</label><input type='checkbox' class='form-control'/>
+						</div> -->
+						<!-- impresslist.config.system.backups.lastmanual -->
+						<p><i>TODO: Automatic email backups.</i></p>
+						<p><b>Last Backup On: </b><span data-last-backup='true'></p>
+						<p><a href='/api.php?endpoint=/backup/'><button id='save-backup-submit' type='submit' class='btn btn-primary'>Save Backup Now!</button></a></p>
+						<p><a href='/api.php?endpoint=/backup-sql/'><button id='save-backup-submit' type='submit' class='btn btn-primary'>Save Backup (SQL) Now!</button></a></p>
+						<p><a href='includes/tasks/backup-email.php' target='new'><button class='btn btn-primary'>Email Backup Now!</button></a></p>
+
+					</div>
+				</div>
+			</div>
+
+			<div class='container mycontainer'>
+				<div class="panel panel-default">
+					<div class="panel-heading">SQL Query:</div>
+					<div class='pady padx'>
+						<form role='form' onsubmit='return false;'>
+							<div class='form-group'>
+								<p>You must use double-quotes.</p>
+								<textarea id='sql-query-text' class='form-control' style='min-height:75px;'></textarea>
+							</div>
+						</form>
+						<button id='sql-query-submit' type='submit' class='btn btn-danger'>Live Dangerously</button>
+					</div>
+				</div>
+			</div>
+
+		</div>
+
+		<div id='modals'></div>
+
+		<footer class="footer">
+			<div class="container mywidecontainer">
+				<p class="text-muted">&copy; Made with love by <a href='http://forceofhab.it/'>Force Of Habit</a></p>
+			</div>
+		</footer>
+	</body>
+</html>

@@ -1,4 +1,7 @@
 {
+    "config": {
+        "vendor-dir": "backend/vendor"
+    },
     "require": {
         "erusev/parsedown": "1.6.0",
         "abraham/twitteroauth": "0.6.2",

@@ -1,0 +1,77 @@
+<!-- Keys -->
+		<div id='keys-page' data-type-page='true' data-page='keys'>
+			<div class='container mycontainer'>
+				<p><b>Project Keys</b></p>
+
+				<!-- <div id='keys-loading-true'>
+					<div class="alert alert-info" role="alert">
+						<span class="glyphicon glyphicon-loading" aria-hidden="true"></span>
+						<span class="sr-only"></span>
+						Loading...
+					</div>
+				</div>
+				<div id='keys-loading-false'>
+				</div> -->
+
+				<?php
+					// keys
+					echo "<p><b>Steam:</b></p>";
+					echo "<p>Assigned: <span id='steam_keys_assigned_count'>loading...</span></p>";
+					echo "<p>Available: <span id='steam_keys_available_count'>loading...</span></p>";
+				?>
+				<hr/>
+				<p><b>Add Keys</b></p>
+				<div class='row'>
+					<div class='col-sm-2'>
+						<p><b>Platform:</b></p>
+					</div>
+					<div class='col-sm-10'>
+						<select id='keys-add-platform' class='form-control'>
+							<option value='---'>---</option>
+							<option value='steam'>Steam</option>
+							<!-- <option value='gamejolt'>Game Jolt</option> -->
+							<!-- <option value='ios'>iOS App Store</option> -->
+							<!-- <option value='mac'>Windows Store</option> -->
+							<!-- <option value='mac'>Mac App Store</option> -->
+							<!-- <option value='xboxone'>Xbox One</option> -->
+							<!-- <option value='ps4'>PS4</option> -->
+							<!-- <option value='wiiu'>Wii U</option> -->
+						</select>
+					</div>
+				</div>
+				<div class='row'>
+					<div class='col-sm-2'>
+						<p><b>Keys:</b></p>
+					</div>
+					<div class='col-sm-10'>
+						<textarea id='keys-add-textfield' class='form-control' style='margin-top:10px;min-height:100px; overflow:scroll;' placeholder="Enter one key per line..."></textarea>
+					</div>
+				</div>
+				<div class='row'>
+					<div class='col-sm-2'>
+						<p><b>Expiry:</b></p>
+					</div>
+					<div class='col-sm-10' style='margin-top:7px;'>
+						<p>
+							<label class='radio-inline'><input id='keys-radio-expiry-never' type='radio' name='keys-expiry-radio' value='never' checked/>Never</label>
+							<label class='radio-inline'><input id='keys-radio-expiry-time' type='radio' name='keys-expiry-radio' value='time'/>Time</label>
+						</p>
+
+
+						<div class='input-group date' id='keys-timepicker'>
+							<input id='keys-edit-timestamp' type='text' class='form-control' />
+							<span class='input-group-addon'>
+								<span class='glyphicon glyphicon-calendar'></span>
+							</span>
+						</div>
+
+					</div>
+				</div><br/>
+
+
+
+
+				<button id='keys-add-submit' class='btn btn-primary fr'>Add Keys</button>
+
+			</div>
+		</div>

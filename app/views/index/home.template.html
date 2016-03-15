@@ -1,0 +1,198 @@
+<!-- Home page -->
+<div id='home-page' ui-sref-active='home'>
+
+	<div id='current-project' class='container mycontainer'>
+		<div class='filters' style='float:left;text-align:left;'>
+			<div class='filter-item'><b>Logged in as:</b> {{App.user.fullname()}} </div>
+			<div class='filter-item'><b>Current Project:</b> {{App.user.currentGame}}<span id='current-project-name'></span></div>
+		</div>
+		<impress-filters />
+	</div><br/>
+
+	<div class='container mycontainer'>
+		<ul class="nav nav-pills" role='tablist'>
+			<li role="presentation" ng-class="{active: App.part(1) == 'jobs'}"><a ui-sref='home.jobs'>Jobs</a></li>
+			<li role="presentation" ng-class="{active: (App.part(1) == 'people' || App.part(1) == '')}"><a ui-sref='home.people'>People</a></li>
+			<li role="presentation" ng-class="{active: App.part(1) == 'publications'}"><a ui-sref='home.publications' >Publications</a></li>
+			<li role="presentation"  ng-class="{active: App.part(1) == 'youtubers'}"><a ui-sref='home.youtubers'>YouTubers</a></li>
+			<li role="presentation"  ng-class="{active: App.part(1) == 'chat'}"><a ui-sref='home.chat'>Chat</a></li>
+		</ul><br/>
+
+		<div class="tab-content">
+			<div role="tabpanel" class="tab-pane active" id="people-pill" ng-show="(App.part(0) == 'home' && App.part(1) == '') || App.part(1) == 'people'">
+
+				<!-- People -->
+				<div id='people-container'>
+					<div class="panel panel-default">
+		  				<div class="panel-heading oa">
+
+		  					<span
+		  						id='nav-select-edit'
+		  						data-type='person'
+		  						title='Select People'
+		  						class='nav-table-topright-item glyphicon glyphicon-edit'
+		  						></span>
+
+		  					<span
+								id='nav-deselect-all'
+		  						data-type='person'
+		  						title='Deselect All'
+		  						class='nav-table-topright-item glyphicon glyphicon-unchecked checkbox-column'></span>
+		  					<span
+		  						id='nav-select-all'
+		  						data-type='person'
+		  						title='Select All'
+		  						class='nav-table-topright-item glyphicon glyphicon-check checkbox-column'
+		  						></span>
+
+		  					<span class='fl'>People</span>
+
+		  					<span id='people-count' class='fr'>(0)</span>
+		  				</div>
+						<table class='table table-striped sortable' >
+							<thead>
+								<tr>
+									<!-- <th data-defaultsort="desc">ID</th> -->
+									<th data-defaultsort="asc">Name</th>
+									<th>Priority</th>
+									<th>Twitter</th>
+									<th>Last Contacted</th>
+								</tr>
+							</thead>
+							<tbody id='people' >
+
+								<tr impress-person-row person='person' ng-repeat="(id, person) in filteredPeople = (App.people | personArrayFilter)" ui-sref='home.people.person({id:person.id})' />
+
+							</tbody>
+							<tfoot id='people-footer' ng-show='filteredPeople.length == 0'><tr><td colspan='4'>No results.</td></tr></tfoot>
+						</table>
+					</div>
+				</div>
+
+			</div>
+			<div role="tabpanel" class="tab-pane" id="publications-pill" ng-show="App.part(1) == 'publications'">
+
+				<!-- Publications / Sites -->
+				<div id='publications-container' >
+					<div class="panel panel-default">
+		  				<div class="panel-heading oa"><span class='fl'>Publications / Sites</span><span id='publication-count' class='fr'>(0)</span></div>
+						<table class='table table-striped sortable' >
+							<thead>
+								<tr>
+									<!-- <th data-defaultsort="asc">ID</th> -->
+									<th data-defaultsort="asc">Name</th>
+									<th>Priority</th>
+									<th>Url</th>
+									<th>Twitter</th>
+									<th>Last Posted On</th>
+								</tr>
+							</thead>
+							<tbody id='publications'>
+
+								<tr ng-repeat='publication in filteredPublications = (App.publications | publicationArrayFilter)' ng-click="publication.open()" data-publication-tablerow='true' data-publication-id='{{publication.id}}' class='table-list' data-toggle='modal' data-target='.publication_modal'>
+									<!-- <td data-publication-id='{{publication.id}}' data-field='id' data-value='{{publication.id}}' >{{publication.id}}</td> -->
+									<td data-publication-id='{{publication.id}}' data-field='name' 				data-value='{{publication.name}}' >{{publication.name}}</td>
+									<td data-publication-id='{{publication.id}}' data-field='priority' 			data-value='{{publication.priority()}}'>{{publication.priority() | priority }}</td>
+									<td data-publication-id='{{publication.id}}' data-field='url' 				data-value='{{publication.url}}'><a href='{{publication.url}}' target='new'>{{publication.url}}</a></td>
+									<td data-publication-id='{{publication.id}}' data-field='twitter_followers' data-value='{{publication.twitter_followers | number}}'><a href='http://twitter.com/{{publication.twitter}}' target='new'>{{publication.twitter_followers | number}}</a></td>
+									<td data-publication-id='{{publication.id}}' data-field='lastpostedon' 		data-value='{{publication.lastpostedon}}'>{{publication.lastpostedon | relativetime}}</td>
+								</tr>
+
+							</tbody>
+							<tfoot ng-show='filteredPublications.length === 0' id='publications-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+						</table>
+					</div>
+				</div><br/>
+
+			</div>
+			<div role="tabpanel" class="tab-pane" id="youtubers-pill">
+
+
+
+				<!-- Youtubers -->
+				<div id='youtubers-container'>
+					<div class="panel panel-default">
+		  				<div class="panel-heading oa"><span class='fl'>YouTubers</span><span id='youtuber-count' class='fr'>(0)</span></div>
+						<table class='table table-striped sortable' >
+							<thead>
+								<tr>
+									<!-- <th data-defaultsort="asc">ID</th> -->
+									<th data-defaultsort="asc">Channel Name</th>
+									<th>Priority</th>
+									<th>Subscribers</th>
+									<th>Views</th>
+									<th>Twitter</th>
+									<th>Last Uploaded On</th>
+								</tr>
+							</thead>
+							<tbody id='youtubers'>
+
+							</tbody>
+							<tfoot id='youtubers-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+						</table>
+					</div>
+				</div><br/>
+
+
+			</div>
+
+			<div role="tabpanel" id='jobs-pill' class='tab-pane'>
+				<div id='jobs-container'>
+
+					<div class='row'>
+						<div class='col-sm-12'>
+							<div><b>Jobs:</b></div>
+							<p></p>
+							<textarea id='jobs-textarea' class='messages form-control' style='min-height:100px; overflow:scroll;'>Loading...</textarea>
+						</div>
+					</div>
+					<p></p>
+
+					<div class='row'>
+						<div class='col-sm-12'>
+							<button id='jobs-save-all' class='btn btn-primary' style='width:100%' disabled>Save</button>
+						</div>
+					</div>
+				</div>
+				<br/>
+
+			</div>
+
+			<div role="tabpanel" id='chat-pill' class='tab-pane'>
+				<div id='chat-container'>
+					<div id='chat'>
+						<div class='row'>
+							<div class='col-sm-12'>
+								<div><b>Online Users:</b> <span class='online-users'></span></div>
+								<p></p>
+								<div class='messages form-control' style='min-height:100px; overflow:scroll;'>
+								</div>
+							</div>
+						</div>
+						<p></p>
+
+						<div class='row'>
+							<div class='col-sm-10'>
+								<input type='text' class='form-control message'/>
+							</div>
+							<div class='col-sm-2'>
+								<button class='btn btn-primary submit-message' style='width:100%'>Chat</button>
+							</div>
+						</div>
+
+					</div>
+				</div>
+				<br/>
+
+			</div>
+
+		</div>
+	</div>
+
+
+
+
+
+
+
+</div>

@@ -1,0 +1,129 @@
+<!-- Social -->
+		<div id='social-page' data-type-page='true' data-page='social'>
+			<div class='container mycontainer'>
+				<div id='social-homepage' class='row'>
+					<div class='col-sm-9'>
+						<p><b>Social Scheduler</b></p>
+
+						<ul class="nav nav-pills" role='tablist'>
+							<li role="presentation" class="active"><a href="#timeline-pill" aria-controls="timeline-pill" role="tab" data-toggle="pill">Timeline</a></li>
+							<li role="presentation"><a href="#uploads-pill" aria-controls="uploads-pill" role="tab" data-toggle="pill">Uploads</a></li>
+							<li role="presentation"><a href="#accounts-pill" aria-controls="accounts-pill" role="tab" data-toggle="pill">Accounts</a></li>
+						</ul>
+
+
+					</div>
+
+				</div>
+				<hr/>
+				<div class="tab-content">
+					<div role="tabpanel" id='timeline-pill' class='tab-pane active'>
+						<div class='row'>
+							<div class='col-sm-3'>
+								<p><b>Timeline</b></p>
+								<p>Schedule tweets &amp; retweets, Facebook posts/shares.</p>
+								<button id='social-timeline-add' class='btn btn-primary'>Add</button>
+							</div>
+							<div class='col-sm-9'>
+
+								<div id='social-timeline-loading'><p><b>Loading...</b></p></div>
+								<div id='social-timeline-none' style='display:none;'>No scheduled posts.</div>
+								<div id='social-timeline'></div>
+
+							</div>
+						</div>
+
+					</div>
+
+					<div role="tabpanel" id='uploads-pill' class='tab-pane'>
+						<div class='row'>
+							<div class='col-sm-12'>
+								<p><b>Upload</b></p>
+								<form id="social-uploadimage" action="" method="post" enctype="multipart/form-data">
+									<div id="selectImage">
+										<input id='input-id' type="file" name="file" id="file" class='file' data-show-preview="false" required />
+									</div>
+								</form>
+								<script type='text/javascript'>
+									$(document).ready(function (e) {
+										$("#input-id").fileinput();
+
+										$("#social-uploadimage").on('submit',(function(e) {
+											e.preventDefault();
+											console.log("submitted");
+											//$("#message").empty();
+											//$('#loading').show();
+											API.addSocialUpload(new FormData(this), function() {
+												$('#social-uploadimage').trigger("reset");
+											});
+										}));
+									});
+								</script>
+							</div>
+						</div><br/>
+
+						<div class='row'>
+							<div class='col-sm-12'>
+								<p><b>Uploads</b></p>
+								<p id='socialUploads-list-loading'>Loading...</p>
+								<p id='social-uploads-list-none' style='display:none;' >No uploads.</p>
+								<div id='social-uploads-list'></div>
+							</div>
+						</div>
+					</div>
+
+					<div role="tabpanel" id='accounts-pill' class='tab-pane'>
+						<div class='row'>
+
+							<div class='col-sm-9'>
+								<p><b>Accounts</b></p>
+								<div id='social-homepage-twitteracc-list'>
+								</div>
+								<div id='social-homepage-twitteracc-list-none' style='display:none;'>
+									<p>No linked accounts.</p>
+								</div>
+								<div id='social-homepage-twitteracc-list-loading'>
+									<p>Loading...</p>
+								</div>
+								<!-- <p><img src='images/email-twitter.png' /> @ashleygwinnell</p> -->
+								<!-- <p><img src='images/email-facebook.png' /> Force Of Habit (page)</p>-->
+							</div>
+							<div class='col-sm-3'>
+								<p><b>Add</b></p>
+								<?php
+									$connection = new Abraham\TwitterOAuth\TwitterOAuth($twitter_consumerKey, $twitter_consumerSecret);
+									$arr = $connection->oauth('oauth/request_token', array('oauth_callback' => 'oob'));
+
+									$authoriseurl = $connection->url('oauth/authorize', array('oauth_token' => $arr['oauth_token']) );
+								?>
+								<div id='social-addtwitteraccount-buttonpage'>
+									<a id='social-addtwitteraccount-link' href="<?php echo $authoriseurl; ?>" target='new'><button class='btn btn-primary'>Twitter Account</button></a>
+								</div>
+								<div id='social-addfacebookaccount-buttonpage' style='margin-top:10px'>
+									<a id='social-addfacebookaccount-link' href="api.php?endpoint=/social/account/facebook/add/" target='new'><button class='btn btn-primary'>Facebook Account</button></a>
+								</div>
+								<div id='social-addfacebookpage-buttonpage' style='margin-top:10px'>
+									<button id='social-addfacebookpage' data-toggle='modal' data-target='.addfacebookpage_modal' class='btn btn-primary'>Facebook Page</button>
+								</div>
+								<div id='social-addtwitteraccount-verifypage' style='display:none;'>
+									<p><b>Twitter Account</b></p>
+									<p>
+										<input id='social-addtwitteraccount-requesttoken' type='text' class='form-control' style='display:none;' value='<?php echo $arr["oauth_token"]; ?>'/>
+										<input id='social-addtwitteraccount-requesttokensecret' type='text' class='form-control' style='display:none;' value='<?php echo $arr["oauth_token_secret"]; ?>'/>
+
+										<input id='social-addtwitteraccount-pin' type='text' class='form-control' placeholder='Enter PIN...'/></p>
+									<p><button id='social-addtwitteraccount-submit' class='btn btn-primary'>Add</button> <button id='social-addtwitteraccount-cancel' class='btn btn-danger'>Cancel</button></p>
+								</div>
+
+
+
+							</div>
+
+
+						</div>
+					</div>
+				</div>
+				<br/>
+				<br/>
+			</div>
+		</div>

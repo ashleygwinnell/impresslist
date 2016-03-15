@@ -1,0 +1,120 @@
+
+		<!-- Mailout -->
+		<div id='mailout-page' data-type-page='true' data-page='mailout' >
+			<div class='container mycontainer'>
+				<div id='mailout-homepage' class='row'>
+					<div class='col-sm-3'>
+						<p><b>Simple Mailouts</b></p>
+						<p>Send an email out to multiple contacts.</p>
+						<button id='nav-add-simplemailout' class='btn btn-primary'>Add</button>
+					</div>
+					<div class='col-sm-9'>
+						<div class='panel panel-default'>
+							<div class="panel-heading oa">
+				  				<span class="fl"><b>Mailouts:</b></span>
+							</div>
+							<table class='table table-striped'>
+								<thead>
+									<tr>
+										<th>Name</th>
+										<th># Recipients</th>
+										<th>Open %</th>
+										<th>Status</th>
+									</tr>
+								</thead>
+								<tbody id='mailout-list-tbody'>
+
+								</tbody>
+								<tfoot id='mailout-list-footer'><tr><td colspan='4'>No mailouts.</td></tr></tfoot>
+							</table>
+						</div>
+					</div>
+				</div>
+				<div id='mailout-writepage' class='row'>
+					<div class='col-sm-3'>
+						<p><b>Simple Mailout</b></p>
+						<p>Tags available for mail merge features.</p>
+
+						<p><b>{{first_name}}</b><br/>Use contact's first name.</p><br/>
+
+						<p><b>{{steam_key}}</b><br/>Gives a new Steam key.</p>
+						<p><b>{{steam_keys}}</b><br/>List all Steam keys sent to this contact. Assigns a new one if never sent any.</p>
+
+
+					</div>
+					<div class='col-sm-9'>
+						<p><b>Name:</b></p>
+						<input id='mailout-name' class='form-control' name='mailout-name' placeholder='' /><br/>
+
+						<p><b>Subject line:</b></p>
+						<input id='mailout-subject' class='form-control' name='mailout-subject' placeholder='' /><br/>
+
+						<p><b>Basic Content:</b></p>
+						<ul class="nav nav-tabs">
+							<li class="active"><a data-toggle="tab" href="#mailout-write">Write</a></li>
+							<li><a id='mailout-preview-tab' data-toggle="tab" href="#mailout-preview">Preview</a></li>
+						</ul>
+
+						<div class="tab-content">
+							<div id="mailout-write" class="tab-pane fade in active">
+								<textarea id='mailout-content' class='messages form-control' style='margin-top:10px;margin-bottom:10px;min-height:100px; overflow:scroll;' placeholder="Use Markdown..."></textarea>
+							</div>
+							<div id="mailout-preview" class="tab-pane fade" style=''>
+
+							</div>
+						</div>
+
+						<p><b>Time:</b></p>
+						<p>
+							<input id='mailout-radio-time-asap' type='radio' name='mailout-time-radio' value='now' checked/> ASAP&nbsp;
+							<input id='mailout-radio-time-scheduled' type='radio' name='mailout-time-radio' value='later'/> Scheduled Time
+						</p>
+						<div class='input-group date' id='mailout-timepicker'>
+							<input id='mailout-edit-timestamp' type='text' class='form-control' />
+							<span class='input-group-addon'>
+								<span class='glyphicon glyphicon-calendar'></span>
+							</span>
+						</div><br/>
+
+
+
+						<div id='mailout-recipients' class='panel panel-default'>
+							<div class="panel-heading oa">
+				  				<span class="fl"><b>Recipients:</b></span>
+							</div>
+							<table class='table table-striped'>
+								<thead>
+									<tr>
+										<th>Name</th>
+										<th>Publication/Channel</th>
+										<th class='mailout-readflags'>Opened</th>
+									</tr>
+								</thead>
+								<tbody id='mailout-recipients-tbody'>
+
+								</tbody>
+							</table>
+						</div>
+						<div id='mailout-recipients-none'><p><button id='nav-mailout-addrecipients' class='btn btn-primary' data-nav-page='home'>Add Recipients</button></p></div>
+
+
+						<div>
+							<button id='mailout-writepage-save' class='btn btn-primary'>Save</button>
+							<button id='mailout-writepage-back' class='btn btn-default'>Close</button>
+							<!-- <button class='btn btn-info fr'>Send Test Email</button> -->
+							<div class='fr'>
+								<button id='mailout-writepage-send' class='btn btn-success'>Send</button>
+								<button id='mailout-writepage-cancelsend' class='btn btn-warning'>Cancel Send</button>
+								<button id='mailout-writepage-remove' class='btn btn-danger'>Remove</button>
+							</div>
+						</div><br/>
+					</div>
+				</div>
+
+
+
+			</div>
+			<br/>
+			<br/>
+			<br/>
+		</div>

@@ -1,0 +1,364 @@
+<div class='modal fade person_modal' tabindex='-1' role='dialog' ng-controller='PersonModalController'>
+	<div class='modal-dialog'>
+		<div class='modal-content' style='padding:5px;'>
+
+			<div style='min-height:100px;padding:20px;'>
+				<div style='min-height:45px;'>
+					<h3 class='fl'>{{ person.fullname() }}</h3>
+
+						<div class='fr'>
+						<!-- Single button -->
+						<div class='btn-group'>
+							<button id='person-email-default' type='button' class='btn btn-default'>
+								<span class='glyphicon glyphicon-send glyphicon-align-left' aria-hidden='true'></span> Email
+							</button>
+							<button type='button' class='btn btn-default dropdown-toggle' data-toggle='dropdown' aria-expanded='false'>
+								<span class='caret'></span>
+								<span class='sr-only'>Toggle Dropdown</span>
+							</button>
+							<ul class='dropdown-menu' role='menu' style='position:absolute;z-index:999;'>
+
+								<!--
+								var emailSubject = ""; //Press List test";
+								var emailBody = ""; //"Press List test body. Include default text here or something.";
+								var emailBCC = impresslist.config.system.email;
+								var emailGmailIndex = impresslist.config.user.gmail;
+
+								var emails = [];
+								emails.push( {"type": "Personal", "email": this.field('email')} );
+								for(var i = 0; i < impresslist.personPublications.length; ++i) {
+									if (impresslist.personPublications[i].field('person') ==  this.id) {
+										emails.push( {"type": impresslist.findPublicationById(impresslist.personPublications[i].field('publication')).field('name'), "email": impresslist.personPublications[i].field('email')} );
+									}
+								} -->
+
+
+								<div ng-repeat="email in emails | emailArrayFilter">
+									<li><a href='{{emailGmailLink(email)}}' target='new'>{{email.type}} (Gmail)</a></li>
+									<li><a href='{{emailClientLink(email)}}'>{{email.type}} (Client)</a></li>
+								</div>
+
+
+
+							</ul>
+						</div>
+					</div>
+				</div>
+				<div id='person_tabs_container' role='tabpanel'>
+					<ul id="person_tabs" class="nav nav-tabs" role="tablist">
+						<li role="presentation" class="active"><a role="tab" href="#" data-tab="person_profile" data-toggle="tab">Profile</a></li>
+						<li role="presentation"><a role="tab" href="#" data-tab="person_publications" data-toggle="tab">Publications</a></li>
+						<li role="presentation"><a role="tab" href="#" data-tab="person_youtubeChannels" data-toggle="tab">Youtube Channels</a></li>
+						<li role="presentation"><a role="tab" href="#" data-tab="person_messages" data-toggle="tab">Messages</a></li>
+					</ul>
+
+					<div class="tab-content">
+
+						<!-- Personal profile panel -->
+						<div role='tabpanel' class='tab-pane active pady' data-tab='person_profile'>
+							<form role='form' onsubmit='return false;'>
+								<div class='row'>
+									<div class='form-group col-md-3'>
+										<label for='name'>First Name:&nbsp; </label>
+										<input class='form-control' type='text' ng-model='person.firstname' />
+									</div>
+									<div class='form-group col-md-3'>
+										<label for='name'>Surname/s:&nbsp; </label>
+										<input class='form-control' type='text' ng-model='person.surnames' />
+									</div>
+									<div class='form-group col-md-3'>
+										<label for='email'>Assignment:</label>
+
+										<select class='form-control' ng-init='0' ng-model='person.assignment' ng-change="person.saveUserAssignment()">
+											<option ng-repeat="user in App.users" value='{{user.id}}' ng-selected="person.assigned==user.id">
+												{{ user.fullname() }}
+											</option>
+											<option ng-selected="person.assignment==0" value='0'>N/A</option>
+										</select>
+
+									</div>
+									<div class='form-group col-md-3'>
+										<label for='email'>Priority:</label>
+
+										<select class='form-control' ng-model='person.priority' ng-change='person.savePriority()' >
+											<option value='3' ng-selected="person.priority()==3">High</option>
+											<option value='2' ng-selected="person.priority()==2">Medium</option>
+											<option value='1' ng-selected="person.priority()==1">Low</option>
+											<option value='0' ng-selected="person.priority()==0">N/A</option>
+										</select>
+									</div>
+								</div>
+								<div class='form-group'>
+									<label for='email'>Email:&nbsp; </label>
+									<input class='form-control' type='text' ng-model='person.email' />
+								</div>
+								<div class='form-group'>
+									<label for='email'>Twitter Username:&nbsp; </label>
+									<input class='form-control' type='text' ng-model='person.twitter' />
+								</div>
+								<div class='form-group'>
+									<label for='email'>Notes:&nbsp; </label>
+									<textarea class='form-control' ng-model='person.notes' style='height:100px;'></textarea>
+								</div>
+								<div class='form-group'>
+									<label class='checkbox-inline'><input type='checkbox' ng-checked="person.outofdate==1"><strong>Out of date?</strong></label>
+								</div>
+								<div class='fl'>
+									<button ng-click='person.save()' type='submit' class='btn btn-primary'>Save</button>
+									&nbsp;<button ng-click='person.close()' type='submit' class='btn btn-default'>Close</button>
+								</div>
+								<div class='fr'>
+									<button ng-click='API.removePerson(person)' type='submit' class='btn btn-danger'>Remove</button>
+								</div>
+							</form>
+						</div>
+
+
+						<!-- Publications panel -->
+						<div role='tabpanel' class='tab-pane pady' data-tab='person_publications'>
+							<div class='form-group'>
+								<label for='add-publication'>Add:&nbsp;</label>
+								<input id='add-publication-search' type='text' class='form-control' placeholder='Search' />
+							</div>
+							<div id='add-publication-results-container' style='display:none;'>
+								<table class='table table-striped'>
+									<thead>
+										<th>Name</th>
+										<th>URL</th>
+									</thead>
+									<tbody id='add-publication-results'>
+									</tbody>
+								</table>
+							</div>
+							<div id='person-publications'>
+
+							</div>
+						</div>
+
+
+ 						<!-- Youtube Channels panel -->
+						<div role='tabpanel' class='tab-pane pady' data-tab='person_youtubeChannels'>
+							<div class='form-group'>
+								<label for='add-youtubechannel'>Add:&nbsp;</label>
+								<input id='add-youtubechannel-search' type='text' class='form-control' placeholder='Search' />
+							</div>
+							<div id='add-youtubechannel-results-container' style='display:none;'>
+								<table class='table table-striped'>
+									<thead>
+										<th>Name</th>
+										<th>Subscribers</th>
+									</thead>
+									<tbody id='add-youtubechannel-results'>
+									</tbody>
+								</table>
+							</div>
+							<div id='person-youtubechannels'>
+
+							</div>
+						</div>
+
+ 				<!--
+ 				var messages = [];
+ 				for(var i = 0; i < impresslist.emails.length; ++i) {
+ 					if (impresslist.emails[i].field('person_id') == this.id) {
+ 						messages.push( impresslist.emails[i] );
+ 					}
+ 				}
+ 				var lastContactBy = "N/A";
+ 				if (messages.length > 0) {
+ 					lastContactBy = impresslist.findUserById(messages[0].field('user_id')).field('forename');
+ 				}
+ 				-->
+
+				<!-- Messages Panel -->
+						<div role='tabpanel' class='tab-pane pady' data-tab='person_messages' >
+								<!-- <div class='pady'><b>Last contacted by:</b> " + lastContactBy + "</div> -->
+								<div id='all-messages'>
+									<div class='pady'><b>All Messages</b></div>
+									<table class='table table-striped sortable'>
+										<thead>
+											<th>Subject</th>
+											<th>Date</th>
+											<th>From</th>
+										</thead>
+										<tbody>
+
+											<tr ng-repeat="message in messages" data-open-field='email' data-email-id='{{message.id}}' style='cursor:pointer;'>
+
+												<td>{{message.subject}}</td>
+												<td title='{{ message.utime | utcstring }}'>{{ message.utime | relativetime }}</td>
+												<td>{{ message.user_forename}}</td>
+											</tr>
+
+											<tr ng-show='messages.length == 0'>
+												<td colspan='3'>No Messages</td>
+											</tr>
+
+										</tbody>
+									</table>
+								</div>
+								<div id='person-view-email' style='display:none;'>
+									<div class='pady'><b><a id='person-view-all-messages'>All Messages</a> </b> >&nbsp;<span data-view-email-field='subject'></span></div>
+									<table class='table table-striped sortable'>
+										<tbody>
+											<tr>
+												<th>Date:</th>
+												<td data-view-email-field='date'></td>
+											</tr>
+											<tr>
+												<th>From:</th>
+												<td data-view-email-field='from'></td>
+											</tr>
+											<tr>
+												<th>To:</th>
+												<td data-view-email-field='to'></td>
+											</tr>
+											<tr>
+												<td data-view-email-field='content' colspan='2'></td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+
+
+
+						</div>
+					</div>
+
+
+				</div>
+			</div>
+		</div>
+	<!--
+		// Email buttons
+		$('#person-email-default').click(function(e) {
+			e.preventDefault();
+			window.open(emailGmailLink);
+		});
+
+		// Add publication binds
+		$("#add-publication-search").keyup(function() {
+			var searchfield = $(this);
+			var text = $(this).val().toLowerCase();
+			if (text.length == 0) {
+				$("#add-publication-results").html("");
+				$('#add-publication-results-container').hide();
+				return;
+			}
+			var html = "";
+			for(var i = 0; i < impresslist.publications.length; i++) {
+				var include = impresslist.publications[i].search(text);
+				if (include) {
+					html += "	<tr class='table-list' data-publication-id='" + impresslist.publications[i].id + "' data-add-publication-result='true' >\
+									<td>" + impresslist.publications[i].name + "</td> \
+									<td>" + impresslist.publications[i].field('url') + "</td> \
+								</tr>";
+				}
+			}
+			if (html.length == 0) {
+				html += "	<tr>\
+								<td colspan='2'>No Results</td> \
+							</tr>";
+			}
+			$("#add-publication-results").html(html);
+			$('#add-publication-results-container').show();
+
+			$("[data-add-publication-result='true']").click(function() {
+				var pubId = $(this).attr("data-publication-id");
+				API.addPersonPublication(person, pubId);
+
+				searchfield.val("");
+				$("#add-publication-results").html("");
+				$('#add-publication-results-container').hide();
+			});
+
+		});
+
+		// Init publications for this person.
+		for(var i = 0; i < impresslist.personPublications.length; ++i) {
+			var perpub = impresslist.personPublications[i];
+			if (perpub.field('person') == this.id) {
+				perpub.open();
+			}
+		}
+
+		// Add Youtube Channel binds
+		$("#add-youtubechannel-search").keyup(function() {
+			var searchfield = $(this);
+			var text = $(this).val().toLowerCase();
+			if (text.length == 0) {
+				$("#add-youtubechannel-results").html("");
+				$('#add-youtubechannel-results-container').hide();
+				return;
+			}
+			var html = "";
+			for(var i = 0; i < impresslist.youtubers.length; i++) {
+				var include = impresslist.youtubers[i].search(text);
+				if (include) {
+					html += "	<tr class='table-list' data-youtubechannel-id='" + impresslist.youtubers[i].id + "' data-add-youtubechannel-result='true' >\
+									<td>" + impresslist.youtubers[i].name + "</td> \
+									<td>" + impresslist.youtubers[i].field('subscribers') + "</td> \
+								</tr>";
+				}
+			}
+			if (html.length == 0) {
+				html += "	<tr>\
+								<td colspan='2'>No Results</td> \
+							</tr>";
+			}
+			$("#add-youtubechannel-results").html(html);
+			$('#add-youtubechannel-results-container').show();
+
+			$("[data-add-youtubechannel-result='true']").click(function() {
+				var ytId = $(this).attr("data-youtubechannel-id");
+				API.addPersonYoutubeChannel(person, ytId);
+
+				searchfield.val("");
+				$("#add-youtubechannel-results").html("");
+				$('#add-youtubechannel-results-container').hide();
+			});
+
+		});
+
+		// Init youtube channels for this person.
+		for(var i = 0; i < impresslist.personYoutubeChannels.length; ++i) {
+			var peryt = impresslist.personYoutubeChannels[i];
+			if (peryt.field('person') == this.id) {
+				peryt.open();
+			}
+		}
+
+		// Viewing Emails
+		$("#person-view-all-messages").click(function() {
+			$('#person-view-email').hide();
+			$('#all-messages').show();
+		});
+		$("[data-open-field='email']").click(function() {
+			var emailId = $(this).attr('data-email-id');
+			var emailObj = impresslist.findEmailById(emailId);
+			var emailDate = new Date(emailObj.field('utime') * 1000).toUTCString();
+			var emailSubject = emailObj.field('subject');
+			if (emailSubject.length > 60) { emailSubject = emailSubject.substr(0, 60) + "..."; }
+			$("[data-view-email-field='date']").html(emailDate);
+			$("[data-view-email-field='subject']").html(emailSubject);
+			$("[data-view-email-field='from']").html(emailObj.field('from_email'));
+			$("[data-view-email-field='to']").html(emailObj.field('to_email'));
+			$("[data-view-email-field='content']").html(emailObj.field('contents'));
+
+			$('#all-messages').hide();
+			$('#person-view-email').show();
+		});
+
+		// Fix tab navigation.
+		$('#person_tabs a').click(function (e) {
+		  e.preventDefault();
+
+		  $("#person_tabs_container .tab-content [role='tabpanel']").hide();
+		  $("#person_tabs_container .tab-content [data-tab='" + $(this).attr('data-tab') + "']").addClass('active').show();
+		  $(this).tab('show');
+		});
+
+		return html;
+
+	-->

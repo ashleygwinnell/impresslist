@@ -1,0 +1,8 @@
+SetEnv HTTP_MOD_REWRITE On
+RewriteEngine On
+RewriteBase /backend	
+
+RewriteCond $1 !(robots.txt|css/|js/|fonts/|images/|includes/tasks/|data/uploads/|favicon.ico|api.php|signup.php|pixel.php|logout.php)
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+

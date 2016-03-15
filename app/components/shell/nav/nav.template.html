@@ -1,0 +1,87 @@
+
+<!-- Spacer -->
+<div class='container mycontainer' style='margin-top:50px;' ng-show="App.user">
+	&nbsp;
+</div>
+
+<nav ng-controller='NavController' class="navbar navbar-default navbar-fixed-top" ng-show="App.user">
+	<div class="container mywidecontainer">
+		<!-- Brand and toggle get grouped for better mobile display -->
+		<div class="navbar-header">
+			<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+				<span class="sr-only">Toggle navigation</span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</button>
+			<a class="navbar-brand" ui-sref="home">impress[]</a>
+		</div>
+
+		<!-- Collect the nav links, forms, and other content for toggling -->
+
+		<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+
+				<div >
+
+					<ul class="nav navbar-nav navbar-right">
+				    	<li><a ui-sref="home">Home</a></li>
+				    	<li><a ui-sref="social">Social</a></li>
+				    	<li><a ui-sref="mailout">Mailout</a></li>
+
+
+
+				    	<li class="dropdown">
+				    		<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Add <span class="caret"></span></a>
+				    		<ul class="dropdown-menu" role="menu">
+				    			<li><a id='nav-add-person' href="javascript:;">Person</a></li>
+				    			<li><a id='nav-add-publication' href="javascript:;">Publication</a></li>
+				    			<li><a id='nav-add-youtuber' href="javascript:;">YouTuber</a></li>
+				    			<li class="divider"></li>
+								<li><a id='nav-add-coverage-publication' href="javascript:;">Coverage (Publication)</a></li>
+								<li><a id='nav-add-coverage-youtuber' href="javascript:;">Coverage (Youtuber)</a></li>
+								<li class="divider"></li>
+								<li><a id='nav-importtool' data-nav-page="importtool" href="javascript:;">Import</a></li>
+								<!-- <li><a id='nav-add-coverage-youtuber' href="javascript:;">Coverage (Youtuber)</a></li> -->
+
+				    		</ul>
+				    	</li>
+
+				    	<li class="dropdown">
+				    		<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Project <span class="caret"></span></a>
+				    		<ul class="dropdown-menu" role="menu">
+				    			<li><a ui-sref="coverage">Coverage</a></li>
+				    			<li><a ui-sref="keys">Keys</a></li>
+				    		</ul>
+				    	</li>
+
+				    	<li class='dropdown'>
+				    		<a href='#' class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Settings <span class="caret"></span></a>
+
+				    		<ul class="dropdown-menu" role="menu">
+				    			<li ng-show='App.user.admin == 1'><a ui-sref="admin">Admin Panel</a></li>
+				    			<li ng-show='App.user.admin == 1' class="divider"></li>
+				    			<?php endif;?>
+
+				    			<li><a id='nav-user-changepassword' href="#" data-toggle='modal' data-target='.password_modal'>Change Password</a></li>
+				    			<li><a id='nav-user-changeimapsettings' href="#" data-toggle='modal' data-target='.imapsettings_modal'>Change IMAP Settings</a></li>
+				    			<li class="divider"></li>
+				    			<li><a ui-sref="help">Help</a></li>
+				    			<li><a ui-sref="feedback">Feedback</a></li>
+				    			<li class="divider"></li>
+				    			<li><a ui-sref="logout">Logout</a></li>
+				    		</ul>
+				    	</li>
+				    </ul>
+
+				    <form class="navbar-form navbar-left" role="search">
+				    	<div class="form-group">
+				    		<input id='filter' type="text" ng-model="Filters.searchText" class="form-control" placeholder="Search" style='width:300px;'>
+				    	</div>
+				    </form>
+
+				</div>
+
+
+		</div>
+	</div>
+</nav>
