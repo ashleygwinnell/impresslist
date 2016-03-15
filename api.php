@@ -959,11 +959,12 @@ if (!isset($_GET['endpoint'])) {
 			$result->success = true;
 			$result->uploads = array();
 
-			$uploads = scandir("images/uploads/");
+			$uploads = scandir($uploadsDir);
 
 			// sort by upload date
 			function sortbyuploaddate($a, $b) {
-				return filemtime("images/uploads/".$a) > filemtime("images/uploads/".$b);
+				global $uploadsDir;
+				return filemtime($uploadsDir.$a) > filemtime($uploadsDir.$b);
 			}
 			usort($uploads, "sortbyuploaddate");
 
@@ -973,8 +974,9 @@ if (!isset($_GET['endpoint'])) {
 				if ($ext == "png" || $ext == "jpg" || $ext == "gif") {
 					$result->uploads[] = array(
 						"name" => $upload,
+						"fullname" => $uploadsDir . $upload,
 						"type" => "image/{$ext}",
-						"size" => filesize("images/uploads/".$upload)
+						"size" => filesize($uploadsDir.$upload)
 					);
 				}
 			}
@@ -1008,7 +1010,7 @@ if (!isset($_GET['endpoint'])) {
 					}
 					else
 					{
-						if (file_exists("images/uploads/" . $_FILES["file"]["name"])) {
+						if (file_exists($uploadsDir . $_FILES["file"]["name"])) {
 							$result = new stdClass();
 							$result->success = false;
 							$result->message = $_FILES["file"]["name"] . " already exists.";
@@ -1016,13 +1018,14 @@ if (!isset($_GET['endpoint'])) {
 						else
 						{
 							$sourcePath = $_FILES['file']['tmp_name']; // Storing source path of the file in a variable
-							$targetPath = "images/uploads/".$_FILES['file']['name']; // Target path where file is to be stored
+							$targetPath = $uploadsDir.$_FILES['file']['name']; // Target path where file is to be stored
 							move_uploaded_file($sourcePath, $targetPath) ; // Moving Uploaded file
 
 							$result = new stdClass();
 							$result->success = true;
 							$result->upload = array(
 								"name" => $_FILES["file"]["name"],
+								"fullname" => $uploadsDir . $_FILES["file"]["name"],
 								"type" => $_FILES["file"]["type"],
 								"size" => $_FILES["file"]["size"]
 							);
@@ -1049,13 +1052,13 @@ if (!isset($_GET['endpoint'])) {
 			} else {
 				$name = $_GET['name'];
 
-				$exists = file_exists("images/uploads/" . $name);
+				$exists = file_exists($uploadsDir . $name);
 				if (!$exists) {
 					$result = new stdClass();
 					$result->success = false;
 					$result->message = "Social Upload {$name} does not exist. ";
 				} else {
-					$r = unlink("images/uploads/" . $name);
+					$r = unlink($uploadsDir . $name);
 					if (!$r) {
 						$result = new stdClass();
 						$result->success = false;

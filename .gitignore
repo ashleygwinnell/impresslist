@@ -1,5 +1,6 @@
 data/database.sql
 data/backups/*
-images/uploads/*
+data/uploads/*
 includes/config.php
+js/vendor
 vendor

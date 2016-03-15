@@ -26,6 +26,7 @@
     "bootstrap-table": "^1.10.1",
     "bootstrap-fileinput": "^4.3.1",
     "bootstrap-growl": "^1.1.0",
+    "bootstrap-multiselect": "0.9.13",
     "jquery.scrollTo": "^2.1.2",
     "moment": "^2.11.2"
   },

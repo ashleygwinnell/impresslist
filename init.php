@@ -2,6 +2,26 @@
 
 session_start();
 
+// Make sure user has ran Composer.
+if (!file_exists("vendor/autoload.php")) {
+	echo "	impress[] requires you to run <u>composer update</u> in the terminal to download external PHP libraries.<br/>
+			<a href='https://getcomposer.org/'>Download Composer</a>";
+	die();
+}
+
+// Make sure user has ran Bower.
+if (!file_exists("js/vendor/bootstrap-multiselect/bower.json")) {
+	echo "	impress[] requires you to run <u>bower update</u> in the terminal to download external JS libraries.<br/>
+			<a href='http://bower.io/'>Download Bower</a>";
+	die();
+}
+
+// Make sure user has configured.
+if (!file_exists("includes/config.php")) {
+	echo "	impress[] requires you to copy <u>includes/config.example.php</u> to <u>includes/config.php</u> and also set all the variables there.";
+	die();
+}
+
 include_once("vendor/autoload.php");
 
 include_once("includes/database.class.php");
@@ -15,6 +35,8 @@ include_once("includes/database.php");
 $impresslist_version = "0.0.1";
 
 $cache = Cache::getInstance();
+
+$uploadsDir = "data/uploads/";
 
 // Sorts
 function sortById($a, $b) { return $a['id'] > $b['id']; }

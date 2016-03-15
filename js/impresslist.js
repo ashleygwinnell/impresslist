@@ -12,21 +12,21 @@ Priority.name = function(v) {
 	}
 }
 
-DBO = function(data) { 
+DBO = function(data) {
 	this.init(data);
-} 
+}
 	DBO.prototype.constructor = DBO;
 	DBO.prototype.init = function(data) {
 	 	this.fields = data;
 	}
-	DBO.prototype.initPriorities = function(field) { 
-		// Priorities: 
+	DBO.prototype.initPriorities = function(field) {
+		// Priorities:
 		// 1=3,2=1
 		//console.log(this.field('priorities'));
 		var txt = this.field(field);
-		if (typeof txt == 'undefined' || txt.length == 0) { 
+		if (typeof txt == 'undefined' || txt.length == 0) {
 			this['priority_' + impresslist.config.user.game] = 0;
-			return; 
+			return;
 		}
 		var pris = txt.split(",");
 		for(var i = 0; i < pris.length; ++i) {
@@ -48,7 +48,7 @@ DBO = function(data) {
 
 	}
 	DBO.prototype.onRemoved = function() {
-		
+
 	}
 	DBO.prototype.field = function(f) {
 		var r = this.fields[f];
@@ -57,7 +57,7 @@ DBO = function(data) {
 	}
 	DBO.prototype.twitterCell = function() {
 		var str = "N/A";
-		if (this.fields['twitter'].length > 0) { 
+		if (this.fields['twitter'].length > 0) {
 			str = "<a href='http://twitter.com/" + this.fields['twitter'] + "' target='new'>" + new Number(this.fields['twitter_followers']).toLocaleString() + "</a>";
 		}
 		return str;
@@ -65,7 +65,7 @@ DBO = function(data) {
 
 
 Email = function(data) {
-	DBO.call(this, data); 
+	DBO.call(this, data);
 }
 	Email.prototype = Object.create(DBO.prototype)
 	Email.prototype.constructor = Email;
@@ -79,7 +79,7 @@ Email = function(data) {
 
 
 Coverage = function(data) {
-	DBO.call(this, data); 
+	DBO.call(this, data);
 }
 	Coverage.prototype = Object.create(DBO.prototype)
 	Coverage.prototype.constructor = Email;
@@ -105,7 +105,7 @@ Coverage = function(data) {
 		ret = this.field('url').toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
-		if (this.field('type') == "publication") { 
+		if (this.field('type') == "publication") {
 			// Search all publications too.
 			for(var i = 0; i < impresslist.publications.length; ++i) {
 				if (impresslist.publications[i].field('id') == this.field('publication')) {
@@ -128,24 +128,24 @@ Coverage = function(data) {
 		return false;
 	}
 	Coverage.prototype.createItem = function(fromInit) {
-		var url = ""; 
-		var iconurl = "images/favicon.png"; 
+		var url = "";
+		var iconurl = "images/favicon.png";
 		//var pubname = "Unknown Publication";
 
-		if ("publication" in this.fields && this.fields['publication'] > 0) { 
+		if ("publication" in this.fields && this.fields['publication'] > 0) {
 
 			var publication = impresslist.findPublicationById( this.field('publication') );
-			
+
 			if (publication != null) {
 				url = publication.field('url');;
 				iconurl = publication.field('iconurl');;
 			//	pubname = publication.name;
-			} 
+			}
 		}
-		
+
 		var html;
 		var type = this.field('type');
-		if (type == "publication") { 
+		if (type == "publication") {
 			html = "		<div data-coverage-id='" + this.field('id') + "' data-coverage-type='" + this.field('type') + "' class='media'>	\
 								<div class='media-left' style='min-width:74px; width:74px;'> \
 									<a href='" + url + "' style='text-align:right;'><img class='media-object fr' style='width:16px;text-align:right;' src='" + iconurl + "' alt='Image'></a> \
@@ -184,7 +184,7 @@ Coverage = function(data) {
 								</div> \
 							</div>";
 		}
-		if (fromInit) { 
+		if (fromInit) {
 			$('#coverage').append(html);
 		} else {
 			$('#coverage').prepend(html);
@@ -192,7 +192,7 @@ Coverage = function(data) {
 		this.update();
 
 
-		if (type == "publication") { 
+		if (type == "publication") {
 			var t = this;
 			$("#edit-coverage[data-coverage-id='" + this.id + "']").click(function() { t.open(); });
 		} else if (type == "youtuber") {
@@ -202,11 +202,11 @@ Coverage = function(data) {
 
 	}
 	Coverage.prototype.removeItem = function() {
-		if (this.field('type') == 'publication') { 
+		if (this.field('type') == 'publication') {
 			$(".media[data-coverage-id='" + this.field('id') + "']").remove();
 		} else if (this.field('type') == 'youtuber') {
 			$(".media[data-youtube-coverage-id='" + this.field('id') + "']").remove();
-		}		
+		}
 	}
 	Coverage.prototype.getPersonName = function() {
 		var p = this.fields['person'];
@@ -358,10 +358,10 @@ Coverage = function(data) {
 		$('#coverage-timepicker').datetimepicker();
 		$('#coverage-timepicker').data("DateTimePicker").defaultDate(moment(utime, "X"));
 		$('#coverage-timepicker').data("DateTimePicker").format("L h:mma");
-		
+
 
 		// Edit publication binds
-		if (this.field('type') == 'publication') { 
+		if (this.field('type') == 'publication') {
 			$("#coverage-edit-publication-search").keyup(function() {
 				var searchfield = $(this);
 				var text = $(this).val().toLowerCase();
@@ -371,7 +371,7 @@ Coverage = function(data) {
 					return;
 				}
 				var html = "";
-				for(var i = 0; i < impresslist.publications.length; i++) { 
+				for(var i = 0; i < impresslist.publications.length; i++) {
 					var include = impresslist.publications[i].search(text);
 					if (include) {
 						html += "	<tr class='table-list' data-publication-id='" + impresslist.publications[i].id + "' data-coverage-edit-publication-result='true' >\
@@ -379,7 +379,7 @@ Coverage = function(data) {
 									</tr>";
 					}
 				}
-				if (html.length == 0) { 
+				if (html.length == 0) {
 					html += "	<tr> <td colspan='2'>No Results</td> </tr>";
 				}
 				$("#coverage-edit-publication-results").html(html);
@@ -403,7 +403,7 @@ Coverage = function(data) {
 					return;
 				}
 				var html = "";
-				for(var i = 0; i < impresslist.youtubers.length; i++) { 
+				for(var i = 0; i < impresslist.youtubers.length; i++) {
 					var include = impresslist.youtubers[i].search(text);
 					if (include) {
 						html += "	<tr class='table-list' data-youtuber-id='" + impresslist.youtubers[i].id + "' data-coverage-edit-youtuber-result='true' >\
@@ -411,7 +411,7 @@ Coverage = function(data) {
 									</tr>";
 					}
 				}
-				if (html.length == 0) { 
+				if (html.length == 0) {
 					html += "	<tr> <td colspan='2'>No Results</td> </tr>";
 				}
 				$("#coverage-edit-youtuber-results").html(html);
@@ -437,7 +437,7 @@ Coverage = function(data) {
 				return;
 			}
 			var html = "";
-			for(var i = 0; i < impresslist.people.length; i++) { 
+			for(var i = 0; i < impresslist.people.length; i++) {
 				var include = impresslist.people[i].search(text);
 				if (include) {
 					html += "	<tr class='table-list' data-person-id='" + impresslist.people[i].id + "' data-coverage-edit-person-result='true' >\
@@ -445,7 +445,7 @@ Coverage = function(data) {
 								</tr>";
 				}
 			}
-			if (html.length == 0) { 
+			if (html.length == 0) {
 				html += "	<tr> <td colspan='2'>No Results</td> </tr>";
 			}
 			$("#coverage-edit-person-results").html(html);
@@ -466,7 +466,7 @@ Coverage = function(data) {
 		var publicationName = "Unknown Publication";
 		if (this.fields['publication'] > 0) {
 			publicationName = impresslist.findPublicationById(this.fields['publication']).name;
-		} 
+		}
 
 		if (this.field('type') == 'youtuber') {
 			publicationName = "Unknown Youtuber";
@@ -483,17 +483,17 @@ Coverage = function(data) {
 		$("[" + selector + "='" + this.id + "'][data-field='url']").attr('href', this.field('url'));
 		$("[" + selector + "='" + this.id + "'][data-field='url']").html(this.field('title'));
 		$("[" + selector + "='" + this.id + "'][data-field='utime']").html( impresslist.util.relativetime_contact(this.field('utime')) );
-		
+
 		var thanked = this.field('thanked');
 		if (thanked == 1) {
-			$("[" + selector + "='" + this.id + "'][data-field='thanked']").html("<span style='color:green;font-style:italic;'>Thanked!</span>");	
+			$("[" + selector + "='" + this.id + "'][data-field='thanked']").html("<span style='color:green;font-style:italic;'>Thanked!</span>");
 		} else {
-			$("[" + selector + "='" + this.id + "'][data-field='thanked']").html("<span style='color:red;font-style:italic;'>Not thanked...</span>");	
+			$("[" + selector + "='" + this.id + "'][data-field='thanked']").html("<span style='color:red;font-style:italic;'>Not thanked...</span>");
 		}
 
 		var selector = "[" + selector + "='" + this.id + "'][data-field='person-name']";
 		$(selector).html( this.getPersonName() );
-		
+
 	}
 	Coverage.prototype.onAdded = function(fromInit) {
 		this.createItem(fromInit);
@@ -503,7 +503,7 @@ Coverage = function(data) {
 		this.close();
 	}
 	Coverage.prototype.save = function() {
-		if (this.field('type') == 'publication') { 
+		if (this.field('type') == 'publication') {
 
 			var title = $('#coverage-edit-title').val();
 			var url = $('#coverage-edit-url').val();
@@ -521,7 +521,7 @@ Coverage = function(data) {
 			//console.log("person: " + person);
 			//console.log("thanked: " + thanked);
 			API.savePublicationCoverage(this, publication, person, title, url, timestamp, thanked);
-		} else if (this.field('type') == 'youtuber') { 
+		} else if (this.field('type') == 'youtuber') {
 			var title = $('#coverage-edit-title').val();
 			var url = $('#coverage-edit-url').val();
 			var timestamp = moment($('#coverage-edit-timestamp').val(), "L h:mma").format("X");
@@ -546,7 +546,7 @@ Coverage = function(data) {
 		$('.coverage_modal').modal('hide');
 	}
 	Coverage.prototype.remove = function() {
-		if (this.field('type') == 'publication') { 
+		if (this.field('type') == 'publication') {
 			API.removePublicationCoverage(this);
 		} else if (this.field('type') == 'youtuber') {
 			API.removeYoutuberCoverage(this);
@@ -554,7 +554,7 @@ Coverage = function(data) {
 	}
 
 Game = function(data) {
-	DBO.call(this, data); 
+	DBO.call(this, data);
 }
 	Game.prototype = Object.create(DBO.prototype)
 	Game.prototype.constructor = Game;
@@ -562,13 +562,13 @@ Game = function(data) {
 		DBO.prototype.init.call(this, data);
 		this.id = parseInt(this.field('id'));
 		this.name = this.field('name');
-		
+
 	}
 
 
 
 User = function(data) {
-	DBO.call(this, data); 
+	DBO.call(this, data);
 }
 	User.prototype = Object.create(DBO.prototype)
 	User.prototype.constructor = User;
@@ -608,7 +608,7 @@ User = function(data) {
 		var thiz = this;
 		$('#user-change-password-submit').click(function() {
 			var currentPassword = $('#user-change-password-current').val();
-			var newPassword = $('#user-change-password-new').val(); 
+			var newPassword = $('#user-change-password-new').val();
 			API.userChangePassword(thiz, currentPassword, newPassword);
 		});
 		$('#user-change-password-close').click(function() {
@@ -650,7 +650,7 @@ User = function(data) {
 		$('#user-change-imap-settings-submit').click(function() {
 			var smtp_server = $('#user-change-smtp-server').val();
 			var imap_server = $('#user-change-imap-server').val();
-			var imap_password = $('#user-change-imap-password').val(); 
+			var imap_password = $('#user-change-imap-password').val();
 			API.userChangeIMAPSettings(thiz, smtp_server, imap_server, imap_password);
 		});
 		$('#user-change-imap-settings-close').click(function() {
@@ -661,7 +661,7 @@ User = function(data) {
 
 
 Youtuber = function(data) {
-	DBO.call(this, data); 
+	DBO.call(this, data);
 }
 	Youtuber.prototype = Object.create(DBO.prototype);
 	Youtuber.prototype.constructor = Youtuber;
@@ -683,7 +683,7 @@ Youtuber = function(data) {
 							<td data-youtuber-id='" + this.field('id') + "' data-field='lastpostedon' data-value='" + this.field('lastpostedon') + "'>" + impresslist.util.relativetime_contact(this.field('lastpostedon')) + "</td> \
 						</tr>";
 		$('#youtubers').append(html);
-		
+
 		var youtuber = this;
 		$(this.openSelector()).click(function() {
 			youtuber.open();
@@ -725,7 +725,7 @@ Youtuber = function(data) {
 																	<option value='2' " + ((priority==2)?"selected='true'":"") + ">Medium</option>\
 																	<option value='1' " + ((priority==1)?"selected='true'":"") + ">Low</option>\
 																	<option value='0' " + ((priority==0)?"selected='true'":"") + ">N/A</option>\
-																</select>";					
+																</select>";
 			html += "						</div>\
 										</div>\
 										<div class='form-group'>\
@@ -770,10 +770,10 @@ Youtuber = function(data) {
 		$("[data-youtuber-id='" + this.id + "'][data-field='subscribers']").html("<a href='http://youtube.com/user/" + this.field('channel') + "' target='new'>" + new Number(this.field('subscribers')).toLocaleString() + "</a>");
 		$("[data-youtuber-id='" + this.id + "'][data-field='views']").html( new Number(this.field('views')).toLocaleString() );
 		$("[data-youtuber-id='" + this.id + "'][data-field='twitter']").html(this.field('twitter'));
-		$("[data-youtuber-id='" + this.id + "'][data-field='twitter_followers']").html( this.twitterCell() );			
-		$("[data-youtuber-id='" + this.id + "'][data-field='lastpostedon']").html( impresslist.util.relativetime_contact(this.field('lastpostedon')) );			
+		$("[data-youtuber-id='" + this.id + "'][data-field='twitter_followers']").html( this.twitterCell() );
+		$("[data-youtuber-id='" + this.id + "'][data-field='lastpostedon']").html( impresslist.util.relativetime_contact(this.field('lastpostedon')) );
 	};
-	
+
 	Youtuber.prototype.close = function() {
 		$('.youtuber_modal').modal('hide');
 	}
@@ -788,13 +788,13 @@ Youtuber = function(data) {
 		}
 	}
 	Youtuber.prototype.filter_isHighPriority = function() {
-		if ($('#filter-high-priority').is(':checked')) { 
+		if ($('#filter-high-priority').is(':checked')) {
 			return (this.priority() == 3);
 		}
 		return true;
 	}
 	Youtuber.prototype.filter_hasEmail = function() {
-		if ($('#filter-email-attached').is(':checked')) { 
+		if ($('#filter-email-attached').is(':checked')) {
 			return (this.field('email').length > 0);
 		}
 		return true;
@@ -812,7 +812,7 @@ Youtuber = function(data) {
 
 		ret = this.fields['description'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
-		
+
 		ret = this.fields['twitter'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
@@ -823,7 +823,7 @@ Youtuber = function(data) {
 		var email   = $("[data-youtuber-id=" + this.id + "][data-input-field='email']").val();
 		var twitter = $("[data-youtuber-id=" + this.id + "][data-input-field='twitter']").val();
 		var notes   = $("[data-youtuber-id=" + this.id + "][data-input-field='notes']").val();
-		
+
 		API.saveYoutuber(this, channel, email, twitter, notes);
 	};
 	Youtuber.prototype.savePriority = function() {
@@ -834,7 +834,7 @@ Youtuber = function(data) {
 
 
 PersonPublication = function(data) {
-	DBO.call(this, data); 
+	DBO.call(this, data);
 }
 	PersonPublication.prototype = Object.create(DBO.prototype);
 	PersonPublication.prototype.constructor = PersonPublication;
@@ -928,7 +928,7 @@ PersonYoutubeChannel = function(data) {
 			$("#person_tabs [data-tab='person_messages']").click();
 		});
 	}
-	
+
 	PersonYoutubeChannel.prototype.update = function() {
 
 	}
@@ -951,7 +951,7 @@ SimpleMailout = function(data) {
 	SimpleMailout.prototype.init = function(data) {
 		DBO.prototype.init.call(this, data);
 		this.id = parseInt(this.field('id'));
-		
+
 		// Todo: Calculate and cache this server-side or something.
 		this.numRecipients = 0;
 		this.numOpens = 0;
@@ -960,7 +960,7 @@ SimpleMailout = function(data) {
 			if (this.recipientsData[i].read) {
 				this.numOpens++;
 			}
-			this.numRecipients++; 
+			this.numRecipients++;
 		}
 	}
 	SimpleMailout.prototype.createTableRow = function() {
@@ -972,7 +972,7 @@ SimpleMailout = function(data) {
 		html += "		</tr>";
 		$('#mailout-list-tbody').append(html);
 		$('#mailout-list-footer').hide();
-		
+
 		// Events
 		var mailout = this;
 		$('tr[data-simplemailout-id="' + this.field('id') + '"][data-simplemailout-tablerow="true"]').unbind("click");
@@ -1007,14 +1007,14 @@ SimpleMailout = function(data) {
 		$("[data-simplemailout-id='" + this.id + "'][data-field='name']").html( this.field('name') );
 		$("[data-simplemailout-id='" + this.id + "'][data-field='numRecipients']").html( recipientsText );
 		$("[data-simplemailout-id='" + this.id + "'][data-field='numOpens']").html( openText );
-		$("[data-simplemailout-id='" + this.id + "'][data-field='timestamp']").html( sentText );		
+		$("[data-simplemailout-id='" + this.id + "'][data-field='timestamp']").html( sentText );
 	}
 	SimpleMailout.prototype.send = function() {
 		var mailout = this;
 		this.save(function() {
-			API.sendSimpleMailout(mailout);	
+			API.sendSimpleMailout(mailout);
 			mailout.close();
-		});		
+		});
 	}
 	SimpleMailout.prototype.cancelsend = function() {
 		API.cancelSimpleMailout(this);
@@ -1025,7 +1025,7 @@ SimpleMailout = function(data) {
 		var name = $('#mailout-name').val();
 		var subject = $('#mailout-subject').val();
 		var markdown = $('#mailout-content').val();
-		
+
 		var recipients = [];
 		var peopleSelected = $('input[data-type="person"][data-checkbox="true"]:checked');
 		for(var i = 0; i < peopleSelected.length; i++) {
@@ -1053,12 +1053,12 @@ SimpleMailout = function(data) {
 			var date = new Date($('#mailout-timepicker').data("DateTimePicker").date());
 			timestamp = Math.floor(date.getTime() / 1000);
 		}
-		
+
 		API.saveSimpleMailout(this, name, subject, recipients, markdown, timestamp, callback);
 	}
 	SimpleMailout.prototype.setFormEnabled = function(boo) {
 		boo = !boo;
-		$('#mailout-name').attr("disabled", boo); 
+		$('#mailout-name').attr("disabled", boo);
 		$('#mailout-subject').attr("disabled", boo);
 		$('#mailout-content').attr("disabled", boo);
 		$('#mailout-radio-time-asap').attr("disabled", boo);
@@ -1083,11 +1083,11 @@ SimpleMailout = function(data) {
 		$('#mailout-writepage-remove').show();
 		if (this.field("ready") == 0) {
 			$('#mailout-writepage-send').show();
-		} 
+		}
 		if (this.field("ready") == 1 && this.field("sent") == 0) {
 			$('#mailout-writepage-cancelsend').show();
 		}
-		
+
 		this.setFormEnabled(true);
 
 		// Set data on form.
@@ -1113,27 +1113,27 @@ SimpleMailout = function(data) {
 		$('#mailout-writepage-send').unbind("click");
 		$('#mailout-writepage-send').click(function() {
 			mailout.send();
-		}); 
+		});
 		$('#mailout-writepage-cancelsend').unbind("click");
 		$('#mailout-writepage-cancelsend').click(function() {
 			mailout.cancelsend();
 		});
 		$('#mailout-writepage-back').unbind("click");
-		$('#mailout-writepage-back').click(function(){ 
+		$('#mailout-writepage-back').click(function(){
 			mailout.close();
 		});
 		$('#mailout-writepage-remove').unbind("click");
-		$('#mailout-writepage-remove').click(function() { 
+		$('#mailout-writepage-remove').click(function() {
 			mailout.setFormEnabled(false);
-			API.removeSimpleMailout(mailout); 
+			API.removeSimpleMailout(mailout);
 		});
-		
+
 		// time picker
 		$('#mailout-radio-time-asap').unbind("click");
 		$('#mailout-radio-time-scheduled').unbind("click");
 		$('#mailout-radio-time-asap').click(function() { $('#mailout-timepicker').hide(); });
 		$('#mailout-radio-time-scheduled').click(function() { $('#mailout-timepicker').show(); });
-		if (this.field("timestamp") == 0) { 
+		if (this.field("timestamp") == 0) {
 			$('#mailout-timepicker').hide();
 			$('#mailout-radio-time-asap').prop("checked", "true");
 		} else {
@@ -1146,13 +1146,13 @@ SimpleMailout = function(data) {
 		for(var i = 0; i < this.recipientsData.length; i++) {
 			if (this.recipientsData[i].type == 'person') {
 				var p = impresslist.findPersonById(this.recipientsData[i].person_id);
-				if (p != null) { 
+				if (p != null) {
 					var box = $('input[data-type="person"][data-mailout-typeid="' + p.id + '"][data-checkbox="true"][data-mailout-type="person"]');
 					$(box).prop("checked", true);
 				}
 			} else if (this.recipientsData[i].type == "personPublication") {
 				var p = impresslist.findPersonPublicationById(this.recipientsData[i].personPublication_id);
-				if (p != null) { 
+				if (p != null) {
 					var box = $('input[data-type="person"][data-mailout-typeid="' + p.id + '"][data-checkbox="true"][data-mailout-type="personPublication"]');
 					$(box).prop("checked", true);
 				}
@@ -1189,7 +1189,7 @@ SimpleMailout = function(data) {
 
 
 Person = function(data) {
-	DBO.call(this, data); 
+	DBO.call(this, data);
 }
 	Person.prototype = Object.create(DBO.prototype);
 	Person.prototype.constructor = Person;
@@ -1201,12 +1201,12 @@ Person = function(data) {
 		//this.publications = [];
 
 		this.initPriorities('priorities');
-		
+
 	}
 	Person.prototype.update = function() {
 		$("[data-person-id='" + this.id + "'][data-field='name']").html(this.fullname());
 		$("[data-person-id='" + this.id + "'][data-field='priority']").html(Priority.name(this.priority()));
-		$("[data-person-id='" + this.id + "'][data-field='twitter_followers']").html( this.twitterCell() );		
+		$("[data-person-id='" + this.id + "'][data-field='twitter_followers']").html( this.twitterCell() );
 	},
 	Person.prototype.save = function() {
 		var firstname = $("[data-person-id=" + this.id + "][data-input-field='firstname']").val();
@@ -1215,7 +1215,7 @@ Person = function(data) {
 		var twitter = $("[data-person-id=" + this.id + "][data-input-field='twitter']").val();
 		var notes = $("[data-person-id=" + this.id + "][data-input-field='notes']").val();
 		var outofdate = $("[data-person-id=" + this.id + "][data-input-field='outofdate']").is(':checked');
-		
+
 		API.savePerson(this, firstname, surnames, email, twitter, notes, outofdate);
 	}
 	Person.prototype.savePriority = function() {
@@ -1226,7 +1226,7 @@ Person = function(data) {
 		var assignment = $("[data-person-id='" + this.id + "'][data-input-field='assignment']").val();
 		API.setPersonAssignment(this, assignment);
 	}
-	
+
 	Person.prototype.preventOpen = function() {
 		$('#modals').html("");
 	}
@@ -1235,9 +1235,9 @@ Person = function(data) {
 		var html = "<div class='modal fade person_modal' tabindex='-1' role='dialog'> \
 						<div class='modal-dialog'> \
 							<div class='modal-content' style='padding:5px;'>";
-				
+
 		html += "				<div style='min-height:100px;padding:20px;'>";
-		
+
 		html += "	<div style='min-height:45px;'> \
 						<h3 class='fl' data-person-id='" + this.id + "' data-field='name'>" + this.fullname() + "</h3> \
 						\
@@ -1256,8 +1256,8 @@ Person = function(data) {
 								var emailSubject = ""; //Press List test";
 								var emailBody = ""; //"Press List test body. Include default text here or something.";
 								var emailBCC = impresslist.config.system.email;
-								var emailGmailIndex = impresslist.config.user.gmail; 
-								
+								var emailGmailIndex = impresslist.config.user.gmail;
+
 								var emails = [];
 								emails.push( {"type": "Personal", "email": this.field('email')} );
 								for(var i = 0; i < impresslist.personPublications.length; ++i) {
@@ -1266,18 +1266,18 @@ Person = function(data) {
 									}
 								}
 
-								for(var i = 0; i < emails.length; ++i) 
-								{ 
+								for(var i = 0; i < emails.length; ++i)
+								{
 									var defaultEmail = emails[i]['email'];
 									if (defaultEmail.length == 0) { continue; }
 									var emailClientLink = impresslist.util.mailtoClient(defaultEmail, emailSubject, emailBody, emailBCC);
-									var emailGmailLink = impresslist.util.mailtoGmail(defaultEmail, emailSubject, emailBody, emailBCC, emailGmailIndex); 
-								
+									var emailGmailLink = impresslist.util.mailtoGmail(defaultEmail, emailSubject, emailBody, emailBCC, emailGmailIndex);
+
 									html += "<li><a href='" + emailGmailLink + "' target='new'>" + emails[i]['type'] + " (Gmail)</a></li>";
 									html += "<li><a href='" + emailClientLink + "'>" + emails[i]['type'] + " (Client)</a></li>";
 								}
-								
-								
+
+
 		html += "			</ul>\
 							</div>\
 						</div>\
@@ -1369,7 +1369,7 @@ Person = function(data) {
 
 				html += "		</div>\
 							</div>";
- 				
+
 
  				// Youtube Channels panel
 				html += "	<div role='tabpanel' class='tab-pane pady' data-tab='person_youtubeChannels'> \
@@ -1391,7 +1391,7 @@ Person = function(data) {
 
 				html += "		</div>\
 							</div>";
- 
+
  				var messages = [];
  				for(var i = 0; i < impresslist.emails.length; ++i) {
  					if (impresslist.emails[i].field('person_id') == this.id) {
@@ -1429,7 +1429,7 @@ Person = function(data) {
 															<td colspan='3'>No Messages</td> \
 														</tr>";
 										}
-										
+
 				html += "				</tbody> \
 									</table> \
 								</div> \
@@ -1501,7 +1501,7 @@ Person = function(data) {
 				return;
 			}
 			var html = "";
-			for(var i = 0; i < impresslist.publications.length; i++) { 
+			for(var i = 0; i < impresslist.publications.length; i++) {
 				var include = impresslist.publications[i].search(text);
 				if (include) {
 					html += "	<tr class='table-list' data-publication-id='" + impresslist.publications[i].id + "' data-add-publication-result='true' >\
@@ -1510,7 +1510,7 @@ Person = function(data) {
 								</tr>";
 				}
 			}
-			if (html.length == 0) { 
+			if (html.length == 0) {
 				html += "	<tr>\
 								<td colspan='2'>No Results</td> \
 							</tr>";
@@ -1533,7 +1533,7 @@ Person = function(data) {
 		for(var i = 0; i < impresslist.personPublications.length; ++i) {
 			var perpub = impresslist.personPublications[i];
 			if (perpub.field('person') == this.id) {
-				perpub.open(); 
+				perpub.open();
 			}
 		}
 
@@ -1547,7 +1547,7 @@ Person = function(data) {
 				return;
 			}
 			var html = "";
-			for(var i = 0; i < impresslist.youtubers.length; i++) { 
+			for(var i = 0; i < impresslist.youtubers.length; i++) {
 				var include = impresslist.youtubers[i].search(text);
 				if (include) {
 					html += "	<tr class='table-list' data-youtubechannel-id='" + impresslist.youtubers[i].id + "' data-add-youtubechannel-result='true' >\
@@ -1556,7 +1556,7 @@ Person = function(data) {
 								</tr>";
 				}
 			}
-			if (html.length == 0) { 
+			if (html.length == 0) {
 				html += "	<tr>\
 								<td colspan='2'>No Results</td> \
 							</tr>";
@@ -1579,7 +1579,7 @@ Person = function(data) {
 		for(var i = 0; i < impresslist.personYoutubeChannels.length; ++i) {
 			var peryt = impresslist.personYoutubeChannels[i];
 			if (peryt.field('person') == this.id) {
-				peryt.open(); 
+				peryt.open();
 			}
 		}
 
@@ -1607,12 +1607,12 @@ Person = function(data) {
 		// Fix tab navigation.
 		$('#person_tabs a').click(function (e) {
 		  e.preventDefault();
-		  
+
 		  $("#person_tabs_container .tab-content [role='tabpanel']").hide();
 		  $("#person_tabs_container .tab-content [data-tab='" + $(this).attr('data-tab') + "']").addClass('active').show();
 		  $(this).tab('show');
 		});
-		
+
 		return html;
 	}
 	Person.prototype.close = function() {
@@ -1648,7 +1648,7 @@ Person = function(data) {
 							<td data-person-id='" + this.field('id') + "' data-field='last_contacted' data-value='" + this.field('lastcontacted') + "'>" + impresslist.util.relativetime_contact(this.field('lastcontacted')) + " " + lastcontactedbystring + "</td>";
 		html += "		</tr>";
 		$('#people').append(html);
-		
+
 		// Events for this table row.
 		var person = this;
 		$(this.openSelector()).click(function() {
@@ -1665,12 +1665,12 @@ Person = function(data) {
 				typeName: "Personal",
 				person: this.field('id'),
 				name: this.fullname(),
-				email: this.field('email') 
+				email: this.field('email')
 			});
 		}
 		for(var i = 0; i < impresslist.personPublications.length; ++i) {
 			if (impresslist.personPublications[i].field('person') == this.id) {
-				if (impresslist.personPublications[i].field('email').length > 0) { 
+				if (impresslist.personPublications[i].field('email').length > 0) {
 					emails.push({
 						type: "personPublication",
 						typeId: impresslist.personPublications[i].field("id"),
@@ -1678,7 +1678,7 @@ Person = function(data) {
 						personPublication: impresslist.personPublications[i].field('id'),
 						name: this.fullname(),
 						email: impresslist.personPublications[i].field('email')
-					});	
+					});
 				}
 			}
 		}
@@ -1704,8 +1704,8 @@ Person = function(data) {
 		$('div[data-person-id="' + this.field('id') + '"][data-field="email-list"]').html(extraEmails);
 
 		var person = this;
-		$("input[data-person-id='" + this.field('id') + "'][data-checkbox='true']").click(function(e) { 
-			impresslist.refreshMailoutRecipients(); 
+		$("input[data-person-id='" + this.field('id') + "'][data-checkbox='true']").click(function(e) {
+			impresslist.refreshMailoutRecipients();
 			person.preventOpen();
 			e.stopPropagation();
 		});
@@ -1735,11 +1735,11 @@ Person = function(data) {
 		}
 	}
 	Person.prototype.filter_isRecentlyContacted = function() {
-		if ($('#filter-recent-contact').is(':checked')) { 
+		if ($('#filter-recent-contact').is(':checked')) {
 			var contactedRecently = false;
 			var len = impresslist.emails.length;
 			for(var i = 0; i < len; ++i) {
-				if (impresslist.emails[i].field('person_id') == this.id && 
+				if (impresslist.emails[i].field('person_id') == this.id &&
 					Number(impresslist.emails[i].field('utime')) >= (Date.now()/1000) - (86400*7)) {
 					contactedRecently = true;
 				}
@@ -1749,10 +1749,10 @@ Person = function(data) {
 		return true;
 	}
 	Person.prototype.filter_isContactedByMe = function() {
-		if ($('#filter-personal-contact').is(':checked')) { 
+		if ($('#filter-personal-contact').is(':checked')) {
 			var len = impresslist.emails.length;
 			for(var i = 0; i < len; ++i) {
-				if (impresslist.emails[i].field('person_id') == this.id && 
+				if (impresslist.emails[i].field('person_id') == this.id &&
 					impresslist.emails[i].field('user_id') == impresslist.config.user.id) {
 					//console.log(i + ": " + impresslist.emails[i].field('user_id') + " matches " + impresslist.config.user.id);
 					return true;
@@ -1763,7 +1763,7 @@ Person = function(data) {
 		return true;
 	}
 	Person.prototype.filter_isHighPriority = function() {
-		if ($('#filter-high-priority').is(':checked')) { 
+		if ($('#filter-high-priority').is(':checked')) {
 			if (this.priority() == 3) {
 				return true;
 			}
@@ -1781,7 +1781,7 @@ Person = function(data) {
 		return true;
 	}
 	Person.prototype.filter_isAssignedToMe = function() {
-		if ($('#filter-assigned-self').is(':checked')) { 
+		if ($('#filter-assigned-self').is(':checked')) {
 			//console.log(this.field('assigned'));
 			//console.log(impresslist.config.user.id);
 			if (this.field('assigned') == impresslist.config.user.id) {
@@ -1792,7 +1792,7 @@ Person = function(data) {
 		return true;
 	}
 	Person.prototype.filter_isOutOfDate = function() {
-		if ($('#filter-show-outofdate').is(':checked')) { 
+		if ($('#filter-show-outofdate').is(':checked')) {
 			if (this.field('outofdate') ==1) {
 				return true;
 			}
@@ -1801,7 +1801,7 @@ Person = function(data) {
 		return true;
 	}
 	Person.prototype.filter_hasEmail = function() {
-		if ($('#filter-email-attached').is(':checked')) { 
+		if ($('#filter-email-attached').is(':checked')) {
 			if (this.field('email').length > 0) {
 				return true;
 			}
@@ -1809,7 +1809,7 @@ Person = function(data) {
 			var len = impresslist.personPublications.length;
 			for(var i = 0; i < len; ++i) {
 				if (impresslist.personPublications[i].field('person') == this.id) {
-					if (impresslist.personPublications[i].field('email').length > 0) { 
+					if (impresslist.personPublications[i].field('email').length > 0) {
 						return true;
 					}
 				}
@@ -1861,7 +1861,7 @@ Person = function(data) {
 Publication = function(data) {
 	DBO.call(this, data);
 }
-	Publication.prototype = Object.create(DBO.prototype); 
+	Publication.prototype = Object.create(DBO.prototype);
 	Publication.prototype.constructor = Publication;
 	Publication.prototype.init = function(data) {
 		DBO.prototype.init.call(this, data);
@@ -1870,7 +1870,7 @@ Publication = function(data) {
 		this.lastpostedon = 0;
 		this.initPriorities('priorities');
 	}
-	
+
 	Publication.prototype.onAdded = function() {
 		this.createTableRow();
 	}
@@ -1879,7 +1879,7 @@ Publication = function(data) {
 		this.close();
 	}
 	Publication.prototype.open = function() {
-		
+
 		var html = "<div class='modal fade publication_modal' tabindex='-1' role='dialog'> \
 						<div class='modal-dialog'> \
 							<div class='modal-content' style='padding:5px;'> \
@@ -1949,7 +1949,7 @@ Publication = function(data) {
 		var rssfeedurl = $("[data-publication-id=" + this.id + "][data-input-field='rssfeedurl']").val();
 		var twitter = $("[data-publication-id=" + this.id + "][data-input-field='twitter']").val();
 		var notes = $("[data-publication-id=" + this.id + "][data-input-field='notes']").val();
-		
+
 		API.savePublication(this, name, url, rssfeedurl, twitter, notes);
 	}
 	Publication.prototype.savePriority = function() {
@@ -1961,8 +1961,8 @@ Publication = function(data) {
 		$("[data-publication-id='" + this.id + "'][data-field='name']").html(this.name);
 		$("[data-publication-id='" + this.id + "'][data-field='priority']").html(Priority.name(this.priority()));
 		$("[data-publication-id='" + this.id + "'][data-field='url']").html(this.field('url'));
-		$("[data-publication-id='" + this.id + "'][data-field='twitter']").html(this.field('twitter'));		
-		$("[data-publication-id='" + this.id + "'][data-field='twitter_followers']").html( this.twitterCell() );		
+		$("[data-publication-id='" + this.id + "'][data-field='twitter']").html(this.field('twitter'));
+		$("[data-publication-id='" + this.id + "'][data-field='twitter_followers']").html( this.twitterCell() );
 	}
 
 	Publication.prototype.close = function() {
@@ -2017,7 +2017,7 @@ Publication = function(data) {
 		}
 	}
 	Publication.prototype.filter_isHighPriority = function() {
-		if ($('#filter-high-priority').is(':checked')) { 
+		if ($('#filter-high-priority').is(':checked')) {
 			return (this.priority() == 3);
 		}
 		return true;
@@ -2032,7 +2032,7 @@ Publication = function(data) {
 
 		ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
-		
+
 		ret = this.fields['url'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
@@ -2043,7 +2043,7 @@ Publication = function(data) {
 	}
 
 OAuthTwitterAccount = function(data) {
-	DBO.call(this, data); 
+	DBO.call(this, data);
 }
 	OAuthTwitterAccount.prototype = Object.create(DBO.prototype)
 	OAuthTwitterAccount.prototype.constructor = OAuthTwitterAccount;
@@ -2085,7 +2085,7 @@ OAuthTwitterAccount = function(data) {
 	}
 
 OAuthFacebookAccount = function(data) {
-	DBO.call(this, data); 
+	DBO.call(this, data);
 }
 	OAuthFacebookAccount.prototype = Object.create(DBO.prototype)
 	OAuthFacebookAccount.prototype.constructor = OAuthFacebookAccount;
@@ -2127,7 +2127,7 @@ OAuthFacebookAccount = function(data) {
 	}
 
 OAuthFacebookPage = function(data) {
-	DBO.call(this, data); 
+	DBO.call(this, data);
 }
 	OAuthFacebookPage.prototype = Object.create(DBO.prototype)
 	OAuthFacebookPage.prototype.constructor = OAuthFacebookPage;
@@ -2170,7 +2170,7 @@ OAuthFacebookPage = function(data) {
 
 var SocialUploadID = 0;
 SocialUpload = function(data) {
-	DBO.call(this, data); 
+	DBO.call(this, data);
 }
 	SocialUpload.prototype = Object.create(DBO.prototype)
 	SocialUpload.prototype.constructor = SocialUpload;
@@ -2195,8 +2195,8 @@ SocialUpload = function(data) {
 		var html = "";
 		html += "<div id='social-upload-" + this.id + "' class='socialqueue-item' style='padding:0px; float:left;margin-right:5px;width:149px;'>";
 		html += "	<button id='social-remove-upload-" + this.id + "' class='btn btn-sm btn-danger fr' style='border-radius:0;'>X</button>";
-		html += "	<a href='images/uploads/" + this.field("name") + "' target='new'><img style='padding:0px;width:100%;' src='images/uploads/" + this.field("name") + "' /></a>";
-		
+		html += "	<a href='" + this.field("fullname") + "' target='new'><img style='padding:0px;width:100%;' src='" + this.field("fullname") + "' /></a>";
+
 		html += "</div>";
 		$('#social-uploads-list').prepend(html);
 		this.update();
@@ -2213,7 +2213,7 @@ SocialUpload = function(data) {
 
 
 SocialTimelineItem = function(data) {
-	DBO.call(this, data); 
+	DBO.call(this, data);
 }
 	SocialTimelineItem.prototype = Object.create(DBO.prototype)
 	SocialTimelineItem.prototype.constructor = SocialTimelineItem;
@@ -2282,28 +2282,28 @@ SocialTimelineItem = function(data) {
 						<label for='accounts'>Accounts:&nbsp; </label>\
 						<select id='social-sharemodal-retweet-accounts' multiple='multiple'>";
 
-							for(var i = 0; i < impresslist.oauthTwitterAccounts.length; i++) 
+							for(var i = 0; i < impresslist.oauthTwitterAccounts.length; i++)
 							{
 								var tw = impresslist.oauthTwitterAccounts[i];
 								console.log("upid:" + tw.id);
 								console.log(this.field('typedata').account);
 
-								if (tw.id == parseInt(this.field('typedata').account)) { 
-									continue; 
+								if (tw.id == parseInt(this.field('typedata').account)) {
+									continue;
 								}
 
 								var hasRetweetScheduled = false;
 								for(var j = 0; j < impresslist.socialTimelineItems.length; j++) {
 									var sti = impresslist.socialTimelineItems[j];
 									if (sti.field('type') == 'retweet' &&
-										parseInt(sti.field('typedata').tweet) == this.id && 
+										parseInt(sti.field('typedata').tweet) == this.id &&
 										parseInt(sti.field('typedata').account) == tw.id
 										) {
 										hasRetweetScheduled = true;
 									}
 								}
 
-								if (!hasRetweetScheduled) { 
+								if (!hasRetweetScheduled) {
 
 									//var selectedText = (hasRetweetScheduled)?"selected='true'":"";
 									var selectedText = "";
@@ -2321,7 +2321,7 @@ SocialTimelineItem = function(data) {
 							<button id='social-close-retweets-" + this.id + "' type='submit' class='btn btn-default'>Close</button> \
 						</div> \
 					</div>";
-		
+
 		html += "				</div> \
 							</div> \
 						</div> \
@@ -2335,7 +2335,7 @@ SocialTimelineItem = function(data) {
 			enableCaseInsensitiveFiltering: true
 		});
 		$("#social-add-retweets-" + this.id).click(function() {
-			// ... 
+			// ...
 			var timeSeparation = $('#social-sharemodal-retweet-timesep').val();
 			var selectedAccountsNodes = $('#social-sharemodal-retweet-accounts option:selected');//.map(function(a, item){return item.value;});
 			var selectedAccounts = "";
@@ -2352,7 +2352,7 @@ SocialTimelineItem = function(data) {
 			API.addSocialTimelineItemRetweets(th, selectedAccounts, timeSeparation, function() {
 				th.closeShareDialog();
 				SocialTimelineItem.displaySort();
-			}); 
+			});
 		});
 		$("#social-close-retweets-" + this.id).click(function() { th.closeShareDialog(); });
 	}
@@ -2365,7 +2365,7 @@ SocialTimelineItem = function(data) {
 						<div class='modal-dialog'> \
 							<div class='modal-content'> \
 								<div style='min-height:100px;padding:20px;'>";
-					
+
 		html += "	<h3>Scheduled Item</h3>";
 		html += "	<div class='row'>\
 						<div class='col-sm-6'>\
@@ -2426,7 +2426,7 @@ SocialTimelineItem = function(data) {
 								<label for='attachments'>Attachments:&nbsp; </label>\
 								<select id='social-modal-tweet-attachments' multiple='multiple'>";
 									var attachments = this.field('typedata').attachments;
-								
+
 									for(var i = 0; i < impresslist.socialUploads.length; ++i) {
 										var up = impresslist.socialUploads[i];
 										var hasAttachment = false;
@@ -2437,7 +2437,7 @@ SocialTimelineItem = function(data) {
 												}
 											}
 										}
-										
+
 										var selectedText = (hasAttachment)?"selected='true'":"";
 										html += "<option value='" + up.field('name') + "' " + selectedText + ">" + up.field('name') + "</option>";
 									}
@@ -2454,7 +2454,7 @@ SocialTimelineItem = function(data) {
 								<select id='social-modal-retweet-select'  class='form-control'>";
 									for(var i = 0; i < impresslist.socialTimelineItems.length; i++) {
 										var it = impresslist.socialTimelineItems[i];
-										if (it.field('type') == 'tweet') { 
+										if (it.field('type') == 'tweet') {
 											html += "<option value='" + it.field("id") + "' " + ((this.field('typedata').tweet==it.id)?"selected='true'":"") + " >@" + impresslist.findOAuthTwitterAccountById(parseInt(it.field('typedata').account)).field('twitter_handle') + " " + it.field('typedata').message + "</option>";
 										}
 									}
@@ -2472,7 +2472,7 @@ SocialTimelineItem = function(data) {
 								<label for='attachments'>Attachments:&nbsp; </label>\
 								<select id='social-modal-fbpost-attachments' multiple='multiple'>";
 									var attachments = this.field('typedata').attachments;
-								
+
 									for(var i = 0; i < impresslist.socialUploads.length; ++i) {
 										var up = impresslist.socialUploads[i];
 										var hasAttachment = false;
@@ -2483,7 +2483,7 @@ SocialTimelineItem = function(data) {
 												}
 											}
 										}
-										
+
 										var selectedText = (hasAttachment)?"selected='true'":"";
 										html += "<option value='" + up.field('name') + "' " + selectedText + ">" + up.field('name') + "</option>";
 									}
@@ -2500,7 +2500,7 @@ SocialTimelineItem = function(data) {
 								<select id='social-modal-fbshare-select'  class='form-control'>";
 									for(var i = 0; i < impresslist.socialTimelineItems.length; i++) {
 										var it = impresslist.socialTimelineItems[i];
-										if (it.field('type') == 'fbpost') { 
+										if (it.field('type') == 'fbpost') {
 											html += "<option value='" + it.field("id") + "' " + ((this.field('typedata').tweet==it.id)?"selected='true'":"") + " >" + impresslist.findOAuthFacebookPageById(parseInt(it.field('typedata').account)).field('page_name') + " " + it.field('typedata').message + "</option>";
 										}
 									}
@@ -2523,7 +2523,7 @@ SocialTimelineItem = function(data) {
 								<button id='delete_socialitemId" + this.id + "' type='submit' class='btn btn-danger'>Remove</button> \
 							</div> \
 						</div>";
-	
+
 
 
 		html += "				</div> \
@@ -2540,12 +2540,12 @@ SocialTimelineItem = function(data) {
 		$('#social-modal-timepicker').datetimepicker();
 		$('#social-modal-timepicker').data("DateTimePicker").defaultDate(moment(utime, "X"));
 		$('#social-modal-timepicker').data("DateTimePicker").format("MMMM Do YYYY HH:mm zz");
-		
+
 		var th = this;
 		var onAttachmentsChanged = function(type) {
 			var selectedOptions = $('#social-modal-'+type+'-attachments option:selected');
 			var selectedOptionValues = $('#social-modal-'+type+'-attachments option:selected').map(function(a, item){return item.value;});
-        	var html = "";    
+        	var html = "";
         	for(var i = 0; i < selectedOptionValues.length; i++) {
         		html += "<img src='images/uploads/" + selectedOptionValues[i] + "' style='width:100px;height:100px;margin-right:5px;'/>";
         	}
@@ -2608,10 +2608,10 @@ SocialTimelineItem = function(data) {
 		// update twitlen
 		th.updateTwitterCharactersLeft();
 		$('#social-modal-tweet-message').on("change keyup paste", function() {
-			th.updateTwitterCharactersLeft();	
+			th.updateTwitterCharactersLeft();
 		});
 
-		
+
 		$('#social-modal-type').change(function() {
 			var vl = $(this).val();
 			onTypeChanged(vl);
@@ -2623,13 +2623,13 @@ SocialTimelineItem = function(data) {
 		$("#delete_socialitemId" + this.id).click(function() { API.removeSocialTimelineItem(th); });
 
 		this.setFormEnabled(true);
-		if (//utime != 0 && Date.now() / 1000 > utime && 
+		if (//utime != 0 && Date.now() / 1000 > utime &&
 			this.field('sent') == 1) {
 			this.setFormEnabled(false);
 			$('#save_socialitemId'+this.id).hide();
 			$('#delete_socialitemId'+this.id).hide();
 		}
-		
+
 	}
 	SocialTimelineItem.prototype.updateRow = function() {
 		var html = "";
@@ -2642,7 +2642,7 @@ SocialTimelineItem = function(data) {
 							<div class='oa'> \
 								<p class='fl'><b>Tweet: <a href='http://twitter.com/" + acc.field('twitter_handle') + "'>@" + acc.field('twitter_handle') + "</a></b></p>";
 			html += "			<p class='fr text-muted' style='margin-left:10px;'> <a data-socialitem-id='" + this.id + "' data-toggle='modal' data-target='.social_modal'    style='cursor:pointer' title='Edit'><i class='glyphicon glyphicon-pencil'></i></a></p>";
-			if (this.field('ready')==1) { 
+			if (this.field('ready')==1) {
 				html += "		<p class='fr text-muted' style='margin-left:10px;'> <a class='social-timeline-opensharedialog' data-socialitem-id='" + this.id + "' data-toggle='modal' data-target='.socialShare_modal' style='cursor:pointer' title='Add Shares'><i class='glyphicon glyphicon-plus'></i></a></p>";
 			}
 			html += "			<p class='fr text-muted'><i class='glyphicon glyphicon-time'></i> <span data-social-id='" + this.id + "' data-toggle='tooltip' data-placement='left' title='" + reldate + "'>" + thedate + "</span></p> \
@@ -2650,11 +2650,11 @@ SocialTimelineItem = function(data) {
 							<div> \
 								<img class='icon' src='" + acc.field("twitter_image") + "' /> \
 								<p style='min-height:40px;margin-bottom:0px;'>" + this.field('typedata').message + "</p>";
-					
+
 								var attachments = this.field('typedata').attachments;
-								if (attachments.length > 0) { 
+								if (attachments.length > 0) {
 									html += "<p class='text-muted attachments'>Attachment/s: " + attachments.length + " <i class='glyphicon glyphicon-picture'></i></p>";
-									for(var i = 0; i < attachments.length; i++) { 
+									for(var i = 0; i < attachments.length; i++) {
 										html += "<p class='socialqueue-imageattachment-container' data-social-id='" + this.id + "'  data-attachment-id='" + i + "'><img class='socialqueue-imageattachment' data-social-id='" + this.id + "' data-attachment-id='" + i + "' src='images/uploads/" + attachments[i].file + "'/></p>";
 									}
 								}
@@ -2677,7 +2677,7 @@ SocialTimelineItem = function(data) {
 							<div class='oa'> \
 								<p class='fl'><b>Facebook: <a href='http://facebook.com/" + acc.field('page_id') + "'>" + acc.field('page_name') + "</a></b></p>";
 			html += "			<p class='fr text-muted' style='margin-left:10px;'> <a data-socialitem-id='" + this.id + "' data-toggle='modal' data-target='.social_modal'    style='cursor:pointer' title='Edit'><i class='glyphicon glyphicon-pencil'></i></a></p>";
-			if (this.field('ready')==1) { 
+			if (this.field('ready')==1) {
 				html += "		<p class='fr text-muted' style='margin-left:10px;'> <a class='social-timeline-opensharedialog' data-socialitem-id='" + this.id + "' data-toggle='modal' data-target='.socialShare_modal' style='cursor:pointer' title='Add Shares'><i class='glyphicon glyphicon-plus'></i></a></p>";
 			}
 			html += "			<p class='fr text-muted'><i class='glyphicon glyphicon-time'></i> <span data-social-id='" + this.id + "' data-toggle='tooltip' data-placement='left' title='" + reldate + "'>" + thedate + "</span></p> \
@@ -2685,11 +2685,11 @@ SocialTimelineItem = function(data) {
 							<div> \
 								<img class='icon' src='" + acc.field("page_image") + "' /> \
 								<p style='min-height:40px;margin-bottom:0px;'>" + this.field('typedata').message + "</p>";
-					
+
 								var attachments = this.field('typedata').attachments;
-								if (attachments.length > 0) { 
+								if (attachments.length > 0) {
 									html += "<p class='text-muted attachments'>Attachment/s: " + attachments.length + " <i class='glyphicon glyphicon-picture'></i></p>";
-									for(var i = 0; i < attachments.length; i++) { 
+									for(var i = 0; i < attachments.length; i++) {
 										html += "<p class='socialqueue-imageattachment-container' data-social-id='" + this.id + "'  data-attachment-id='" + i + "'><img class='socialqueue-imageattachment' data-social-id='" + this.id + "' data-attachment-id='" + i + "' src='images/uploads/" + attachments[i].file + "'/></p>";
 									}
 								}
@@ -2717,7 +2717,7 @@ SocialTimelineItem = function(data) {
 		$('.socialqueue-item-container[data-social-id=' + this.id + ']').html(html);
 
 		$('.socialqueue-item-container[data-social-id=' + this.id + ']').attr("data-timestamp", this.field('timestamp'));
-		
+
 
 		/*$("[data-custom-toggle='social-add-shares'").unbind("click");
 		$("[data-custom-toggle='social-add-shares'").click(function() {
@@ -2726,7 +2726,7 @@ SocialTimelineItem = function(data) {
 	}
 	SocialTimelineItem.prototype.update = function() {
 		var th = this;
-		$('.socialqueue-imageattachment').click(function(){ 
+		$('.socialqueue-imageattachment').click(function(){
 			var attid = $(this).attr('data-attachment-id');
 			console.log(attid);
 
@@ -2734,17 +2734,17 @@ SocialTimelineItem = function(data) {
 			var imageSelector = '.socialqueue-imageattachment[data-social-id=' + th.id + '][data-attachment-id='+attid+']';
 
 			var h = $(containerSelector).css('height');
-			if (h == '100px') { 
-				$(containerSelector).css('height', '100%'); 
-				$(imageSelector).css('margin-top', '0px'); 
+			if (h == '100px') {
+				$(containerSelector).css('height', '100%');
+				$(imageSelector).css('margin-top', '0px');
 			} else {
-				$(containerSelector).css('height', '100px'); 
-				$(imageSelector).css('margin-top', '-25%'); 
+				$(containerSelector).css('height', '100px');
+				$(imageSelector).css('margin-top', '-25%');
 			}
 		});
 
-		$('[data-social-id=' + this.id + '][data-toggle="tooltip"]').tooltip(); 
-		
+		$('[data-social-id=' + this.id + '][data-toggle="tooltip"]').tooltip();
+
 		$(this.openSelector()).click(function(){
 			th.open();
 		});
@@ -2772,7 +2772,7 @@ SocialTimelineItem = function(data) {
 
 		if (type == 'tweet') {
 			var account = $("#social-modal-account").val();
-			var typedata = { 
+			var typedata = {
 				message: $('#social-modal-tweet-message').val(),
 				account: account,
 				attachments: []
@@ -2785,7 +2785,7 @@ SocialTimelineItem = function(data) {
 					"file": selectedOptionValues[i]
 				});
 			}
-			
+
 			API.saveSocialTimelineItem(this, type, typedata, timestamp, ready);
 		}
 		else if (type == 'retweet') {
@@ -2796,10 +2796,10 @@ SocialTimelineItem = function(data) {
 				account: account
 			};
 			API.saveSocialTimelineItem(this, type, typedata, timestamp, ready);
-		} 
+		}
 		else if (type == 'fbpost') {
 			var account = $("#social-modal-account").val();
-			var typedata = { 
+			var typedata = {
 				message: $('#social-modal-fbpost-message').val(),
 				account: account,
 				attachments: []
@@ -2812,7 +2812,7 @@ SocialTimelineItem = function(data) {
 					"file": selectedOptionValues[i]
 				});
 			}
-			
+
 			API.saveSocialTimelineItem(this, type, typedata, timestamp, ready);
 		}
 		else if (type == 'fbshare') {
@@ -2823,7 +2823,7 @@ SocialTimelineItem = function(data) {
 				account: account
 			};
 			API.saveSocialTimelineItem(this, type, typedata, timestamp, ready);
-		} 
+		}
 		else if (type == 'blank') {
 			var typedata = {};
 			API.saveSocialTimelineItem(this, type, typedata, timestamp, ready);
@@ -2831,8 +2831,8 @@ SocialTimelineItem = function(data) {
 		//var email   = $("[data-youtuber-id=" + this.id + "][data-input-field='email']").val();
 		//var twitter = $("[data-youtuber-id=" + this.id + "][data-input-field='twitter']").val();
 		//var notes   = $("[data-youtuber-id=" + this.id + "][data-input-field='notes']").val();
-		
-		
+
+
 	}
 
 	SocialTimelineItem.prototype.updateTwitterCharactersLeft = function() {
@@ -2849,7 +2849,7 @@ SocialTimelineItem = function(data) {
 
 	SocialTimelineItem.prototype.setFormEnabled = function(boo) {
 		boo = !boo;
-		$('#social-modal-type').attr("disabled", boo); 
+		$('#social-modal-type').attr("disabled", boo);
 		$('#social-modal-account').attr("disabled", boo);
 		$('#social-modal-edit-timestamp').attr("disabled", boo);
 		$('#social-modal-tweet-message').attr("disabled", boo);
@@ -2859,9 +2859,9 @@ SocialTimelineItem = function(data) {
 		$('#social-modal-edit-ready').attr("disabled", boo);
 		$('#save_socialitemId'+this.id).attr("disabled", boo);
 		$('#delete_socialitemId'+this.id).attr("disabled", boo);
-		
+
 	}
-	
+
 
 
 var impresslist = {
@@ -2932,7 +2932,7 @@ var impresslist = {
 		API.listSimpleMailouts();
 		API.listSocialTimeline();
 		API.listSocialUploads();
-		
+
 
 		// Navigation links
 		var thiz = this;
@@ -2994,14 +2994,14 @@ var impresslist = {
 				$('.bootstrap-tagsinput').attr('disabled',boo);
 			}
 			importtool_disableForm(true);
-			
+
 			var importString = $('#importtool-maintext').val();
 
 			var importType = $('input[name="importtool-type"]:checked').val();
-			if (importType == undefined) { 
-				importtool_disableForm(false); 
-				API.errorMessage("Invalid import type. Please select CSV or TSV."); 
-				return; 
+			if (importType == undefined) {
+				importtool_disableForm(false);
+				API.errorMessage("Invalid import type. Please select CSV or TSV.");
+				return;
 			}
 			console.log(importType);
 
@@ -3019,7 +3019,7 @@ var impresslist = {
 			$.ajax( url )
 				.done(function(result) {
 					importtool_disableForm(false);
-					if (result.substr(0, 1) != '{') { 
+					if (result.substr(0, 1) != '{') {
 						API.errorMessage(result);
 						return;
 					}
@@ -3029,7 +3029,7 @@ var impresslist = {
 						return;
 					}
 					alert(result);
-					
+
 				})
 				.fail(function() {
 					API.errorMessage("Could not import list.");
@@ -3049,7 +3049,7 @@ var impresslist = {
 			md_content = md_content.replace("{{first_name}}", "(First Name)");
 			md_content = md_content.replace("{{steam_key}}", "XXXXX-XXXXX-XXXXX");
 			md_content = md_content.replace("{{steam_keys}}", steam_keys_md);
-			var html_content = markdown.toHTML( md_content ); 
+			var html_content = markdown.toHTML( md_content );
 			$('#mailout-preview').html(html_content);
 		});
 
@@ -3060,7 +3060,7 @@ var impresslist = {
 				if (visible) {
 					var typeId = $(this).attr('data-'+type+'-id');
 					if (typeId != undefined) {
-						if (checked) { 
+						if (checked) {
 							$('input[data-'+type+'-checkbox="true"][data-'+type+'-id="' + typeId + '"]').prop("checked", true);
 						} else {
 							$('input[data-'+type+'-checkbox="true"][data-'+type+'-id="' + typeId + '"]').prop("checked", false);
@@ -3109,12 +3109,12 @@ var impresslist = {
 		$('#keys-add-submit').click(function(){
 			var keys_setFormEnabled = function(boo) {
 				boo = !boo;
-				$('#keys-add-platform').attr("disabled", boo); 
-				$('#keys-add-textfield').attr("disabled", boo); 
-				$('#keys-radio-expiry-never').attr("disabled", boo); 
-				$('#keys-radio-expiry-time').attr("disabled", boo); 
-				$('#keys-timepicker').attr("disabled", boo); 
-				$('#keys-add-submit').attr("disabled", boo); 
+				$('#keys-add-platform').attr("disabled", boo);
+				$('#keys-add-textfield').attr("disabled", boo);
+				$('#keys-radio-expiry-never').attr("disabled", boo);
+				$('#keys-radio-expiry-time').attr("disabled", boo);
+				$('#keys-timepicker').attr("disabled", boo);
+				$('#keys-add-submit').attr("disabled", boo);
 			}
 			keys_setFormEnabled(false);
 
@@ -3143,16 +3143,16 @@ var impresslist = {
 				$('#keys-add-platform').val('---');
 				$('#keys-add-textfield').val('');
 				$('#nav-keys').click();
-			});	
-				
+			});
+
 		});
 
-		// Social Scheduler 
-		// Timeline 
+		// Social Scheduler
+		// Timeline
 		$('#social-timeline-add').click(function() {
 			API.addSocialTimelineItem();
 		});
-		
+
 
 		// Social Account Management
 		$('#social-addtwitteraccount-link').click(function(){
@@ -3170,7 +3170,7 @@ var impresslist = {
 			API.addOAuthTwitterAccount(token, tokenSecret, pin);
 		});
 		$('#social-addfacebookpage').click(function() {
-			
+
 			var html = "<div class='modal fade addfacebookpage_modal' tabindex='-1' role='dialog'> \
 							<div class='modal-dialog'> \
 								<div class='modal-content' style='padding:5px;'> \
@@ -3221,15 +3221,15 @@ var impresslist = {
 					$('#social-add-officialfacebookpage-' + data[i].id).click(function() {
 						var th = this;
 						API.addOAuthFacebookPage(
-							$(this).attr("data-page-id"), 
-							$(this).attr("data-page-name"), 
-							$(this).attr("data-page-accessToken"), 
-							$(this).attr("data-page-image"), 
+							$(this).attr("data-page-id"),
+							$(this).attr("data-page-name"),
+							$(this).attr("data-page-accessToken"),
+							$(this).attr("data-page-image"),
 							function(dt) {
 								$("#social-officialfacebookpage-" + dt.facebookpage.page_id).remove();
 							}
 						);
-						
+
 					});
 				}
 
@@ -3242,17 +3242,17 @@ var impresslist = {
 
 		// TODO functionality
 		this.jobs.init();
-		
+
 		this.refreshFilter();
 	},
 	selectModeIsOpen: false,
 	openSelectMode: function() {
-		if (!this.selectModeIsOpen) { 
+		if (!this.selectModeIsOpen) {
 			this.toggleSelectMode();
 		}
 	},
 	closeSelectMode: function() {
-		if (this.selectModeIsOpen) { 
+		if (this.selectModeIsOpen) {
 			this.toggleSelectMode();
 		}
 	},
@@ -3271,7 +3271,7 @@ var impresslist = {
 		});
 		this.refreshFilter();
 
-		
+
 	},
 
 
@@ -3280,28 +3280,28 @@ var impresslist = {
 		$("[data-type-page='true']").hide();
 		$("[data-type-page='true'][data-page='" + page + "']").show();
 	},
-	
+
 	refreshFilter: function() {
 		impresslist.applyFilter($('#filter').val().toLowerCase());
 	},
 	applyFilter: function(text) {
 		var countPeopleVisible = 0;
-		for(var i = 0; i < impresslist.people.length; i++) { 
+		for(var i = 0; i < impresslist.people.length; i++) {
 			if (impresslist.people[i].filter(text)) { countPeopleVisible++; }
 		}
-		
+
 		var countPublicationsVisible = 0;
-		for(var i = 0; i < impresslist.publications.length; i++) { 
+		for(var i = 0; i < impresslist.publications.length; i++) {
 			if (impresslist.publications[i].filter(text)) { countPublicationsVisible++; }
 		}
 
 		var countYoutubeChannelsVisible = 0;
-		for(var i = 0; i < impresslist.youtubers.length; i++) { 
+		for(var i = 0; i < impresslist.youtubers.length; i++) {
 			if (impresslist.youtubers[i].filter(text)) { countYoutubeChannelsVisible++; }
 		}
 
 		var countCoverageVisible = 0;
-		for(var i = 0; i < impresslist.coverage.length; i++) { 
+		for(var i = 0; i < impresslist.coverage.length; i++) {
 			if (impresslist.coverage[i].filter(text)) { countCoverageVisible++; }
 		}
 
@@ -3333,7 +3333,7 @@ var impresslist = {
 
 		var html = "";
 		for(var i = 0; i < peopleSelected.length; i++) {
-			
+
 			var readBool = $(peopleSelected[i]).attr('mailout-read');
 			html += "<tr>"
 			html += "	<td>" + $(peopleSelected[i]).attr('data-mailout-name') + "</td>";
@@ -3348,7 +3348,7 @@ var impresslist = {
 		$('#mailout-recipients').show();
 		$('#mailout-recipients-none').hide();
 	},
-	
+
 	addPerson: function(obj, fromInit) {
 		this.people.push(obj);
 		obj.onAdded();
@@ -3392,7 +3392,7 @@ var impresslist = {
 		this.coverage.push(obj);
 		obj.onAdded(fromInit);
 	},
-	
+
 	addOAuthTwitterAccount: function(obj, fromInit) {
 		this.oauthTwitterAccounts.push(obj);
 		obj.onAdded(fromInit);
@@ -3499,7 +3499,7 @@ var impresslist = {
 				break;
 			}
 		}
-	}, 
+	},
 	removeYoutuber: function(obj) {
 		for(var i = 0, len = this.youtubers.length; i < len; ++i) {
 			if (this.youtubers[i].id == obj.id) {
@@ -3510,7 +3510,7 @@ var impresslist = {
 				break;
 			}
 		}
-	}, 
+	},
 	removePersonPublication: function(obj) {
 		for(var i = 0, len = this.personPublications.length; i < len; ++i) {
 			if (this.personPublications[i].id == obj.id) {
@@ -3685,7 +3685,7 @@ impresslist.jobs = {
 		var thiz = this;
 		$(this.selectors.button).click(function() {
 			var message = $(thiz.selectors.text).val();
-			if (message.trim().length > 0) { 
+			if (message.trim().length > 0) {
 				thiz.save(message);
 			}
 		});
@@ -3695,7 +3695,7 @@ impresslist.jobs = {
 		var url = "api.php?endpoint=/job/list/";
 		$.ajax( url )
 			.done(function(result) {
-				if (result.substr(0, 1) != '{') { 
+				if (result.substr(0, 1) != '{') {
 					API.errorMessage(result);
 					return;
 				}
@@ -3706,7 +3706,7 @@ impresslist.jobs = {
 				}
 				thiz.populate(json.jobs);
 				$(thiz.selectors.button).removeAttr('disabled');
-				
+
 			})
 			.fail(function() {
 				API.errorMessage("Could not list Jobs.");
@@ -3717,13 +3717,13 @@ impresslist.jobs = {
 		var url = "api.php?endpoint=/job/save-all/&jobs=" + encodeURIComponent(message);
 		$.ajax( url )
 			.done(function(result) {
-				if (result.substr(0, 1) != '{') { 
+				if (result.substr(0, 1) != '{') {
 					API.errorMessage(result);
 					return;
 				}
 				var json = JSON.parse(result);
 				if (!json.success) { API.errorMessage(json.message); return; }
-				
+
 				thiz.populate(json.jobs);
 				API.successMessage("Jobs saved");
 			})
@@ -3741,7 +3741,7 @@ impresslist.jobs = {
 		}
 		console.log(jobsString);
 		$(this.selectors.text).html(jobsString);
-	} 
+	}
 };
 
 
@@ -3766,14 +3766,14 @@ impresslist.chat = {
 		var thiz = this;
 		$(this.selectors.text).keyup(function(e) {
 			var code = e.which;
-			if(code==13) { 
+			if(code==13) {
 				$(thiz.selectors.button).click();
 			}
 		});
 		$(this.selectors.button).click(function() {
 			var message = $(thiz.selectors.text).val();
 			$(thiz.selectors.text).val("");
-			if (message.trim().length > 0) { 
+			if (message.trim().length > 0) {
 				thiz.send(message);
 			}
 		});
@@ -3804,7 +3804,7 @@ impresslist.chat = {
 	},
 
 
-	update: function(fromInit) { 
+	update: function(fromInit) {
 		var thiz = this;
 		$.ajax(  {
 			type: "GET",
@@ -3814,7 +3814,7 @@ impresslist.chat = {
 				success: function(result) {
 					console.log(result);
 
-					if (result.substr(0, 1) != '{') { 
+					if (result.substr(0, 1) != '{') {
 						API.errorMessage(result);
 						return;
 					}
@@ -3827,7 +3827,7 @@ impresslist.chat = {
 					//console.log(result);
 					if (fromInit) { $(thiz.selectors.messages).html(""); }
 					for (var i = 0; i < json.data.lines.length; i++) {
-						
+
 						var user = impresslist.findUserById(json.data.lines[i].user);
 						var date = new Date(json.data.lines[i].time*1000);
 						var text = "";
@@ -3849,13 +3849,13 @@ impresslist.chat = {
 					thiz.latest_message_time = json.data.meta.time;
 					thiz.current_filesize = json.data.meta.size;
 
-					setTimeout(function() { 
-						thiz.update(false); 
+					setTimeout(function() {
+						thiz.update(false);
 					}, 1000);
 				}
 			});
 	},
-	send: function(line) { 
+	send: function(line) {
 		$.ajax({
 			type: "POST",
 			url: "api.php?endpoint=/chat/send/",
@@ -3864,7 +3864,7 @@ impresslist.chat = {
 			cache: false,
 			success:  function(result) {
 				console.log(result);
-				if (result.substr(0, 1) != '{') { 
+				if (result.substr(0, 1) != '{') {
 					API.errorMessage(result);
 					return;
 				}
@@ -3872,10 +3872,10 @@ impresslist.chat = {
 				if (!json.success) {
 					API.errorMessage(json.message);
 					return;
-				} 
+				}
 			}
 		});
-			
+
 	}
 }
 
@@ -3899,7 +3899,7 @@ impresslist.util = {
 	    var msPerMonth = msPerDay * 30;
 	    var msPerYear = msPerDay * 365;
 
-	    var elapsed = current - previous; 
+	    var elapsed = current - previous;
 	    //console.log("current: " + current);
 	    //console.log("prev: " + previous);
 
@@ -3912,15 +3912,15 @@ impresslist.util = {
 				}
 		        return num + ' seconds from now';
 		    } else if (elapsed < msPerHour) {
-		        return Math.round(elapsed/msPerMinute) + ' minutes from now';   
+		        return Math.round(elapsed/msPerMinute) + ' minutes from now';
 		    } else if (elapsed < msPerDay ) {
-		        return Math.round(elapsed/msPerHour ) + ' hours from now';   
+		        return Math.round(elapsed/msPerHour ) + ' hours from now';
 		    } else if (elapsed < msPerMonth) {
-		        return '~' + Math.round(elapsed/msPerDay) + ' days from now';   
+		        return '~' + Math.round(elapsed/msPerDay) + ' days from now';
 		    } else if (elapsed < msPerYear) {
-		        return '~' + Math.round(elapsed/msPerMonth) + ' months from now';   
+		        return '~' + Math.round(elapsed/msPerMonth) + ' months from now';
 		    }
-	    	return '~' + Math.round(elapsed/msPerYear ) + ' years from now';   
+	    	return '~' + Math.round(elapsed/msPerYear ) + ' years from now';
 	    }
 		else if (elapsed < msPerMinute) {
 			var num = Math.round(elapsed/1000);
@@ -3929,20 +3929,20 @@ impresslist.util = {
 			}
 	        return num + ' seconds ago';
 	    } else if (elapsed < msPerHour) {
-	        return Math.round(elapsed/msPerMinute) + ' minutes ago';   
+	        return Math.round(elapsed/msPerMinute) + ' minutes ago';
 	    } else if (elapsed < msPerDay ) {
-	        return Math.round(elapsed/msPerHour ) + ' hours ago';   
+	        return Math.round(elapsed/msPerHour ) + ' hours ago';
 	    } else if (elapsed < msPerMonth) {
-	        return '~' + Math.round(elapsed/msPerDay) + ' days ago';   
+	        return '~' + Math.round(elapsed/msPerDay) + ' days ago';
 	    } else if (elapsed < msPerYear) {
-	        return '~' + Math.round(elapsed/msPerMonth) + ' months ago';   
+	        return '~' + Math.round(elapsed/msPerMonth) + ' months ago';
 	    }
 
 	    else {
-	        return '~' + Math.round(elapsed/msPerYear ) + ' years ago';   
+	        return '~' + Math.round(elapsed/msPerYear ) + ' years ago';
 	    }
 	},
-	
+
 	zeropad: function(num, digits) {
 	    var newstr = ("" + num);
 	    while (newstr.length < digits) {
@@ -3953,7 +3953,7 @@ impresslist.util = {
 
 	mailtoClient: function(defaultEmail, emailSubject, emailBody, emailBCC) {
 		emailBCC = typeof emailBCC !== 'undefined' ? emailBCC : "";
-		
+
   	 	var str = "mailto:" + defaultEmail + "?subject=" + emailSubject + "&body=" + emailBody;
 		if (emailBCC.length > 0) { str += "&bcc=" + emailBCC; }
 		return str;
