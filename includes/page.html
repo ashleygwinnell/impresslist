@@ -364,12 +364,11 @@
 				<div id='keys-loading-false'>
 				</div> -->
 
-				<?php
-					// keys
-					echo "<p><b>Steam:</b></p>";
-					echo "<p>Assigned: <span id='steam_keys_assigned_count'>loading...</span></p>";
-					echo "<p>Available: <span id='steam_keys_available_count'>loading...</span></p>";
-				?>
+
+				<p><b>Steam:</b></p>
+				<p>Assigned: <span id='steam_keys_assigned_count'>loading...</span></p>
+				<p>Available: <span id='steam_keys_available_count'>loading...</span></p>
+
 				<hr/>
 				<p><b>Add Keys</b></p>
 				<div class='row'>
@@ -382,7 +381,7 @@
 							<option value='steam'>Steam</option>
 							<!-- <option value='gamejolt'>Game Jolt</option> -->
 							<!-- <option value='ios'>iOS App Store</option> -->
-							<!-- <option value='mac'>Windows Store</option> -->
+							<!-- <option value='windows'>Windows Store</option> -->
 							<!-- <option value='mac'>Mac App Store</option> -->
 							<!-- <option value='xboxone'>Xbox One</option> -->
 							<!-- <option value='ps4'>PS4</option> -->
@@ -417,12 +416,51 @@
 						</div>
 
 					</div>
-				</div><br/>
+					<button id='keys-add-submit' class='btn btn-primary fr'>Add Keys</button>
+				</div>
+				<hr/>
 
 
 
+				<div id='keys-remove-form' style='display:none;' >
+					<p><b>Remove Keys:</b></p>
+					<div class='row'>
+						<div class='col-sm-2'>
+							<p><b>Platform:</b></p>
+						</div>
+						<div class='col-sm-10'>
+							<select id='keys-remove-platform' class='form-control' style='margin-bottom:10px;'>
+								<option value='---'>---</option>
+								<option value='steam'>Steam</option>
+								<!-- <option value='gamejolt'>Game Jolt</option> -->
+								<!-- <option value='ios'>iOS App Store</option> -->
+								<!-- <option value='windows'>Windows Store</option> -->
+								<!-- <option value='mac'>Mac App Store</option> -->
+								<!-- <option value='xboxone'>Xbox One</option> -->
+								<!-- <option value='ps4'>PS4</option> -->
+								<!-- <option value='wiiu'>Wii U</option> -->
+							</select>
+						</div>
+					</div>
+					<div class='row'>
+						<div class='col-sm-2'>
+							<p><b>Amount:</b></p>
+						</div>
+						<div class='col-sm-8'>
+							<input id='keys-remove-amount' class='form-control'  />
+						</div>
+						<button id='keys-remove-submit' class='btn btn-primary fr'>Remove Keys</button>
+					</div>
+					<br/>
 
-				<button id='keys-add-submit' class='btn btn-primary fr'>Add Keys</button>
+
+					<div id='keys-removed-container' style='display:none;' >
+						<p><b>Removed Keys:</b></p>
+						<p>Copy these to somewhere safe as they are no longer stored within impress[].</p>
+						<ul id='keys-removed-list'></ul>
+					</div>
+				</div>
+				<br/><br/>
 
 			</div>
 		</div>

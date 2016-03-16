@@ -3219,7 +3219,34 @@ var impresslist = {
 
 			API.listKeys(impresslist.config.user.game, 'steam', false, function(data) {
 				$('#steam_keys_available_count').html(data.count);
+
+				if (data.count > 0) {
+					// remove keys form
+					$('#keys-remove-submit').unbind('click');
+					$('#keys-remove-submit').click(function(){
+						var submitGame = impresslist.config.user.game;
+						var platform = $('#keys-remove-platform').val();
+						var amount = $('#keys-remove-amount').val();
+
+						API.popKeys(submitGame, platform, amount, function(data) {
+
+							// show removed keys
+							var html = "";
+							for(var i = 0; i < data.keys.length; i++) {
+								html += "<li>" + data.keys[i].keystring + "</li>";
+							}
+							$('#keys-removed-list').html(html);
+							$('#keys-removed-container').show();
+
+							$('#steam_keys_available_count').html( parseInt($('#steam_keys_available_count').html()) - data.count);
+						});
+
+					});
+
+					$('#keys-remove-form').show();
+				}
 			});
+
 
 			// sort out timepicker
 			$('#keys-timepicker').datetimepicker();

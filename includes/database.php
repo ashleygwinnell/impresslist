@@ -60,7 +60,7 @@
 	}
 	function db_singleavailablekeyforgame($db, $gameid, $platform) {
 		if (!is_numeric($gameid)) { return false; }
-		$rs = $db->query("SELECT * FROM game_key WHERE game = '" . $gameid . "' AND platform = '" . $platform . "' AND assigned = 0 ORDER BY id ASC;");
+		$rs = $db->query("SELECT * FROM game_key WHERE game = '" . $gameid . "' AND platform = '" . $platform . "' AND assigned = 0 AND removed = 0 ORDER BY id ASC;");
 		return $rs[0];
 	}
 	function db_singleOAuthTwitter($db, $twitterAccId) {
@@ -111,12 +111,14 @@
 									AND assigned = :assigned
 									AND assignedToType = :assignedToType
 									AND assignedToTypeId = :assignedToTypeId
+									AND removed = :removed
 								");
 		$stmt->bindValue(":game", $gameid, Database::VARTYPE_INTEGER);
 		$stmt->bindValue(":platform", $platform, Database::VARTYPE_STRING);
 		$stmt->bindValue(":assigned", 1, Database::VARTYPE_INTEGER);
 		$stmt->bindValue(":assignedToType", $type, Database::VARTYPE_STRING);
 		$stmt->bindValue(":assignedToTypeId", $typeid, Database::VARTYPE_INTEGER);
+		$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
 		return $stmt->query();
 	}
 	function db_defaultPrioritiesString($db) {

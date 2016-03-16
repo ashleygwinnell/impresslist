@@ -467,6 +467,33 @@ API.addKeys = function(keys, game, platform, expiresOn, callbackfunction) {
 			API.errorMessage("Could not add Keys.");
 		});
 }
+API.popKeys = function(game, platform, amount, successCallback) {
+	var url = "api.php?endpoint=/keys/pop/" +
+					"&game=" + encodeURIComponent(game) +
+					"&platform=" + encodeURIComponent(platform) +
+					"&amount=" + encodeURIComponent(amount);
+	console.log(url);
+
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Keys popped.");
+			console.log(json);
+
+			successCallback(json);
+		})
+		.fail(function() {
+			API.errorMessage("Could not pop Keys.");
+		});
+}
 
 API.listSimpleMailouts = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }

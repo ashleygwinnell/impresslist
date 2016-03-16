@@ -282,7 +282,10 @@ $sql = "CREATE TABLE IF NOT EXISTS game_key (
 			assignedByUser INTEGER NOT NULL,
 			assignedByUserTimestamp INTEGER NOT NULL,
 			createdOn INTEGER NOT NULL,
-			expiresOn INTEGER NOT NULL
+			expiresOn INTEGER NOT NULL,
+			removed INTEGER NOT NULL DEFAULT 0,
+			removedByUser INTEGER,
+			removedByUserTimestamp INTEGER
 		) {$sqlEngineAndCharset} ;";
 $db->exec($sql); // todo; add indexes?
 

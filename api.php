@@ -188,6 +188,7 @@ if (!isset($_GET['endpoint'])) {
 		// Key management
 		"/keys/list/",
 		"/keys/add/",
+		"/keys/pop/",
 
 		// Coverage management
 		"/coverage/",
@@ -1977,7 +1978,7 @@ if (!isset($_GET['endpoint'])) {
 				$keys = $db->query("SELECT * FROM game_key
 									WHERE
 										game = '" . $user_currentGame . "' AND
-										platform = '" . $_GET['platform'] . "'
+										platform = '" . $_GET['platform'] . "' AND removed = 0
 										{$assignedSQL}
 									;");
 				$result = new stdClass();
@@ -1985,6 +1986,80 @@ if (!isset($_GET['endpoint'])) {
 				$result->keys = $keys;
 				$result->count = count($keys);
 			} else if (!$dolist && !$result){
+				$result = api_error("Unknown error. Invalid value.");
+			}
+		}
+		else if ($endpoint == "/keys/pop/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$dopop = true;
+			if ($_GET['platform'] != 'steam') {
+				$result = api_error("Invalid 'platform' value.");
+				$dopop = false;
+			//} else if ($_GET['assigned'] != "true" && $_GET['assigned'] != "false") {
+			//	$result = api_error("Invalid 'assigned' value.");
+			//	$dolist = false;
+			} else if (!util_isInteger($_GET['game'])) {
+				$result = api_error("Invalid 'game' value.");
+				$dopop = false;
+			}
+
+			if ($dopop) { // make sure Game is valid.
+				$game = db_singlegame($db, $_GET['game']);
+				if (!$game) {
+					$result = api_error("Invalid 'game' value.");
+					$dopop = false;
+				}
+			}
+
+			if ($dopop) { // make sure Game is valid.
+				if (!isset($_GET['amount'])) {
+					$result = api_error("Invalid 'amount' value.");
+					$dopop = false;
+				}
+				else if (!util_isInteger($_GET['amount']) || $_GET['amount'] <= 0) {
+					$result = api_error("Invalid 'amount' value.");
+					$dopop = false;
+				}
+			}
+
+			if ($dopop) {
+
+				$stmt = $db->prepare("SELECT * FROM game_key
+										WHERE game = :game
+											AND platform = :platform
+											AND assignedToTypeId = :assignedToTypeId
+										LIMIT :amount
+									;");
+				$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":platform", $_GET['platform'], Database::VARTYPE_STRING);
+				$stmt->bindValue(":assignedToTypeId", 0, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":amount", $_GET['amount'], Database::VARTYPE_INTEGER);
+				$keys = $stmt->query();
+
+				$time = time();
+				$keyIds = array();
+				foreach ($keys as &$key) {
+					$keyIds[] = $key['id'];
+					$key['removed'] = 1;
+					$key['removedByUser'] = $_SESSION['user'];
+					$key['removedByUserTimestamp'] = $time;
+				}
+
+				$stmt = $db->prepare("UPDATE game_key SET removed = :removed, removedByUser = :removedByUser, removedByUserTimestamp = :removedByUserTimestamp WHERE id in ( :id ) ;");
+				$stmt->bindValue(":id", implode($keyIds, ','), Database::VARTYPE_STRING);
+				$stmt->bindValue(":removed", 1, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":removedByUser", $_SESSION['user'], Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":removedByUserTimestamp", $time, Database::VARTYPE_INTEGER);
+				$stmt->execute();
+
+				$result = new stdClass();
+				$result->success = true;
+				$result->keys = $keys;
+				$result->count = count($keys);
+			} else if (!$dopop && !$result){
 				$result = api_error("Unknown error. Invalid value.");
 			}
 		}
@@ -2022,8 +2097,8 @@ if (!isset($_GET['endpoint'])) {
 					// if we get here then the keys are all good!
 					// TODO: should we check for duplicates..?
 					for($j = 0; $j < count($keysArray); $j++) {
-						$stmt = $db->prepare("INSERT INTO game_key (id, game, platform, keystring, assigned, assignedToType, assignedToTypeId, assignedByUser, assignedByUserTimestamp, createdOn, expiresOn)
-												  			VALUES (NULL, :game, :platform, :keystring, :assigned, :assignedToType, :assignedToTypeId, :assignedByUser, :assignedByUserTimestamp, :createdOn, :expiresOn ); ");
+						$stmt = $db->prepare("INSERT INTO game_key (id, game, platform, keystring, assigned, assignedToType, assignedToTypeId, assignedByUser, assignedByUserTimestamp, createdOn, expiresOn, removed)
+												  			VALUES (NULL, :game, :platform, :keystring, :assigned, :assignedToType, :assignedToTypeId, :assignedByUser, :assignedByUserTimestamp, :createdOn, :expiresOn, :removed ); ");
 						$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
 						$stmt->bindValue(":platform", $_GET['platform'], Database::VARTYPE_STRING);
 						$stmt->bindValue(":keystring", $keysArray[$j], Database::VARTYPE_STRING);
@@ -2034,6 +2109,7 @@ if (!isset($_GET['endpoint'])) {
 						$stmt->bindValue(":assignedByUserTimestamp", 0, Database::VARTYPE_INTEGER);
 						$stmt->bindValue(":createdOn", time(), Database::VARTYPE_INTEGER);
 						$stmt->bindValue(":expiresOn", $_GET['expiresOn'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
 						$stmt->execute();
 					}
 
