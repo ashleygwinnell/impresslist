@@ -3463,10 +3463,12 @@ var impresslist = {
 		for(var i = 0; i < peopleSelected.length; i++) {
 
 			var readBool = $(peopleSelected[i]).attr('mailout-read');
+			var personName = $(peopleSelected[i]).attr('data-mailout-name');
+			var personTypeName = $(peopleSelected[i]).attr('data-mailout-typename');
 			html += "<tr>"
-			html += "	<td>" + $(peopleSelected[i]).attr('data-mailout-name') + "</td>";
-			html += "	<td>" + $(peopleSelected[i]).attr('data-mailout-typename') + "</td>";
-			html += "	<td class='mailout-readflags mailout-read-" + readBool + "'>" + readBool + "</td>";
+			html += "	<td data-value='" + personName + "'>" + personName + "</td>";
+			html += "	<td data-value='" + personTypeName + "'>" + personTypeName + "</td>";
+			html += "	<td class='mailout-readflags mailout-read-" + readBool + "' data-value='" + readBool + "'>" + readBool + "</td>";
 			// " + $(peopleSelected[i]).attr('data-mailout-email') + "
 			html += "</tr>";
 		}
