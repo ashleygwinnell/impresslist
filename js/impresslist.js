@@ -1111,12 +1111,13 @@ SimpleMailout = function(data) {
 
 		var openText = "-";
 		if (this.field("sent") == 1) {
-			openText = Math.round((((1.0*this.numOpens)/(1.0*this.numRecipients))*100)) + "%";
+			openText = Math.round((((1.0*this.numOpens)/(1.0*this.numRecipients))*100));
 		}
 
 		$("[data-simplemailout-id='" + this.id + "'][data-field='name']").html( this.field('name') );
 		$("[data-simplemailout-id='" + this.id + "'][data-field='numRecipients']").html( recipientsText );
-		$("[data-simplemailout-id='" + this.id + "'][data-field='numOpens']").html( openText );
+		$("[data-simplemailout-id='" + this.id + "'][data-field='numOpens']").html( openText + "%" );
+		$("[data-simplemailout-id='" + this.id + "'][data-field='numOpens']").attr('data-value', openText );
 		$("[data-simplemailout-id='" + this.id + "'][data-field='timestamp']").html( sentText );
 	}
 	SimpleMailout.prototype.send = function() {
