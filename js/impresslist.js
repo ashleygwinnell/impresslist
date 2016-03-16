@@ -1545,7 +1545,7 @@ Person = function(data) {
 									</table> \
 								</div> \
 								<div id='person-view-email' style='display:none;'> \
-									<div class='pady'><b><a id='person-view-all-messages'>All Messages</a> </b> >&nbsp;<span data-view-email-field='subject'></span></div> \
+									<div class='pady'><b><a class='person-view-all-messages'>All Messages</a> </b> >&nbsp;<span data-view-email-field='subject'></span></div> \
 									<table class='table table-striped sortable'> \
 										<tbody> \
 											<tr> \
@@ -1565,6 +1565,10 @@ Person = function(data) {
 											</tr> \
 										</tbody> \
 									</table> \
+									<div class='oa'> \
+										<button class='person-view-all-messages btn btn-sm btn-default fl'>Return to Messages</button> \
+										<button class='person-remove-message btn btn-sm btn-danger fr' style='display:none'>Remove</button> \
+									</div>\
 								</div> \
 							</div>";
 
@@ -1695,10 +1699,11 @@ Person = function(data) {
 		}
 
 		// Viewing Emails
-		$("#person-view-all-messages").click(function() {
+		var returnToMessages = function() {
 			$('#person-view-email').hide();
 			$('#all-messages').show();
-		});
+		};
+		$(".person-view-all-messages").click(returnToMessages);
 		$("[data-open-field='email']").click(function() {
 			var emailId = $(this).attr('data-email-id');
 			var emailObj = impresslist.findEmailById(emailId);
@@ -1710,6 +1715,19 @@ Person = function(data) {
 			$("[data-view-email-field='from']").html(emailObj.field('from_email'));
 			$("[data-view-email-field='to']").html(emailObj.field('to_email'));
 			$("[data-view-email-field='content']").html(emailObj.field('contents'));
+
+
+			if (impresslist.config.user.admin) { $('.person-remove-message').show(); }
+			$('.person-remove-message').unbind('click');
+			$('.person-remove-message').click(function() {
+
+				API.request('/email/remove/', { id: emailId }, function( data ) {
+					API.successMessage("Email successfully removed.");
+					$('#all-messages tr[data-open-field=email][data-email-id=' + emailId + ']').remove();
+					returnToMessages();
+				}, function(){});
+
+			});
 
 			$('#all-messages').hide();
 			$('#person-view-email').show();
@@ -2987,6 +3005,7 @@ var impresslist = {
 			id: 0,
 			game: 0,
 			gmail: 0,
+			admin: false,
 			imapServer: '',
 			smtpServer: ''
 		}

@@ -7,7 +7,7 @@ $require_login = true;
 include_once("init.php");
 
 // Users
-$users = $db->query("SELECT user.id, forename, surname, email, color, lastactivity, count(email.id) as num_emails, admin FROM user LEFT JOIN email on email.user_id = user.id where removed = 0 group by user.id;");
+$users = $db->query("SELECT user.id, forename, surname, email, color, lastactivity, count(email.id) as num_emails, admin FROM user LEFT JOIN email on email.user_id = user.id WHERE user.removed = 0 AND email.removed = 0 group by user.id;");
 $num_users = count($users);
 
 // Games

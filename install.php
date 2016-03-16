@@ -247,7 +247,8 @@ $sql = "CREATE TABLE IF NOT EXISTS email (
 			to_email VARCHAR(255) NOT NULL,
 			subject varchar(255) NOT NULL,
 			contents text NOT NULL,
-			unmatchedrecipient INTEGER NOT NULL "//,
+			unmatchedrecipient INTEGER NOT NULL,
+			removed INTEGER NOT NULL DEFAULT 0 "//,
 			 //PRIMARY KEY(user_id, person_id, utime)
 			. "
 		) {$sqlEngineAndCharset} ;";

@@ -173,6 +173,7 @@ if (!isset($_GET['endpoint'])) {
 		"/person-publication/list/",
 		"/person-youtube-channel/list/",
 		"/email/list/",
+		"/email/remove/",
 
 		// Import tool/s
 		"/import/",
@@ -1682,7 +1683,7 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once("init.php");
 
-			$emails = $db->query("SELECT * FROM email WHERE unmatchedrecipient = 0 ORDER BY utime DESC;");
+			$emails = $db->query("SELECT * FROM email WHERE unmatchedrecipient = 0 AND removed = 0 ORDER BY utime DESC;");
 			$num_emails = count($emails);
 			for($i = 0; $i < $num_emails; $i++) {
 				$emails[$i]['contents'] = utf8_encode($emails[$i]['contents']);
@@ -1692,6 +1693,48 @@ if (!isset($_GET['endpoint'])) {
 			$result = new stdClass();
 			$result->success = true;
 			$result->emails = $emails;
+		}
+		else if ($endpoint == '/email/remove/')
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$user = db_singleuser($db, $_SESSION['user']);
+			if (!$user['admin']) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = 'You must be an admin to remove emails.';
+			}
+			else {
+
+				$id = $_GET['id'];
+				if (!is_numeric($id) || $id <= 0 ) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = 'ID must be a number.';
+				} else {
+
+					$stmt = $db->prepare("SELECT * FROM email WHERE id = :id LIMIT 1 ;");
+					$stmt->bindValue(":id", $id, Database::VARTYPE_STRING);
+					$emails = $stmt->query();
+
+					if (count($emails) != 1) {
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = 'Email does not exist.';
+					} else {
+
+						$stmt = $db->prepare("UPDATE email SET removed = 1 WHERE id = :id ;");
+						$stmt->bindValue(":id", $id, Database::VARTYPE_STRING);
+						$stmt->execute();
+
+						$result = new stdClass();
+						$result->success = true;
+
+					}
+				}
+
+			}
 		}
 
 

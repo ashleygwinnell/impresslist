@@ -14,7 +14,7 @@
 			$extrasString = ','.$extrasString;
 		}
 
-		$results = $db->query("SELECT user.id, forename, surname, email, color, emailGmailIndex, emailIMAPServer, emailSMTPServer, currentGame, lastactivity, count(email.id) as num_emails, admin $extrasString FROM user LEFT JOIN email on email.user_id = user.id where removed = 0 and user.id = " . $userId. " group by user.id ;");
+		$results = $db->query("SELECT user.id, forename, surname, email, color, emailGmailIndex, emailIMAPServer, emailSMTPServer, currentGame, lastactivity, count(email.id) as num_emails, admin $extrasString FROM user LEFT JOIN email on email.user_id = user.id where user.removed = 0 and email.removed = 0 and user.id = " . $userId. " group by user.id ;");
 
 		return $results[0];
 	}
