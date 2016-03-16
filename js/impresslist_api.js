@@ -1514,6 +1514,134 @@ API.sqlQuery = function(query) {
 			API.errorMessage("Could not execute query.");
 		});
 }
+API.addUser = function() {
+	var url = "api.php?endpoint=/admin/user/add/";
+	console.log(url);
+
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("User added.");
+			console.log(json);
+
+			var user = new User(json.user);
+			impresslist.addUser(user, false);
+		})
+		.fail(function() {
+			API.errorMessage("Could not add User.");
+		});
+}
+API.saveUser = function(user, forename, surname, email, color, admin, successCallback) {
+	var url = "api.php?endpoint=/admin/user/save/";
+	url += "&id=" + encodeURIComponent(user.id);
+	url += "&forename=" + encodeURIComponent(forename);
+	url += "&surname=" + encodeURIComponent(surname);
+	url += "&email=" + encodeURIComponent(email);
+	url += "&color=" + encodeURIComponent(color);
+	url += "&admin=" + encodeURIComponent(admin);
+	console.log(url);
+
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("User saved.");
+			console.log(json);
+
+			console.log(json);
+			user.init(json.user);
+			user.update();
+
+			if (typeof successCallback != 'undefined') {
+				successCallback();
+			}
+		})
+		.fail(function() {
+			API.errorMessage("Could not save User.");
+		});
+}
+API.removeUser = function(user) {
+	var url = "api.php?endpoint=/admin/user/remove/";
+	url += "&id=" + encodeURIComponent(user.id);
+	console.log(url);
+
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
+
+			var json = JSON.parse(result);
+			if (!json.success) { API.errorMessage(json.message); return; }
+			API.successMessage("User removed.");
+			impresslist.removeUser(user);
+
+		})
+		.fail(function() {
+			API.errorMessage("Could not remove User.");
+		});
+}
+API.saveUserPassword = function(user, password1, password2, successCallback) {
+	var url = "api.php?endpoint=/admin/user/change-password/";
+	url += "&id=" + encodeURIComponent(user.id);
+	url += "&password1=" + encodeURIComponent(password1);
+	url += "&password2=" + encodeURIComponent(password2);
+	console.log(url);
+
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
+
+			var json = JSON.parse(result);
+			if (!json.success) { API.errorMessage(json.message); return; }
+			API.successMessage("User password changed.");
+
+			if (typeof successCallback != 'undefined') {
+				successCallback();
+			}
+
+		})
+		.fail(function() {
+			API.errorMessage("Could not change User password.");
+		});
+}
+API.request = function(endpoint, data, successCallback, failCallback) {
+	var url = "api.php?endpoint=" + encodeURIComponent(endpoint);
+	for(var field in data) {
+		url += "&" + field + "=" + encodeURIComponent(data[field]);
+	}
+	console.log(url);
+
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			successCallback(json);
+		})
+		.fail(function() {
+			failCallback();
+		});
+}
 
 API.successMessage = function(message) {
 	$.bootstrapGrowl(message, { type: 'success',  offset: {from: 'top', amount: 70}, align:'center', delay: 2000});

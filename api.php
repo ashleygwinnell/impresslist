@@ -151,9 +151,15 @@ if (!isset($_GET['endpoint'])) {
 		"/youtuber/set-priority/",
 		"/youtuber/remove/",
 
+		// Projects
+		"/project/add/",
+
 		// Admin
 		"/admin/sql-query/",
 		"/admin/user/add/",
+		"/admin/user/save/",
+		"/admin/user/remove/",
+		"/admin/user/change-password/",
 		"/backup/",
 		"/backup-sql/",
 
@@ -2628,14 +2634,206 @@ if (!isset($_GET['endpoint'])) {
 				$result->success = true;
 			}
 		}
+		else if ($endpoint == "/project/add/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			// user must be an admin to do this.
+			$user = db_singleuser($db, $_SESSION['user']);
+			if (!$user['admin']) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = 'You must be an admin to add projects.';
+			}
+			else {
+				$data = $_GET;
+
+				if (!isset($data['name']) || !isset($data['iconurl'])) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = 'Name and icon must be set.';
+				} else {
+
+					$stmt = $db->prepare(" INSERT INTO game (id, name, iconurl)
+													VALUES (NULL, :name, :iconurl) ");
+					$stmt->bindValue(":name", 		$data['name'], 		Database::VARTYPE_STRING);
+					$stmt->bindValue(":iconurl", 	$data['iconurl'], 	Database::VARTYPE_STRING);
+					$rs = $stmt->execute();
+
+					$projectId = $db->lastInsertRowID();
+
+					$result = new stdClass();
+					$result->success = true;
+					$result->project = db_singlegame($db, $projectId);
+				}
+			}
+		}
 		else if ($endpoint == "/admin/user/add/")
 		{
 			$require_login = true;
 			include_once("init.php");
 
-			//$query = "INSERT INTO user VALUES (NULL, 'Brett', 'Gwinnell',  'brettgwinnell@hotmail.com', 0, '5f4dcc3b5aa765d61d8327deb882cf99', 1, 'red', 0, 0);";
-			//$query = "ALTER TABLE publication ADD COLUMN priorities VARCHAR(255) NOT NULL DEFAULT ''; ";
-			//$db->query($query);
+			// user must be an admin to do this.
+			$user = db_singleuser($db, $_SESSION['user']);
+			if (!$user['admin']) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = 'You must be an admin to add users.';
+			}
+			else {
+				$data = $_GET;
+
+				$stmt = $db->prepare(" INSERT INTO user (id, forename, surname, email, password, color, admin, currentGame, coverageNotifications)
+												VALUES (NULL, :forename, :surname, :email, :password, :color, :admin, :currentGame, :coverageNotifications ) ");
+				$stmt->bindValue(":forename", 'Firstname', Database::VARTYPE_STRING);
+				$stmt->bindValue(":surname", 'Surname', Database::VARTYPE_STRING);
+				$stmt->bindValue(":email", 'test@gmail.com', Database::VARTYPE_STRING);
+				$stmt->bindValue(":password", md5('password'), Database::VARTYPE_STRING);
+				$stmt->bindValue(":color", 'black', Database::VARTYPE_STRING);
+				$stmt->bindValue(":admin", 0, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":currentGame", 1, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":coverageNotifications", 0, Database::VARTYPE_INTEGER);
+				$rs = $stmt->execute();
+
+				$userId = $db->lastInsertRowID();
+
+				$result = new stdClass();
+				$result->success = true;
+				$result->user = db_singleuser($db, $userId);
+			}
+		}
+		else if ($endpoint == "/admin/user/save/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			// user must be an admin to do this.
+			$user = db_singleuser($db, $_SESSION['user']);
+			if (!$user['admin']) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = 'You must be an admin to edit users.';
+			}
+			else {
+				$data = $_GET;
+
+				$user = db_singleuser($db, $data['id']);
+				if (!$user) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = 'This user does not exist.';
+				} else {
+
+					$required_fields = array(
+						array('name' => 'id', 'type' => 'integer'),
+						array('name' => 'forename', 'type' => 'string'),
+						array('name' => 'surname', 'type' => 'string'),
+						array('name' => 'email', 'type' => 'email'),
+						array('name' => 'color', 'type' => 'string'),
+						array('name' => 'admin', 'type' => 'bool')
+					);
+					$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+					if (!$error) {
+						$stmt = $db->prepare(" UPDATE user SET
+													forename = :forename,
+													surname = :surname,
+													email = :email,
+													color = :color,
+													admin = :admin
+												WHERE id = :id ; ");
+						$stmt->bindValue(":id", $data['id'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":forename", $data['forename'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":surname", $data['surname'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":email", $data['email'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":color", $data['color'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":admin", $data['admin'], Database::VARTYPE_INTEGER);
+						$rs = $stmt->execute();
+
+						$result = new stdClass();
+						$result->success = true;
+						$result->user = db_singleuser($db, $data['id']);
+					}
+				}
+			}
+		}
+		else if ($endpoint == "/admin/user/remove/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			// user must be an admin to do this.
+			$user = db_singleuser($db, $_SESSION['user']);
+			if (!$user['admin']) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = 'You must be an admin to add users.';
+			}
+			else {
+				$data = $_GET;
+				$user = db_singleuser($db, $data['id']);
+				if (!$user) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = 'This user does not exist.';
+				} else {
+					$stmt = $db->prepare(" UPDATE user SET removed = 1 WHERE id = :id ; ");
+					$stmt->bindValue(":id", $data['id'], Database::VARTYPE_INTEGER);
+					$rs = $stmt->execute();
+
+					$result = new stdClass();
+					$result->success = true;
+				}
+
+			}
+		}
+		else if ($endpoint == "/admin/user/change-password/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			// user must be an admin to do this.
+			$user = db_singleuser($db, $_SESSION['user']);
+			if (!$user['admin']) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = 'You must be an admin to add users.';
+			}
+			else {
+				$data = $_GET;
+				$user = db_singleuser($db, $data['id']);
+				if (!$user) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = 'This user does not exist.';
+				} else {
+
+					if (!isset($data['password1']) || !isset($data['password2'])) {
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = 'One of the password fields was not set.';
+					} else {
+
+						if ($data['password1'] != $data['password2']) {
+							$result = new stdClass();
+							$result->success = false;
+							$result->message = 'The passwords entered did not match.';
+						} else {
+
+							$stmt = $db->prepare(" UPDATE user SET password = :password WHERE id = :id ; ");
+							$stmt->bindValue(":id", $data['id'], Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":password", md5($data['password1']), Database::VARTYPE_STRING);
+							$rs = $stmt->execute();
+
+							$result = new stdClass();
+							$result->success = true;
+						}
+					}
+
+
+				}
+
+			}
 		}
 		else if ($endpoint == "/admin/sql-query/")
 		{
@@ -2783,10 +2981,11 @@ if (!isset($_GET['endpoint'])) {
 				$result = api_error("You are not logged in.");
 			} else {
 				// Update current user time.
-				$stmt = $db->prepare("UPDATE user SET lastactivity = :lastactivity WHERE id = :id;");
-				$stmt->bindValue(":lastactivity", time(), Database::VARTYPE_INTEGER);
-				$stmt->bindValue(":id", $_SESSION['user'], Database::VARTYPE_INTEGER);
-				$stmt->execute();
+				//$stmt = $db->prepare("UPDATE user SET lastactivity = :lastactivity WHERE id = :id;");
+				//$stmt->bindValue(":lastactivity", time(), Database::VARTYPE_INTEGER);
+				//$stmt->bindValue(":id", $_SESSION['user'], Database::VARTYPE_INTEGER);
+				//$stmt->execute();
+				user_updateActivity($_SESSION['user']);
 
 
 				// Fetch other logged-in users.

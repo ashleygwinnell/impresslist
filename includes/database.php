@@ -1,14 +1,21 @@
 <?php
 
-	
+
 	$db = Database::getInstance();
 
 	function sqlite_epoch($time = 0) {
 		return date("Y-m-d H:i:s", $time);
 	}
-	function db_singleuser($db, $userId) {
+	function db_singleuser($db, $userId, $extraFields = array() ) {
 		if (!is_numeric($userId)) { return false; }
-		$results = $db->query("SELECT * FROM user WHERE id = '" . $userId . "' LIMIT 1;");
+
+		$extrasString = implode($extraFields, ',');
+		if (strlen($extrasString) > 0) {
+			$extrasString = ','.$extrasString;
+		}
+
+		$results = $db->query("SELECT user.id, forename, surname, email, color, emailGmailIndex, emailIMAPServer, emailSMTPServer, currentGame, lastactivity, count(email.id) as num_emails, admin $extrasString FROM user LEFT JOIN email on email.user_id = user.id where removed = 0 and user.id = " . $userId. " group by user.id ;");
+
 		return $results[0];
 	}
 	function db_singleperson($db, $personId) {
@@ -97,12 +104,12 @@
 		return $rs[0];
 	}
 	function db_keysassignedtotype($db, $gameid, $platform, $type, $typeid) {
-		$stmt = $db->prepare("SELECT * 
-								FROM game_key 
-								WHERE game = :game 
+		$stmt = $db->prepare("SELECT *
+								FROM game_key
+								WHERE game = :game
 									AND platform = :platform
 									AND assigned = :assigned
-									AND assignedToType = :assignedToType 
+									AND assignedToType = :assignedToType
 									AND assignedToTypeId = :assignedToTypeId
 								");
 		$stmt->bindValue(":game", $gameid, Database::VARTYPE_INTEGER);

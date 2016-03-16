@@ -47,8 +47,8 @@ $slack_enabled = true;
 $slack_apiUrl = "https://hooks.slack.com/services/GENERATE/THIS/URL";
 
 // Local/development settings might be different.
-if ($_SERVER['HTTP_HOST'] == "localhost") { 
-	
+if ($_SERVER['HTTP_HOST'] == "localhost") {
+
 }
 
 

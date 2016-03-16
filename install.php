@@ -194,7 +194,8 @@ $sql = "CREATE TABLE IF NOT EXISTS user (
 			coverageNotifications INTEGER NOT NULL DEFAULT 1,
 			color VARCHAR(10) NOT NULL DEFAULT '#000000',
 			admin INTEGER NOT NULL DEFAULT 0,
-			lastactivity INTEGER NOT NULL DEFAULT 0
+			lastactivity INTEGER NOT NULL DEFAULT 0,
+			removed INTEGER NOT NULL DEFAULT 0
 		) {$sqlEngineAndCharset} ;";
 $db->exec($sql);
 $users = $db->query("SELECT * FROM user;");
@@ -382,7 +383,7 @@ echo "done database";
 // 	chmod 777 data/database.sql
 // 	chmod 777 data/chat.txt
 // 	chmod 644 backup.php
-//  chmod 777 images/uploads/
+//  chmod 777 data/uploads/
 
 // 6.
 // Set up cron tasks.

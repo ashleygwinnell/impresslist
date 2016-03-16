@@ -4,7 +4,7 @@ abstract class PreparedStatement {
 	abstract function bindValue($name, $value, $type);
 }
 class SQLiteDatabase_PreparedStatement extends PreparedStatement {
-	
+
 	private $stmt = null;
 	function __construct($stmt) {
 		$this->stmt = $stmt;
@@ -13,11 +13,11 @@ class SQLiteDatabase_PreparedStatement extends PreparedStatement {
 		$type = SQLiteDatabase::vartypetosqlite( $type );
 		$this->stmt->bindValue($name, $value, $type);
 	}
-	function query() { 
+	function query() {
 		$rs = $this->stmt->execute();
 		$results = array();
-		while($arr = $rs->fetchArray(SQLITE3_ASSOC)) { 
-			$results[] = $arr; 
+		while($arr = $rs->fetchArray(SQLITE3_ASSOC)) {
+			$results[] = $arr;
 		}
 		$rs->finalize();
 		$this->stmt->close();
@@ -30,7 +30,7 @@ class SQLiteDatabase_PreparedStatement extends PreparedStatement {
 	}
 }
 class MysqliDatabase_PreparedStatement extends PreparedStatement {
-	
+
 	private $stmt = null;
 	private $order = null;
 	private $orderbindings = null;
@@ -56,7 +56,7 @@ class MysqliDatabase_PreparedStatement extends PreparedStatement {
 		return $arr;
 	}
 	private function finishBinds() {
-		
+
 		if (count($this->order) == 0) { return; }
 		$types = "";
 		foreach ($this->order as $key => $o) { $types .= $this->orderbindings[$o]['type']; }
@@ -71,39 +71,39 @@ class MysqliDatabase_PreparedStatement extends PreparedStatement {
 		//print_r($a);
 		call_user_func_array(array($this->stmt, "bind_param"), $this->refValues($a));
 
-		//$ref    = new ReflectionClass('mysqli_stmt'); 
-		//$method = $ref->getMethod("bind_param"); 
-		//$method->invokeArgs($this->stmt, $this->refValues($a)); 
+		//$ref    = new ReflectionClass('mysqli_stmt');
+		//$method = $ref->getMethod("bind_param");
+		//$method->invokeArgs($this->stmt, $this->refValues($a));
 	}
-	function query() { 
+	function query() {
 		$this->finishBinds();
 		$b = $this->stmt->execute();
 		if (!$b) { return array(); }
-		
+
 		// PHP 5.3.0 only...
 		//$rs = $this->stmt->get_result();
 		//$results = array();
-		//while($arr = $rs->fetch_array(MYSQLI_ASSOC)) { 
-		//	$results[] = $arr; 
+		//while($arr = $rs->fetch_array(MYSQLI_ASSOC)) {
+		//	$results[] = $arr;
 		//}
 		//return $results;
-		
+
 		// Older PHP...
 		$row = array();
 		$params = array();
-		$meta = $this->stmt->result_metadata(); 
-		while ($field = $meta->fetch_field()) { 
-			$params[] = &$row[$field->name]; 
-		} 
-		call_user_func_array(array($this->stmt, 'bind_result'), $params); 
+		$meta = $this->stmt->result_metadata();
+		while ($field = $meta->fetch_field()) {
+			$params[] = &$row[$field->name];
+		}
+		call_user_func_array(array($this->stmt, 'bind_result'), $params);
 
 		$results = array();
-		while ($this->stmt->fetch()) { 
+		while ($this->stmt->fetch()) {
 			$c = array();
 			foreach($row as $key => $val) {
-				$c[$key] = $val; 
-			} 
-			$results[] = $c; 
+				$c[$key] = $val;
+			}
+			$results[] = $c;
 		}
 		//$this->stmt->free_result();
 		$this->stmt->close();
@@ -124,11 +124,11 @@ class SQLiteDatabase extends Database {
 		$this->db = new SQLite3($_SERVER['DOCUMENT_ROOT'] . "/" . $name, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE);
 	}
 
-	function query($sql) 
+	function query($sql)
 	{
 		$results = array();
 		$rs = $this->db->query($sql);
-		while($row = $rs->fetchArray(SQLITE3_ASSOC)) { 
+		while($row = $rs->fetchArray(SQLITE3_ASSOC)) {
 			$results[] = $row;
 		}
 		$rs->finalize();
@@ -164,7 +164,7 @@ class SQLiteDatabase extends Database {
 class MysqliDatabase extends Database {
 	private $db;
 	public $type = Database::TYPE_MYSQL;
-	
+
 	function __construct($server, $user, $password, $database) {
 		$this->db = new mysqli($server, $user, $password);
 
@@ -187,7 +187,7 @@ class MysqliDatabase extends Database {
 		$this->db->set_charset("utf8");
 	}
 
-	function query($sql) 
+	function query($sql)
 	{
 		$results = array();
 		$rs = $this->db->query($sql);
@@ -210,7 +210,7 @@ class MysqliDatabase extends Database {
 		while (($start = strpos($sql, ":", $offset)) !== FALSE) {
 			$end1 = strpos($sql, ",", $start);
 			if ($end1 === FALSE) { $end1 = PHP_INT_MAX; }
-		
+
 			$end2 = strpos($sql, " ", $start); // space
 			if ($end2 === FALSE) { $end2 = PHP_INT_MAX; }
 
@@ -219,17 +219,17 @@ class MysqliDatabase extends Database {
 
 			$end4 = strpos($sql, ")", $start);
 			if ($end4 === FALSE) { $end4 = PHP_INT_MAX; }
-			
+
 			$end5 = strpos($sql, ";", $start);
 			if ($end5 === FALSE) { $end5 = PHP_INT_MAX; }
-	
+
 			$end = min(array($end1, $end2, $end3, $end4, $end5));
 			$len = $end - $start;
 
 			$name = substr($sql, $start, $len);
 			//echo $name . "<br/>";
 			//echo "len: " . $len . "<br/>";;
-			
+
 			//$sql = str_replace($name, " ? ", $sql);
 
 			$pos = strpos($sql, $name);
@@ -255,8 +255,8 @@ class MysqliDatabase extends Database {
 	function lastInsertRowID() {
 		return $this->db->insert_id;
 	}
-	function escape_string($str) { 
-		return $this->db->escape_string($str); 
+	function escape_string($str) {
+		return $this->db->escape_string($str);
 	}
 
 	function close() {
@@ -289,17 +289,17 @@ class Database
 	function escape_string($str) { return $str; }
 
 	public static $s_instance = null;
-	public static function getInstance() 
+	public static function getInstance()
 	{
-		if (Database::$s_instance == null) 
-		{ 
+		if (Database::$s_instance == null)
+		{
 			global $impresslist_databaseType;
-			if ($impresslist_databaseType == Database::TYPE_SQLITE) 
+			if ($impresslist_databaseType == Database::TYPE_SQLITE)
 			{
 				global $impresslist_sqliteDatabaseName;
 				Database::$s_instance = new SQLiteDatabase($impresslist_sqliteDatabaseName);
-			} 
-			else if ($impresslist_databaseType == Database::TYPE_MYSQL) 
+			}
+			else if ($impresslist_databaseType == Database::TYPE_MYSQL)
 			{
 				global $impresslist_mysqlServer;
 				global $impresslist_mysqlUsername;
@@ -323,7 +323,7 @@ class Database
 		$sql .= "  impress[] backup.\n";
 		$sql .= "*/\n\n";
 
-		if ($this->type == Database::TYPE_SQLITE) { 
+		if ($this->type == Database::TYPE_SQLITE) {
 
 			$convert_to_mysql = true;
 
@@ -331,7 +331,7 @@ class Database
 			foreach ($tables as $table) {
 				$name = $table['name'];
 				if (strpos($name, "sqlite_", 0) !== FALSE) { continue; }
-				
+
 				$sql .= "CREATE TABLE IF NOT EXISTS {$name} (\n";
 
 					$fields = $this->query("PRAGMA table_info({$name})");
@@ -346,8 +346,8 @@ class Database
 						$fdefault = ($field['dflt_value'] != "")?("DEFAULT " . $field['dflt_value']): "";
 						$fpk = ($field['pk']==1)?"PRIMARY KEY":"";
 
-						if ($convert_to_mysql) { 
-							
+						if ($convert_to_mysql) {
+
 							if ($ftype == "TIMESTAMP") {
 								$ftype = "INT(11)";
 							}
@@ -368,7 +368,7 @@ class Database
 				foreach ($rows as $row) {
 					$values = "";
 					$count = 0;
-					foreach ($row as $key => $val) { 
+					foreach ($row as $key => $val) {
 						if ($count > 0) {
 							$values .= ",";
 						}
@@ -380,13 +380,13 @@ class Database
 				$sql .= "\n";
 
 				//print_r($fields);
-				
-				
+
+
 			}
 			//echo $sql;
 
-			
-			
+
+
 		} else if ($this->type == Database::TYPE_MYSQL) {
 
 
@@ -400,7 +400,7 @@ class Database
 				$columnSql = "SHOW COLUMNS FROM " . $impresslist_mysqlDatabaseName . "." . $name . ";";
 				//echo $columnSql;
 				$columns = $this->query($columnSql);
-				
+
 				$sql .= "CREATE TABLE IF NOT EXISTS {$name} (\n";
 					$count = 0;
 					foreach ($columns as $column) {
@@ -414,14 +414,14 @@ class Database
 						$sql .= "	`{$fname}` {$ftype} {$fpk} {$fnn} {$fdefault}";
 						$count++;
 					}
-				$sql .= "\n);\n\n";
+				$sql .= "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8  ;\n\n";
 
 				// content
 				$rows = $this->query("SELECT * FROM {$name};");
 				foreach ($rows as $row) {
 					$values = "";
 					$count = 0;
-					foreach ($row as $key => $val) { 
+					foreach ($row as $key => $val) {
 						if ($count > 0) {
 							$values .= ",";
 						}
@@ -434,7 +434,7 @@ class Database
 			}
 
 
-			
+
 			//echo $sql;
 			//$result = $sql;
 			//serve_file("impresslist-backup-sql-" . date("c") . ".sql", $sql, "txt");

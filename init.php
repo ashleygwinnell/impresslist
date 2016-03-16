@@ -3,21 +3,21 @@
 session_start();
 
 // Make sure user has ran Composer.
-if (!file_exists("vendor/autoload.php")) {
+if (!file_exists($_SERVER['DOCUMENT_ROOT'] . "vendor/autoload.php")) {
 	echo "	impress[] requires you to run <u>composer update</u> in the terminal to download external PHP libraries.<br/>
 			<a href='https://getcomposer.org/'>Download Composer</a>";
 	die();
 }
 
 // Make sure user has ran Bower.
-if (!file_exists("js/vendor/bootstrap-multiselect/bower.json")) {
+if (!file_exists($_SERVER['DOCUMENT_ROOT'] . "js/vendor/bootstrap-multiselect/bower.json")) {
 	echo "	impress[] requires you to run <u>bower update</u> in the terminal to download external JS libraries.<br/>
 			<a href='http://bower.io/'>Download Bower</a>";
 	die();
 }
 
 // Make sure user has configured.
-if (!file_exists("includes/config.php")) {
+if (!file_exists($_SERVER['DOCUMENT_ROOT'] . "includes/config.php")) {
 	echo "	impress[] requires you to copy <u>includes/config.example.php</u> to <u>includes/config.php</u> and also set all the variables there.";
 	die();
 }
@@ -62,7 +62,7 @@ if ($require_login) {
 			}
 			if (empty($errors)) {
 
-				$stmt = $db->prepare("SELECT * FROM user WHERE email = :email AND password = :password; ");
+				$stmt = $db->prepare("SELECT * FROM user WHERE email = :email AND password = :password AND removed = 0; ");
 				$stmt->bindValue(":email", $email, Database::VARTYPE_STRING);
 				$stmt->bindValue(":password", md5($password), Database::VARTYPE_STRING);
 				$results = $stmt->query();
@@ -91,7 +91,7 @@ if ($require_login) {
 		die();
 
 	} else {
-		$user = db_singleuser($db, $_SESSION['user']);
+		$user = db_singleuser($db, $_SESSION['user'], ['emailIMAPPassword']);
 
 		if ($user == null) {
 			include_once("includes/login.html");
@@ -105,6 +105,7 @@ if ($require_login) {
 		$user_admin = ($user['admin'] == 1)?true:false;
 		$user_imapServer = $user['emailIMAPServer'];
 		$user_smtpServer = $user['emailSMTPServer'];
+		user_updateActivity($user_id);
 
 		//print_r($user);
 	}

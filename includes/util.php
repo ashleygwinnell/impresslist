@@ -658,7 +658,14 @@ function slack_jobsChanged($arr, $fromUser) {
 	return slack_incomingWebhook($data);
 }
 
-
+function user_updateActivity($user_id) {
+	// Update current user time.
+	global $db;
+	$stmt = $db->prepare("UPDATE user SET lastactivity = :lastactivity WHERE id = :id;");
+	$stmt->bindValue(":lastactivity", time(), Database::VARTYPE_INTEGER);
+	$stmt->bindValue(":id", $user_id, Database::VARTYPE_INTEGER);
+	$stmt->execute();
+}
 
 
 ?>

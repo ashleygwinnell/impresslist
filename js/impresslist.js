@@ -556,13 +556,25 @@ Coverage = function(data) {
 Game = function(data) {
 	DBO.call(this, data);
 }
-	Game.prototype = Object.create(DBO.prototype)
+	Game.prototype = Object.create(DBO.prototype);
 	Game.prototype.constructor = Game;
 	Game.prototype.init = function(data) {
 		DBO.prototype.init.call(this, data);
 		this.id = parseInt(this.field('id'));
 		this.name = this.field('name');
-
+	}
+	Game.prototype.iconUrl = function() {
+		if (this.fields['iconurl'] && this.fields['iconurl'].length > 0) {
+			return this.fields['iconurl'];
+		}
+		return 'images/favicon.png';
+	}
+	Game.prototype.onAdded = function() {
+		var html = "<div data-project-container data-project-id='" + this.id+ "' style='padding:5px;'> \
+						<img src='" + this.iconUrl() + "' style='width:32px;height:32px' /> \
+						<span data-field='name'>" + this.name + "</span> \
+					</div>";
+		$('#admin-projects-list').append(html);
 	}
 
 
@@ -573,6 +585,7 @@ User = function(data) {
 	User.prototype = Object.create(DBO.prototype)
 	User.prototype.constructor = User;
 	User.prototype.init = function(data) {
+		console.log(data);
 		DBO.prototype.init.call(this, data);
 		this.id = parseInt(this.field('id'));
 	}
@@ -658,6 +671,103 @@ User = function(data) {
 		});
 
 	};
+
+	User.prototype.createRow = function() {
+		var html = "";
+		html += "<div data-user='" + this.id + "' data-user-row class='oa'> \
+					<p class='fl'> \
+						<span data-user='" + this.id + "' data-field='id'></span>. \
+						<b><span data-user='" + this.id + "' data-field='forename'></span></b><br/> \
+						<span data-user='" + this.id + "' data-field='num_emails'></span> emails - \
+						last active <span data-user='" + this.id + "' data-field='lastactive'></span> \
+					</p> \
+					&nbsp;<button data-user='" + this.id + "' class='fr btn btn-sm btn-primary admin-edit-user-password'>Change Password</button> \
+					&nbsp;<button data-user='" + this.id + "' class='fr btn btn-sm btn-primary admin-edit-user' style='margin-right:5px;'>Edit</button>&nbsp; \
+				</div>";
+		$('#admin-users-list').append(html);
+
+		var th = this;
+		$('.admin-edit-user[data-user='+this.id+']').click(function() { th.open() });
+		$('.admin-edit-user-password[data-user='+this.id+']').click(function() { th.openChangePasswordAdmin() });
+
+		this.update();
+	}
+	User.prototype.removeRow = function() {
+		$('div[data-user=' + this.id + '][data-user-row]').remove();
+	}
+	User.prototype.open = function() {
+		$('#edit-user-forename').val( this.field('forename') );
+		$('#edit-user-surname').val( this.field('surname') );
+		$('#edit-user-email').val( this.field('email') );
+		$('#edit-user-color').val( this.field('color') );
+		$('#edit-user-admin').prop("checked", (this.field('admin')==1)?true:false);
+		// edit-user-password
+		$('#admin-edit-user-form').show();
+
+		var th = this;
+
+		$('#nav-save-user').unbind('click');
+		$('#nav-save-user').click(function() { th.save() } );
+
+		$('#nav-close-user').unbind('click');
+		$('#nav-close-user').click(function() { th.close() } );
+
+		$('#nav-delete-user').unbind('click');
+		$('#nav-delete-user').click(function(){ API.removeUser(th); });
+	}
+	User.prototype.save = function() {
+		var th = this;
+		var forename = $('#edit-user-forename').val();
+		var surname = $('#edit-user-surname').val();
+		var email = $('#edit-user-email').val();
+		var color = $('#edit-user-color').val();
+		var admin = $('#edit-user-admin').prop('checked');
+		API.saveUser(this, forename, surname, email, color, admin, function() {
+			th.close();
+		});
+	}
+	User.prototype.close = function() {
+		$('#admin-edit-user-form').hide();
+	}
+	User.prototype.update = function() {
+		$('#admin-users-list [data-user=' + this.id + '][data-field=id]').html(this.id);
+		$('#admin-users-list [data-user=' + this.id + '][data-field=forename]').html(this.field('forename'));
+		$('#admin-users-list [data-user=' + this.id + '][data-field=forename]').css('color', this.field('color'));
+		$('#admin-users-list [data-user=' + this.id + '][data-field=num_emails]').html(this.field('num_emails'));
+		$('#admin-users-list [data-user=' + this.id + '][data-field=lastactive]').html(impresslist.util.relativetime_contact(this.field('lastactivity')));
+	}
+	User.prototype.onAdded = function() {
+		this.createRow();
+	}
+	User.prototype.onRemoved = function() {
+		this.removeRow();
+		this.close();
+	}
+
+	User.prototype.openChangePasswordAdmin = function() {
+		$('#edit-user-password').val( '' );
+		$('#edit-user-password-confirm').val( '' );
+
+		$('#admin-edit-user-password-form').show();
+
+		var th = this;
+		$('#nav-save-user-password').unbind('click');
+		$('#nav-save-user-password').click(function() { th.savePassword() } );
+
+		$('#nav-close-user-password').unbind('click');
+		$('#nav-close-user-password').click(function() { th.closeChangePasswordAdmin() } );
+	}
+	User.prototype.savePassword = function() {
+		var th = this;
+		var password1 = $('#edit-user-password').val();
+		var password2 = $('#edit-user-password-confirm').val();
+		API.saveUserPassword(this, password1, password2, function() {
+			th.closeChangePasswordAdmin();
+		});
+	}
+	User.prototype.closeChangePasswordAdmin = function() {
+		$('#admin-edit-user-password-form').hide();
+	}
 
 
 Youtuber = function(data) {
@@ -2375,8 +2485,8 @@ SocialTimelineItem = function(data) {
 									<option value='blank' " + ((this.field('type')=='blank')?"selected='true'":"") + ">Blank</option>\
 									<option value='tweet' " + ((this.field('type')=='tweet')?"selected='true'":"") + ">Tweet</option>\
 									<option value='retweet' " + ((this.field('type')=='retweet')?"selected='true'":"") + ">Retweet</option>\
-									<option value='fbpost' " + ((this.field('type')=='fbpost')?"selected='true'":"") + ">Facebook Post</option>\
-									<option value='fbshare' " + ((this.field('type')=='fbshare')?"selected='true'":"") + ">Facebook Share</option>\
+									<!-- <option value='fbpost' " + ((this.field('type')=='fbpost')?"selected='true'":"") + ">Facebook Post</option>\
+									<option value='fbshare' " + ((this.field('type')=='fbshare')?"selected='true'":"") + ">Facebook Share</option>-->\
 								</select>\
 							</div>\
 						</div>\
@@ -2942,6 +3052,7 @@ var impresslist = {
 		$('#nav-add-coverage-publication').click(API.addPublicationCoverage);
 		$('#nav-add-coverage-youtuber').click(API.addYoutuberCoverage);
 		$('#nav-add-simplemailout').click(API.addSimpleMailout);
+		$('#nav-add-user').click(API.addUser);
 		$('#nav-user-changepassword').click(function() { thiz.findUserById(thiz.config.user.id).openChangePassword(); });
 		$('#nav-user-changeimapsettings').click(function() { thiz.findUserById(thiz.config.user.id).openChangeIMAPSettings(); });
 		$('#nav-home').click(this.changePage);
@@ -2955,6 +3066,22 @@ var impresslist = {
 		$('#nav-help').click(this.changePage);
 		$('#nav-feedback').attr("href", impresslist.util.mailtoClient("ashley@forceofhab.it", "impresslist feedback", ""));
 		$('#sql-query-submit').click(function() { API.sqlQuery( $('#sql-query-text').val() ); });
+
+		$('#nav-add-project').click(function(){
+			API.request('/project/add/', {
+				name: $('#nav-add-project-name').val(),
+				iconurl: $('#nav-add-project-iconurl').val(),
+			},
+				function(data) {
+					var game = new Game(data.project);
+					impresslist.addGame(game, false);
+				},
+				function() {
+					API.errorMessage("Could not add Project.");
+				}
+			);
+		});
+
 
 		// Dynamic bits.
 		$('#current-user-name').html(this.findUserById(this.config.user.id).fullname());
@@ -3544,6 +3671,17 @@ var impresslist = {
 			}
 		}
 	},
+	removeUser: function(obj) {
+		for(var i = 0, len = this.users.length; i < len; ++i) {
+			if (this.users[i].id == obj.id) {
+				console.log('user removed: ' + obj.id);
+				obj.onRemoved();
+				this.users.splice(i, 1);
+				impresslist.refreshFilter();
+				break;
+			}
+		}
+	},
 	findPersonById: function(id) {
 		/*for(var i = 0; i < this.people.length; ++i) {
 			if (this.people[i].id == id) {
@@ -3675,11 +3813,15 @@ var impresslist = {
 };
 
 impresslist.jobs = {
+	enabled: false,
 	selectors: {
 		text: "#jobs-textarea",
 		button: "#jobs-save-all"
 	},
 	init: function(fromInit) {
+		if (!this.enabled) { return; }
+		$('#jobs-pill-link').show();
+
 		this.update(fromInit);
 
 		var thiz = this;
@@ -3757,7 +3899,11 @@ impresslist.chat = {
 		button: "#chat .submit-message"
 	},
 	init: function() {
-		if (!this.enabled) { return; }
+		if (!this.enabled) {
+			return;
+		}
+		$('#chat-pill-link').show();
+
 		this.updateOnlineUsers();
 		setInterval(this.updateOnlineUsers, 30 * 1000);
 

@@ -139,11 +139,11 @@
 
 			<div class='container mycontainer'>
 				<ul class="nav nav-pills" role='tablist'>
-					<li role="presentation"><a href="#jobs-pill" aria-controls="jobs-pill" role="tab" data-toggle="pill">Jobs</a></li>
+					<li role="presentation"><a id='jobs-pill-link' href="#jobs-pill" aria-controls="jobs-pill" role="tab" data-toggle="pill" style='display:none;'>Jobs</a></li>
 					<li role="presentation" class="active"><a href="#people-pill" aria-controls="people-pill" role="tab" data-toggle="pill">People</a></li>
 					<li role="presentation"><a href="#publications-pill" aria-controls="publications-pill" role="tab" data-toggle="pill">Publications</a></li>
 					<li role="presentation"><a href="#youtubers-pill" aria-controls="youtubers-pill" role="tab" data-toggle="pill">YouTubers</a></li>
-					<li role="presentation"><a href="#chat-pill" aria-controls="chat-pill" role="tab" data-toggle="pill">Chat</a></li>
+					<li role="presentation"><a id='chat-pill-link' href="#chat-pill" aria-controls="chat-pill" role="tab" data-toggle="pill" style='display:none;'>Chat</a></li>
 				</ul><br/>
 
 				<div class="tab-content">
@@ -315,7 +315,7 @@
 
 		</div>
 
-		<!-- Admin panel -->
+		<!-- Help panel -->
 		<div id='help-page' data-type-page='true' data-page='help'>
 			<div class='container mycontainer'>
 				<p><b>Help:</b></p>
@@ -472,6 +472,32 @@
 		<!-- Mailout -->
 		<div id='social-page' data-type-page='true' data-page='social'>
 			<div class='container mycontainer'>
+
+				<? if (
+						$twitter_consumerKey == 'consumer_key' ||
+						$twitter_consumerSecret == "consumer_secret" ||
+						$twitter_oauthToken == "oauth_token" ||
+						$twitter_oauthSecret == "oauth_secret"
+					): ?>
+					<div class="alert alert-danger" role="alert">
+						<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+						<span class="sr-only">Error:</span>
+						Twitter API is not correctly configured.
+					</div>
+				<? endif; ?>
+
+				<? if (
+						$facebook_appId == 'app_id' ||
+						$facebook_appSecret == "app_secret" ||
+						$facebook_apiVersion == "api_version"
+					): ?>
+					<div class="alert alert-danger" role="alert">
+						<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+						<span class="sr-only">Error:</span>
+						Facebook API is not correctly configured.
+					</div>
+				<? endif; ?>
+
 				<div id='social-homepage' class='row'>
 					<div class='col-sm-9'>
 						<p><b>Social Scheduler</b></p>
@@ -602,6 +628,18 @@
 		<!-- Mailout -->
 		<div id='mailout-page' data-type-page='true' data-page='mailout'>
 			<div class='container mycontainer'>
+				<? if (
+						$user['emailSMTPServer'] == '' ||
+						$user['emailIMAPServer'] == '' ||
+						$user['emailIMAPPassword'] == ''
+					): ?>
+					<div class="alert alert-danger" role="alert">
+						<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+						<span class="sr-only">Error:</span>
+						IMAP is not correctly configured and so mailout features will not work for you.
+					</div>
+				<? endif; ?>
+
 				<div id='mailout-homepage' class='row'>
 					<div class='col-sm-3'>
 						<p><b>Simple Mailouts</b></p>
@@ -771,18 +809,75 @@
 			<div class='container mycontainer'>
 				<div class="panel panel-default">
 					<div class="panel-heading">Users:</div>
-					<div class='pady padx'>
-						<div class='admin-users-list'>
-							<?php
-								echo "<p><i>TODO: User management, stats, etc.</i></p>";
+					<div class='padx pady oa'>
+						<div id='admin-users-list'>
 
-								foreach ($users as &$user) {
-									echo "<p>" . $user['id'] . ". <b style='color:" . $user['color'] . "'>" . $user['forename'] . "</b></p>";
-								}
-
-							?>
 						</div>
+						<button id='nav-add-user' class='fr btn btn-success'>Add User</button>
+
 					</div>
+
+					<div id='admin-edit-user-password-form' class='padx pady oa' style='display:none;'>
+						<p><b>Edit User Password:</b><p>
+						<div class='form-group'>
+							<label>New Password:</label>
+							<input id='edit-user-password' type='password' class='form-control' />
+						</div>
+						<div class='form-group'>
+							<label>Confirm New Password:</label>
+							<input id='edit-user-password-confirm' type='password' class='form-control' />
+						</div>
+						<button id='nav-save-user-password' class='btn btn-success'>Save</button>
+						<button id='nav-close-user-password' class='btn btn-default'>Close</button>
+					</div>
+
+					<div id='admin-edit-user-form' class='padx pady oa' style='display:none;'>
+						<p><b>Edit User</b></p>
+						<div class='form-group'>
+							<label>Forename:</label>
+							<input id='edit-user-forename' type='text' class='form-control' />
+						</div>
+						<div class='form-group'>
+							<label>Surname:</label>
+							<input id='edit-user-surname' type='text' class='form-control' />
+						</div>
+						<div class='form-group'>
+							<label>Email:</label>
+							<input id='edit-user-email' type='text' class='form-control' />
+						</div>
+						<div class='form-group'>
+							<label>Color:</label>
+							<input id='edit-user-color' type='text' class='form-control' />
+						</div>
+						<div class='form-group'>
+							<label>Admin:</label>
+							<input id='edit-user-admin' type='checkbox' />
+						</div>
+
+						<button id='nav-save-user' class='btn btn-success'>Save</button>
+						<button id='nav-close-user' class='btn btn-default'>Close</button>
+						<button id='nav-delete-user' class='btn btn-danger'>Remove</button>
+					</div>
+
+
+				</div>
+			</div>
+
+			<div class='container mycontainer'>
+				<div class="panel panel-default">
+					<div class="panel-heading">Projects:</div>
+					<div class='padx pady oa'>
+						<div id='admin-projects-list'>
+
+						</div>
+						<hr/>
+						<p><b>Add Project</b></p>
+						<input id='nav-add-project-name' type='text' class='fl form-control' placeholder='Name' style='width:40%;margin-right:10px'/>
+						<input id='nav-add-project-iconurl' type='text' class='fl form-control' placeholder='Icon URL' style='width:40%'/>
+						<button id='nav-add-project' class='fr btn btn-success'>Add Project</button>
+
+					</div>
+
 				</div>
 			</div>
 
@@ -790,9 +885,26 @@
 				<div class="panel panel-default">
 					<div class="panel-heading">Manual Tasks:</div>
 					<div class='pady padx'>
+						<p>These should all be set up as Cron jobs.</p>
 						<a href='includes/tasks/refresh-email.php' target='new'><button class='btn btn-primary'>Refresh Emails</button></a>
 						<a href='includes/tasks/refresh-rss.php' target='new'><button class='btn btn-primary'>Refresh RSS Feeds</button></a>
-						<a href='includes/tasks/refresh-twitter.php' target='new'><button class='btn btn-primary'>Refresh Twitter Followers</button></a>
+						<a href='includes/tasks/refresh-twitter.php' target='new'><button class='btn btn-primary'>Refresh Twitter Data</button></a>
+
+						<a href='includes/tasks/refresh-youtubers.php' target='new'><button class='btn btn-primary'>Refresh Youtube Data</button></a>
+
+						<a href='includes/tasks/refresh-coverage.php' target='new'><button class='btn btn-primary'>Refresh Coverage</button></a>
+						<a href='includes/tasks/refresh-coverage-youtube.php' target='new'><button class='btn btn-primary'>Refresh Coverage (Youtube)</button></a>
+						<a href='includes/tasks/refresh-email-latests.php' target='new'><button class='btn btn-primary'>Refresh Email (Latests)</button></a>
+
+						<a href='includes/tasks/refresh-email-queue.php' target='new'><button class='btn btn-primary'>Refresh Email Queue</button></a>
+
+						<a href='includes/tasks/refresh-favicons.php' target='new'><button class='btn btn-primary'>Refresh Favicons</button></a>
+
+						<a href='includes/tasks/refresh-socialqueue.php' target='new'><button class='btn btn-primary'>Refresh Social Queue</button></a>
+
+						<a href='includes/tasks/refresh-twitter-configuration.php' target='new'><button class='btn btn-primary'>Refresh Twitter Configuration</button></a>
+
+
 
 
 					</div>
