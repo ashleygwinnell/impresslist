@@ -3,9 +3,10 @@
 set_time_limit(0);
 
 $require_login = false;
+$require_config = true;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
-//for($loop = 0; $loop < 6; $loop++) { 
+//for($loop = 0; $loop < 6; $loop++) {
 
 	$imap_connection = imap_open("{" . $impresslist_emailIMAPHost . ":993/imap/ssl/novalidate-cert}INBOX", $impresslist_emailAddress, $impresslist_emailPassword);
 
@@ -37,7 +38,7 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 
 
-	for($i = 0; $i < count($in); $i++) 
+	for($i = 0; $i < count($in); $i++)
 	{
 		$from = strtolower( $in[$i]['from'] );
 		$to = strtolower( $in[$i]['to'] );
@@ -59,21 +60,21 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 			echo $to . "<br/>";
 
 
-			// Make sure this user is in the database. 
+			// Make sure this user is in the database.
 			$count_recipients_1 = 0;
 			$count_recipients_2 = 0;
-			
+
 			$stmt2 = $db->prepare("SELECT * FROM person WHERE email = :email AND removed = 0; ");
 			$stmt2->bindValue(":email", $to, Database::VARTYPE_STRING);
-			$rs2arr = $stmt2->query(); 
+			$rs2arr = $stmt2->query();
 			$count_recipients_1 = count($rs2arr);
-			
-			
+
+
 			$stmt3 = $db->prepare("SELECT * FROM person_publication WHERE email = :email; ");
 			$stmt3->bindValue(":email", $to, Database::VARTYPE_STRING);
 			$rs3arr = $stmt3->query();
 			$count_recipients_2 = count($rs3arr);
-			
+
 			if ($count_recipients_1 > 1 || $count_recipients_2 > 1) {
 				echo "THIS EMAIL ADDRESS IS IN THE DATABASE FOR TWO PEOPLE. CANNOT ADD EMAIL.<br/>";
 				continue;
@@ -97,23 +98,23 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 				$count_recipients_1 = 1;
 				$count_recipients_2 = 0;
 
-				
+
 			}
 
-			if (($count_recipients_1 == 1 && $count_recipients_2 == 0) || ($count_recipients_1 == 0 && $count_recipients_2 == 1)) 
+			if (($count_recipients_1 == 1 && $count_recipients_2 == 0) || ($count_recipients_1 == 0 && $count_recipients_2 == 1))
 			{
-				// we have this recipient, so just just the email! 
+				// we have this recipient, so just just the email!
 				echo "RECIPIENT EXISTS. ADD JUST THE EMAIL.<br/>";
 				$result = (count($rs2arr) > 0)?$rs2arr[0]:$rs3arr[0];
 				$person_id = (count($rs2arr) > 0)?$rs2arr[0]['id']:$rs3arr[0]['person'];
-				
 
-				// make sure this email isn't already in there! 
+
+				// make sure this email isn't already in there!
 				$stmt5 = $db->prepare("SELECT * FROM email WHERE user_id = :user_id AND
-																person_id = :person_id AND 
+																person_id = :person_id AND
 																utime = :utime AND
 																to_email = :to_email AND
-																from_email = :from_email AND 
+																from_email = :from_email AND
 																subject = :subject AND
 																contents = :contents;");
 				$stmt5->bindValue(":user_id", $userResults[0]['id'], Database::VARTYPE_INTEGER);
@@ -126,7 +127,7 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 				$rs5 = $stmt5->query();
 
 				$count_email_dups = count($rs5);
-				
+
 				if ($count_email_dups > 0) {
 					echo "already in database (" . $count_email_dups . ") <br/>";
 					imap_delete($imap_connection, $in[$i]['id']);
@@ -192,7 +193,7 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 	//print_r($in);
 
-	/*for($i = 0; $i < count($in); $i++) { 
+	/*for($i = 0; $i < count($in); $i++) {
 		//print_r($in);
 		echo "-----<br/>";
 		//echo "from: " . $in[0]['from'] . "<br/>";
@@ -205,7 +206,7 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 		echo "deleted: " . $in[$i]['deleted'] . "<br/>";
 		echo "-----<br/>";
 	}
-	if (count($in > 0)) { 
+	if (count($in > 0)) {
 		imap_delete($imap_connection, $in[0]['index']);
 	}
 	*/

@@ -1,6 +1,7 @@
 <?php
 
 $require_login = false;
+$require_config = true;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // Emails
@@ -21,19 +22,19 @@ $num_personPublications = count($personPublications);
 
 //ALTER TABLE person_publication ADD COLUMN lastcontactedby INTEGER NOT NULL DEFAULT 0;
 // Refresh "latest" data on people.
-for ($i = 0; $i < count($people); $i++) 
+for ($i = 0; $i < count($people); $i++)
 {
 	$latestAllContactTimestamp = 0;
 	$latestAllContactUser = 0;
-	for ($k = 0; $k < count($personPublications); $k++) 
+	for ($k = 0; $k < count($personPublications); $k++)
 	{
-		if ($personPublications[$k]['person'] == $people[$i]['id']) 
-		{ 
+		if ($personPublications[$k]['person'] == $people[$i]['id'])
+		{
 			$latestEmailIndex = -1;
 			$latestEmailTimestamp = 0;
 			$latestEmailUser = 0;
 
-			for($j = 0; $j < count($emails); $j++) 
+			for($j = 0; $j < count($emails); $j++)
 			{
 				if ($emails[$j]['to_email'] == $personPublications[$k]['email']) {
 					if ($emails[$j]['utime'] > $latestEmailTimestamp) {
@@ -53,20 +54,20 @@ for ($i = 0; $i < count($people); $i++)
 				//echo $latestEmailTimestamp . "<br/>";
 				//echo $emails[$latestEmailIndex]['user_id'] . "<br/>";
 				$stmt = $db->prepare("UPDATE person_publication SET lastcontacted = :lastcontacted, lastcontactedby = :lastcontactedby WHERE id = :id; ");
-				$stmt->bindValue(":id", $personPublications[$k]['id'], Database::VARTYPE_INTEGER); 
+				$stmt->bindValue(":id", $personPublications[$k]['id'], Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":lastcontacted", $latestEmailTimestamp, Database::VARTYPE_INTEGER);
-				$stmt->bindValue(":lastcontactedby", $latestEmailUser, Database::VARTYPE_INTEGER); 
+				$stmt->bindValue(":lastcontactedby", $latestEmailUser, Database::VARTYPE_INTEGER);
 				$stmt->execute();
 				$stmt->close();
 
-			}		
-		}	
+			}
+		}
 	}
 
 
 	$latestPersonalEmailTimestamp = 0;
 	$latestPersonalEmailIndex = -1;
-	for($j = 0; $j < count($emails); $j++) 
+	for($j = 0; $j < count($emails); $j++)
 	{
 		if ($emails[$j]['to_email'] == $people[$i]['email']) {
 			if ($emails[$j]['utime'] > $latestPersonalEmailTimestamp) {
@@ -80,14 +81,14 @@ for ($i = 0; $i < count($people); $i++)
 		}
 	}
 	if ($latestAllContactUser > 0) {
-		$stmt = $db->prepare("UPDATE person 
-								SET 
-									lastcontacted = :lastcontacted, 
-									lastcontactedby = :lastcontactedby 
+		$stmt = $db->prepare("UPDATE person
+								SET
+									lastcontacted = :lastcontacted,
+									lastcontactedby = :lastcontactedby
 								WHERE id = :id; ");
-		$stmt->bindValue(":id", $people[$i]['id'], Database::VARTYPE_INTEGER); 
+		$stmt->bindValue(":id", $people[$i]['id'], Database::VARTYPE_INTEGER);
 		$stmt->bindValue(":lastcontacted", $latestAllContactTimestamp, Database::VARTYPE_INTEGER);
-		$stmt->bindValue(":lastcontactedby", $latestAllContactUser, Database::VARTYPE_INTEGER); 
+		$stmt->bindValue(":lastcontactedby", $latestAllContactUser, Database::VARTYPE_INTEGER);
 		$stmt->execute();
 		//$stmt->close();
 	}

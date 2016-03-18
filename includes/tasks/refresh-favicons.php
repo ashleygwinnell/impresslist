@@ -4,6 +4,7 @@ set_time_limit(0);
 ini_set("allow_url_fopen", "On");
 
 $require_login = false;
+$require_config = true;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // Publications
@@ -24,7 +25,7 @@ for($i = 0; $i < $num_publications; ++$i) {
 	if (strlen($url) > 0) {
 
 		$rsscontent = url_get_contents($url);
-		
+
 		//$resStart = strpos($rsscontent, "<link rel='icon'", 0);
 		//if ($resStart === FALSE) { continue; }
 
@@ -40,20 +41,20 @@ for($i = 0; $i < $num_publications; ++$i) {
 		if ($arr === FALSE) { skip($publications[$i]['name']); continue; }
 
 		$faviconUrl = $arr[0]['href'];
-		if (strlen($faviconUrl) == 0) { 
+		if (strlen($faviconUrl) == 0) {
 			// Option 2
 			$faviconUrl = "http://www.google.com/s2/favicons?domain=" . $url;
-		} else if (substr($faviconUrl, 0, 1) == "/") { 
+		} else if (substr($faviconUrl, 0, 1) == "/") {
 			if (substr($url, -1, 1) == "/") {
-				$faviconUrl = $url . substr($faviconUrl, 1); 
+				$faviconUrl = $url . substr($faviconUrl, 1);
 			} else {
-				$faviconUrl = $url . $faviconUrl;	
+				$faviconUrl = $url . $faviconUrl;
 			}
 		} else if (substr($faviconUrl, 0, 7) != "http://" && substr($faviconUrl, 0, 8) != "https://") {
 			if (substr($url, -1, 1) == "/") {
 				$faviconUrl = $url . $faviconUrl;
 			} else {
-				$faviconUrl = $url . "/" . $faviconUrl;	
+				$faviconUrl = $url . "/" . $faviconUrl;
 			}
 		}
 

@@ -1,5 +1,6 @@
 builds/
 data/database.sql
+data/database-backup.sql
 data/backups/*
 data/uploads/*
 includes/config/config.php

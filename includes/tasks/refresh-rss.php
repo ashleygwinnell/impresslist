@@ -4,6 +4,7 @@ set_time_limit(0);
 ini_set("allow_url_fopen", "On");
 
 $require_login = false;
+$require_config = true;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // Publications
@@ -17,7 +18,7 @@ for($i = 0; $i < $num_publications; ++$i) {
 		$rsscontent = url_get_contents($rss);
 		$latestArticleTimestamp = 0;
 		$offset = 0;
-		while(true) { 
+		while(true) {
 			$resStart = strpos($rsscontent, "<pubDate>", $offset);
 			if ($resStart === FALSE) { break; }
 			$resStart += 9;
@@ -33,7 +34,7 @@ for($i = 0; $i < $num_publications; ++$i) {
 
 		if ($latestArticleTimestamp == 0) {
 			$offset = 0;
-			while(true) { 
+			while(true) {
 				$resStart = strpos($rsscontent, "<updated>", $offset);
 				if ($resStart === FALSE) { break; }
 				$resStart += 9;
@@ -48,15 +49,15 @@ for($i = 0; $i < $num_publications; ++$i) {
 			}
 		}
 
-		
+
 
 		if ($latestArticleTimestamp > 0) {
 			echo "<b>" . $publications[$i]['name'] . "</b><br/>";
 			echo $latestArticleTimestamp . "<br/>";
 			echo "<hr/>";
 
-			$stmt = $db->prepare(" UPDATE publication 
-									SET 
+			$stmt = $db->prepare(" UPDATE publication
+									SET
 										lastpostedon = :lastpostedon,
 										lastpostedon_updatedon = :lastpostedon_updatedon
 									WHERE id = :id;");

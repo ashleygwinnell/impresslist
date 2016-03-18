@@ -4,6 +4,7 @@ ini_set("allow_url_fopen", "On");
 
 $startTime = time();
 $require_login = false;
+$require_config = true;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // Temp test
@@ -22,7 +23,7 @@ $num_games = count($games);
 
 
 function tryAddYoutubeCoverage($youtuberId, $youtuberName, $gameId, $title, $url, $thumbnail, $time) {
-	global $db; 
+	global $db;
 	// YES! We got coverage.
 	// ... but we need to make sure we don't have it saved already!
 	echo "Found Coverage!<br/>\n";
@@ -38,14 +39,14 @@ function tryAddYoutubeCoverage($youtuberId, $youtuberName, $gameId, $title, $url
 		echo $thumbnail . "<br/>\n";
 		echo "<hr/>\n";
 		// Add it to the database.
-		$stmt = $db->prepare("INSERT INTO youtuber_coverage (id, youtuber, person, game, url, title, thumbnail, `utime`) 
+		$stmt = $db->prepare("INSERT INTO youtuber_coverage (id, youtuber, person, game, url, title, thumbnail, `utime`)
 														VALUES (NULL, :youtuber, NULL, :game, :url, :title, :thumbnail, :utime ); ");
-		$stmt->bindValue(":youtuber", $youtuberId, Database::VARTYPE_INTEGER); 
-		$stmt->bindValue(":game", $gameId, Database::VARTYPE_INTEGER); 
-		$stmt->bindValue(":url", $url, Database::VARTYPE_STRING); 
-		$stmt->bindValue(":title", $title, Database::VARTYPE_STRING); 
-		$stmt->bindValue(":thumbnail", $thumbnail, Database::VARTYPE_STRING); 
-		$stmt->bindValue(":utime", $time, Database::VARTYPE_INTEGER); 
+		$stmt->bindValue(":youtuber", $youtuberId, Database::VARTYPE_INTEGER);
+		$stmt->bindValue(":game", $gameId, Database::VARTYPE_INTEGER);
+		$stmt->bindValue(":url", $url, Database::VARTYPE_STRING);
+		$stmt->bindValue(":title", $title, Database::VARTYPE_STRING);
+		$stmt->bindValue(":thumbnail", $thumbnail, Database::VARTYPE_STRING);
+		$stmt->bindValue(":utime", $time, Database::VARTYPE_INTEGER);
 		$stmt->execute();
 
 		@email_new_youtube_coverage($youtuberName, $url, $time);
@@ -60,12 +61,12 @@ function tryAddYoutubeCoverage($youtuberId, $youtuberName, $gameId, $title, $url
 
 
 // for each publication
-for($i = 0; $i < $num_youtubers; ++$i) 
+for($i = 0; $i < $num_youtubers; ++$i)
 {
 	echo "<b>" . $youtubers[$i]['name'] . "</b>!<br/>\n";
 
 	$youtubeChannel = $youtubers[$i]['channel'];
-	if (strlen($youtubeChannel) > 0) 
+	if (strlen($youtubeChannel) > 0)
 	{
 		if (strlen($youtubers[$i]['youtubeId']) == 0 || strlen($youtubers[$i]['youtubeUploadsPlaylistId']) == 0) {
 			// better update this 'un.
@@ -75,16 +76,16 @@ for($i = 0; $i < $num_youtubers; ++$i)
 			$youtubers[$i]['youtubeUploadsPlaylistId'] = $details['playlists']['uploads'];
 
 			$stmt = $db->prepare("UPDATE youtuber SET youtubeId = :youtubeId, youtubeUploadsPlaylistId = :youtubeUploadsPlaylistId WHERE id = :id; ");
-			$stmt->bindValue(":youtubeId", $details['id'], Database::VARTYPE_STRING); 
-			$stmt->bindValue(":youtubeUploadsPlaylistId", $details['playlists']['uploads'], Database::VARTYPE_STRING); 
-			$stmt->bindValue(":id", $youtubers[$i]['id'], Database::VARTYPE_INTEGER); 
+			$stmt->bindValue(":youtubeId", $details['id'], Database::VARTYPE_STRING);
+			$stmt->bindValue(":youtubeUploadsPlaylistId", $details['playlists']['uploads'], Database::VARTYPE_STRING);
+			$stmt->bindValue(":id", $youtubers[$i]['id'], Database::VARTYPE_INTEGER);
 			$stmt->execute();
 			sleep(1);
 		}
 
 		$uploads = youtube_v3_getUploads($youtubers[$i]['youtubeUploadsPlaylistId']);
-		if ($uploads != 0) 
-		{ 
+		if ($uploads != 0)
+		{
 
 			foreach($uploads as $video) {
 				$title = $video['title'];
@@ -95,14 +96,14 @@ for($i = 0; $i < $num_youtubers; ++$i)
 
 				foreach ($games as $game) {
 					if (strpos($title, $game['name']) !== FALSE ||
-						strpos($description, $game['name']) !== FALSE) 
+						strpos($description, $game['name']) !== FALSE)
 					{
 						tryAddYoutubeCoverage(
-							$youtubers[$i]['id'], 
-							$youtubers[$i]['name'], 
-							$game['id'], 
-							$title, 
-							$link, 
+							$youtubers[$i]['id'],
+							$youtubers[$i]['name'],
+							$game['id'],
+							$title,
+							$link,
 							$thumbnail,
 							$published
 						);
@@ -111,13 +112,13 @@ for($i = 0; $i < $num_youtubers; ++$i)
 
 			}
 		}
-		$db->exec("UPDATE youtuber SET lastscrapedon = " . time() . " WHERE id = " . $youtubers[$i]['id'] . " ;");	
+		$db->exec("UPDATE youtuber SET lastscrapedon = " . time() . " WHERE id = " . $youtubers[$i]['id'] . " ;");
 		sleep(5);
 		//die();
-		
+
 		/*$youtubeDetails = youtube_getUploads($youtubeChannel);
-		if ($youtubeDetails != 0) 
-		{ 
+		if ($youtubeDetails != 0)
+		{
 			//print_r($youtubeDetails);
 			foreach($youtubeDetails['feed']['entry'] as $video) {
 				$link = $video['link']['0']['href'];
@@ -130,7 +131,7 @@ for($i = 0; $i < $num_youtubers; ++$i)
 				$title = $video['media$group']['media$title']['$t'];
 				$description = $video['media$group']['media$description']['$t'];
 				$thumbnail = $video['media$group']['media$thumbnail'][0]['url'];
-				
+
 				echo $title . "<br/";
 
 				foreach ($games as $game) {
@@ -144,23 +145,23 @@ for($i = 0; $i < $num_youtubers; ++$i)
 						echo "<br/>";
 
 						tryAddYoutubeCoverage(
-							$youtubers[$i]['id'], 
-							$youtubers[$i]['name'], 
-							$game['id'], 
-							$title, 
-							$link, 
+							$youtubers[$i]['id'],
+							$youtubers[$i]['name'],
+							$game['id'],
+							$title,
+							$link,
 							$published
 						);
 
 					}
 				}
 
-				
+
 			}
 		}*/
 	}
-	
-	
+
+
 }
 
 echo "<b>Done!</b>\n";

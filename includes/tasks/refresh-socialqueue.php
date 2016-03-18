@@ -4,6 +4,7 @@ set_time_limit(0);
 $startTime = time();
 
 $require_login = false;
+$require_config = true;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // List of all to-process items.
@@ -14,7 +15,7 @@ echo $queueSize . " items in queue.<br/>";
 
 for($i = 0; $i < $queueSize; $i++) {
 	$item = $queue[$i];
-	$item['typedata'] = json_decode($item['typedata'], true); 
+	$item['typedata'] = json_decode($item['typedata'], true);
 
 	if ($item['type'] == "tweet") {
 		echo "Tweet<br/>";
@@ -43,16 +44,16 @@ for($i = 0; $i < $queueSize; $i++) {
 	} else if ($item['type'] == "retweet") {
 		echo "Retweet<br/>";
 		$tweet = $item['typedata']['tweet'];
-		
+
 		$otheritem = db_singleSocialQueueItem($db, $tweet);
-		$otheritem['typedata'] = json_decode($otheritem['typedata'], true); 
-		$account = db_singleOAuthTwitterById($db, $item['typedata']['account']);	
-		
-		if (!is_null($otheritem) && 
-			!is_null($account) && 
-			$otheritem['sent']==1 && 
+		$otheritem['typedata'] = json_decode($otheritem['typedata'], true);
+		$account = db_singleOAuthTwitterById($db, $item['typedata']['account']);
+
+		if (!is_null($otheritem) &&
+			!is_null($account) &&
+			$otheritem['sent']==1 &&
 			isset($otheritem['typedata']['tweet']['id'])
-			) { 
+			) {
 			twitter_retweetStatus($account['oauth_key'], $account['oauth_secret'], $otheritem['typedata']['tweet']['id']);
 
 			$stmt = $db->prepare("UPDATE socialqueue SET sent = :sent WHERE id = :id ");
@@ -61,14 +62,14 @@ for($i = 0; $i < $queueSize; $i++) {
 			$rs = $stmt->execute();
 		}
 
-		
+
 	}
 
-	
+
 }
 
 
 $endTime = time();
 echo "Took " . ($endTime - $startTime) . " seconds.";
-	
+
 ?>

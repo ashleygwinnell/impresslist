@@ -2,11 +2,12 @@
 
 set_time_limit(0);
 
-// 
+//
 // Refresh Youtuber subs/views count.php
 //
 $startTime = time();
 $require_login = false;
+$require_config = true;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // People
@@ -15,18 +16,18 @@ $num_youtubeChannels = count($youtubeChannels);
 
 $twittersUpdated = 0;
 $subscriptionsUpdated = 0;
-for($i = 0; $i < $num_youtubeChannels; $i++) 
+for($i = 0; $i < $num_youtubeChannels; $i++)
 {
 	$youtubeChannel = $youtubeChannels[$i]['channel'];
 	// echo $youtubeChannel;
-	if (strlen($youtubeChannel) > 0) 
+	if (strlen($youtubeChannel) > 0)
 	{
 		$youtubeDetails = youtube_v3_getInformation($youtubeChannel);
 		$youtubeUploads = youtube_v3_getUploads($youtubeChannels[$i]['youtubeUploadsPlaylistId']);
 
 		//echo $youtubeDetails . " | " . $youtubeUploads . "<br/>";
 
-		if ($youtubeDetails != 0 && $youtubeUploads != 0) { 
+		if ($youtubeDetails != 0 && $youtubeUploads != 0) {
 			/*echo "updated " . $content['entry']['title']['$t'] . "<br/>";
 			$result = array(
 				"name" => $content['entry']['title']['$t'],
@@ -46,19 +47,19 @@ for($i = 0; $i < $num_youtubeChannels; $i++)
 			}
 
 
-			$db->exec("UPDATE youtuber 
-							SET 
-								lastpostedon = '" . $lastPostedOn . "', 
-								lastpostedon_updatedon = '" . time() . "', 
-								subscribers = '" . $youtubeDetails['subscribers'] . "', 
-								views = '" . $youtubeDetails['views'] . "' 
+			$db->exec("UPDATE youtuber
+							SET
+								lastpostedon = '" . $lastPostedOn . "',
+								lastpostedon_updatedon = '" . time() . "',
+								subscribers = '" . $youtubeDetails['subscribers'] . "',
+								views = '" . $youtubeDetails['views'] . "'
 							WHERE id = '" . $youtubeChannels[$i]['id'] . "';");
 			$subscriptionsUpdated++;
 			sleep(1);
 		}
 	}
 
-	
+
 	// echo "<hr/>";
 }
 
@@ -70,5 +71,5 @@ echo "updated " . $subscriptionsUpdated . " youtuber subscriptions <br/>";
 echo "done!<br/>";
 $endTime = time();
 echo "took " . ($endTime - $startTime) . " seconds.";
-	
+
 ?>

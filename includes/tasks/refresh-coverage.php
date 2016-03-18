@@ -4,6 +4,7 @@ ini_set("allow_url_fopen", "On");
 
 $startTime = time();
 $require_login = false;
+$require_config = true;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // id = 165 -- plus10damage.com
@@ -21,17 +22,17 @@ $games = $db->query("SELECT * FROM game;");
 $num_games = count($games);
 
 function fixrelativeurl($host, $url) {
-	if (substr($url, 0, 1) == "/") { 
+	if (substr($url, 0, 1) == "/") {
 		if (substr($host, -1, 1) == "/") {
-			return $host . substr($url, 1); 
+			return $host . substr($url, 1);
 		}
-		return $host . $url; 
+		return $host . $url;
 	}
 	return $url;
 }
 
 function tryAddPublicationCoverage($publicationId, $publicationName, $gameId, $title, $url, $time) {
-	global $db; 
+	global $db;
 	// YES! We got coverage.
 	// ... but we need to make sure we don't have it saved already!
 	echo "Found Coverage!<br/>\n";
@@ -46,13 +47,13 @@ function tryAddPublicationCoverage($publicationId, $publicationName, $gameId, $t
 		echo $time . "<br/>\n";
 		echo "<hr/>\n";
 		// Add it to the database.
-		$stmt = $db->prepare("INSERT INTO publication_coverage (id, publication, person, game, url, title, `utime`) 
+		$stmt = $db->prepare("INSERT INTO publication_coverage (id, publication, person, game, url, title, `utime`)
 														VALUES (NULL, :publication, NULL, :game, :url, :title, :utime ); ");
-		$stmt->bindValue(":publication", $publicationId, Database::VARTYPE_INTEGER); 
-		$stmt->bindValue(":game", $gameId, Database::VARTYPE_INTEGER); 
-		$stmt->bindValue(":url", $url, Database::VARTYPE_STRING); 
-		$stmt->bindValue(":title", $title, Database::VARTYPE_STRING); 
-		$stmt->bindValue(":utime", $time, Database::VARTYPE_INTEGER); 
+		$stmt->bindValue(":publication", $publicationId, Database::VARTYPE_INTEGER);
+		$stmt->bindValue(":game", $gameId, Database::VARTYPE_INTEGER);
+		$stmt->bindValue(":url", $url, Database::VARTYPE_STRING);
+		$stmt->bindValue(":title", $title, Database::VARTYPE_STRING);
+		$stmt->bindValue(":utime", $time, Database::VARTYPE_INTEGER);
 		$stmt->execute();
 
 		@email_new_coverage($publicationName, $url, $time);
@@ -72,7 +73,7 @@ for($i = 0; $i < $num_publications; ++$i) {
 	$doScrape = true;
 	// Scrape RSS feed.
 	$rss = $publications[$i]['rssfeedurl'];
-	if (strlen($rss) > 0) 
+	if (strlen($rss) > 0)
 	{
 		echo "Checking RSS...<br/>\n";
 
@@ -83,10 +84,10 @@ for($i = 0; $i < $num_publications; ++$i) {
 		@$doc->loadHTML( $rsscontent );
 		$xml = @simplexml_import_dom($doc);
 		if ($xml === FALSE) {
-			// log error. 
+			// log error.
 			echo "Invalid XML for website .<br/>\n";
-			continue; 
-		} else if (!is_object($xml)) { 
+			continue;
+		} else if (!is_object($xml)) {
 			echo "Invalid XML for website. Did not make XML object.<br/>\n";
 			continue;
 		}
@@ -95,29 +96,29 @@ for($i = 0; $i < $num_publications; ++$i) {
 		if ($items == null) {
 			//print_r($xml);
 			echo "Skipping...<br/>\n";
-			//continue; 
-		} else { 
+			//continue;
+		} else {
 
 			foreach ($items as $item) {
 				$title = htmlentities($item->title);
 				$time = strtotime($item->pubdate);
-				$url = $item->link->__toString(); 
+				$url = $item->link->__toString();
 				if (strlen($url) == 0) {
 					$url = $item->guid;
 				}
 
 				//print_r($item);
-				//echo 
+				//echo
 
 				foreach ($games as $game) {
 					if (strpos($title, $game['name']) !== FALSE) {
-						
+
 						tryAddPublicationCoverage(
-							$publications[$i]['id'], 
-							$publications[$i]['name'], 
-							$game['id'], 
-							$title, 
-							$url, 
+							$publications[$i]['id'],
+							$publications[$i]['name'],
+							$game['id'],
+							$title,
+							$url,
 							$time
 						);
 
@@ -130,7 +131,7 @@ for($i = 0; $i < $num_publications; ++$i) {
 		}
 	}
 
-	// Scrape homepage 
+	// Scrape homepage
 	if ($doScrape)
 	{
 		echo "Scraping homepage...<br/>\n";
@@ -156,17 +157,17 @@ for($i = 0; $i < $num_publications; ++$i) {
 			echo $info['scheme'].'://'.$info['host']; // http://www.mydomain.com
 
 		//	continue;
-		} 
-		else 
-		{ 
-			
+		}
+		else
+		{
+
 			foreach ($games as $game) {
 				$gamename = $game['name'];
 				$gamename_safe = strtolower(str_replace(" ", "-", $game['name']));
 
 				// match any links that contain the game name
 				$arr = $xml->xpath('//a[contains(concat(" ", @href, " "), "' . $gamename_safe . '")] | //a[contains(concat(" ", @title, " "), "' . $gamename . '")]');
-				
+
 				//print_r($arr);
 
 				// make sure each url only appears once.
@@ -181,31 +182,31 @@ for($i = 0; $i < $num_publications; ++$i) {
 						$obj = array();
 						$obj['url'] = fixrelativeurl($url, $href->__toString());
 						$obj['time'] = time();
-						if (isset($__attrs['title'])) { 
+						if (isset($__attrs['title'])) {
 							$obj['title'] = htmlentities($__attrs['title']->__toString());
 						}
 						$checkedUrls[] = $obj;
 					} else {
 						for($j = 0; $j < count($checkedUrls); $j++) {
 							if ($checkedUrls[$j]['url'] == fixrelativeurl($url, $href->__toString())) {
-								if (!isset($checkedUrls[$j]['title']) && isset($__attrs['title'])) { 
-									$checkedUrls[$j]['title'] = htmlentities($__attrs['title']); 
+								if (!isset($checkedUrls[$j]['title']) && isset($__attrs['title'])) {
+									$checkedUrls[$j]['title'] = htmlentities($__attrs['title']);
 								}
 							}
 						}
 					}
-					
+
 				}
 				if ($simulateNoTitle) {
 					foreach ($checkedUrls as $key => $checked) {
-						if (isset($checkedUrls[$key]['title'])) { 
+						if (isset($checkedUrls[$key]['title'])) {
 							unset($checkedUrls[$key]['title']);
 						}
 					}
 				}
-				// For links without titles, fetch titles. 
+				// For links without titles, fetch titles.
 				foreach ($checkedUrls as $key => $checked) {
-					if (!isset($checkedUrls[$key]['title'])) { 
+					if (!isset($checkedUrls[$key]['title'])) {
 						$url2 = fixrelativeurl($url, $checkedUrls[$key]['url']);
 						$url2contents = url_get_contents($url2);
 						$doc2 = new DOMDocument();
@@ -218,10 +219,10 @@ for($i = 0; $i < $num_publications; ++$i) {
 							$derp = preg_match('/<title>/', $url2contents, $match);
 							$info = parse_url($match[1]);
 							echo $info['scheme'].'://'.$info['host']; // http://www.mydomain.com
-						} //else { 
-						
+						} //else {
+
 						$checkedUrls[$key]['title'] = htmlentities($xml2->head->title->__toString());
-					
+
 					//	}
 					}
 				}
@@ -231,15 +232,15 @@ for($i = 0; $i < $num_publications; ++$i) {
 				// add to database!
 				foreach ($checkedUrls as $key => $checked) {
 					tryAddPublicationCoverage(
-						$publications[$i]['id'], 
-						$publications[$i]['name'], 
-						$game['id'], 
-						$checkedUrls[$key]['title'], 
-						fixrelativeurl($publications[$i]['url'], $checkedUrls[$key]['url']), 
+						$publications[$i]['id'],
+						$publications[$i]['name'],
+						$game['id'],
+						$checkedUrls[$key]['title'],
+						fixrelativeurl($publications[$i]['url'], $checkedUrls[$key]['url']),
 						$checkedUrls[$key]['time']
 					);
 				}
-				
+
 			}
 
 		}
