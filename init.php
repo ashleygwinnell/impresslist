@@ -2,6 +2,8 @@
 
 session_start();
 
+$impresslist_version = "0.1.0";
+
 // Make sure user has ran Composer.
 if (!file_exists($_SERVER['DOCUMENT_ROOT'] . "vendor/autoload.php")) {
 	echo "	impress[] requires you to run <u>composer update</u> in the terminal to download external PHP libraries.<br/>
@@ -17,8 +19,8 @@ if (!file_exists($_SERVER['DOCUMENT_ROOT'] . "js/vendor/bootstrap-multiselect/bo
 }
 
 // Make sure user has configured.
-if (!file_exists($_SERVER['DOCUMENT_ROOT'] . "includes/config.php")) {
-	echo "	impress[] requires you to copy <u>includes/config.example.php</u> to <u>includes/config.php</u> and also set all the variables there.";
+if (!file_exists($_SERVER['DOCUMENT_ROOT'] . "includes/config/config.php") && $require_config) {
+	header('Location: install.php');
 	die();
 }
 
@@ -27,16 +29,46 @@ include_once("vendor/autoload.php");
 include_once("includes/database.class.php");
 include_once("includes/cache.class.php");
 
-include_once("includes/config.php");
+$impresslist_installed = false;
+if ($require_config) {
+	include_once("includes/config/config.php");
+}
 include_once("includes/util.php");
 include_once("includes/database.php");
 
 // Internal config vars
-$impresslist_version = "0.0.1";
+$settings = db_getSettings($db);
+
+$impresslist_company_name = $settings['company_name'];
+$impresslist_company_addressLine = $settings['company_addressLine'];
+$impresslist_company_emailAddress = $settings['company_emailAddress'];
+$impresslist_company_twitter = $settings['company_twitter'];
+$impresslist_company_facebook = $settings['company_facebook'];
+
+$impresslist_cacheType = $settings['cacheType'];
+$impresslist_memcacheServer = $settings['memcacheServer'];
+$impresslist_memcachePort = $settings['memcachePort'];
+
+$twitter_consumerKey = $settings['twitter_consumerKey'];
+$twitter_consumerSecret = $settings['twitter_consumerSecret'];
+$twitter_oauthToken = $settings['twitter_oauthToken'];
+$twitter_oauthSecret = $settings['twitter_oauthSecret'];
+
+$facebook_appId = $settings['facebook_appId'];
+$facebook_appSecret = $settings['facebook_appSecret'];
+$facebook_apiVersion = $settings['facebook_apiVersion'];
+
+$youtube_apiKey = $settings['youtube_apiKey'];
+
+$slack_enabled = $settings['slack_enabled'];
+$slack_apiUrl = $settings['slack_apiUrl'];
+
+$impresslist_backupEmail = $settings['auto_backup_email'];
 
 $cache = Cache::getInstance();
-
 $uploadsDir = "data/uploads/";
+
+$showNavigation = true;
 
 // Sorts
 function sortById($a, $b) { return $a['id'] > $b['id']; }
@@ -93,7 +125,9 @@ if ($require_login) {
 	} else {
 		$user = db_singleuser($db, $_SESSION['user'], ['emailIMAPPassword']);
 
+		//print_r($user);
 		if ($user == null) {
+			//echo 'ahahaa';
 			include_once("includes/login.html");
 			die();
 		}

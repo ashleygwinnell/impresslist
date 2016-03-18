@@ -1,5 +1,7 @@
 <?php
 
+$require_config = true;
+
 function api_error($message) {
 	$error = new stdClass();
 	$error->success = false;
@@ -123,6 +125,15 @@ if (!isset($_GET['endpoint'])) {
 } else {
 
 	$endpoints = array(
+
+		// Install
+		"/install/database/",
+		"/install/administrator/",
+		"/install/cronjobs/",
+		"/install/system-email/",
+		"/install/twitter-settings/",
+		"/install/youtube-settings/",
+		"/install/complete/",
 
 		// People
 		"/person/list/",
@@ -288,6 +299,353 @@ if (!isset($_GET['endpoint'])) {
 
 			$result = new stdClass();
 			$result->success = true;
+		}
+		else if ($endpoint == "/install/database/")
+		{
+			$required_fields = array(
+				array('name' => 'mysql_host', 	 	'type' => 'textarea'),
+				array('name' => 'mysql_username', 	'type' => 'textarea'),
+				array('name' => 'mysql_password', 	'type' => 'textarea'),
+				array('name' => 'mysql_database',	'type' => 'textarea')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error)
+			{
+				$data = $_GET;
+				if (count($data) > 5) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = "Too many parameters passed.";
+					api_result($result);
+					die();
+				}
+
+				$require_login = false;
+				$require_config = false;
+				include_once('includes/database.class.php');
+				include_once('includes/cache.class.php');
+
+				$impresslist_mysqlServer 		= $data['mysql_host'];
+				$impresslist_mysqlUsername		= $data['mysql_username'];
+				$impresslist_mysqlPassword		= $data['mysql_password'];
+				$impresslist_mysqlDatabaseName	= $data['mysql_database'];
+				$impresslist_databaseType 		= Database::TYPE_MYSQL;
+				include_once('includes/database.php');
+
+				try {
+					$db = Database::getInstance();
+
+					session_start();
+					$_SESSION['install'] = [];
+					$_SESSION['install'] = array_merge([], $data);
+
+					db_install($db);
+
+					$result = new stdClass();
+					$result->success = true;
+					api_result($result);
+					die();
+
+				} catch (Exception $e) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = $e->getMessage();
+					api_result($result);
+					die();
+				}
+			}
+
+		}
+		else if ($endpoint == "/install/administrator/")
+		{
+			include_once("includes/util.php");
+			$required_fields = array(
+				array('name' => 'forename','type' => 'textarea'),
+				array('name' => 'surname', 	'type' => 'textarea'),
+				array('name' => 'email', 	'type' => 'email'),
+				array('name' => 'password',	'type' => 'textarea')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error)
+			{
+				$data = $_GET;
+
+				$require_login = false;
+				$require_config = false;
+				include_once('includes/database.class.php');
+
+				session_start();
+				$impresslist_mysqlServer 		= $_SESSION['install']['mysql_host'];
+				$impresslist_mysqlUsername		= $_SESSION['install']['mysql_username'];
+				$impresslist_mysqlPassword		= $_SESSION['install']['mysql_password'];
+				$impresslist_mysqlDatabaseName	= $_SESSION['install']['mysql_database'];
+				$impresslist_databaseType 		= Database::TYPE_MYSQL;
+
+				$db = Database::getInstance();
+
+				// Check there's no user already.
+				$users = $db->query("SELECT * FROM user LIMIT 1;");
+				if (count($users) > 0) {
+					// impress[] already has an administrator. Let's just update them.
+					$stmt = $db->prepare("UPDATE user SET forename = :forename, surname = :surname, email = :email, password = :password WHERE id = 1; ");
+					$stmt->bindValue(":forename", 		$data['forename'], 		Database::VARTYPE_STRING);
+					$stmt->bindValue(":surname", 		$data['surname'], 		Database::VARTYPE_STRING);
+					$stmt->bindValue(":email", 			$data['email'], 		Database::VARTYPE_STRING);
+					$stmt->bindValue(":password", 		md5($data['password']), Database::VARTYPE_STRING);
+					$stmt->execute();
+
+					$result = new stdClass();
+					$result->success = true;
+					api_result($result);
+				}
+				else {
+					$stmt = $db->prepare("INSERT IGNORE INTO game (id, name, iconurl, keywords) VALUES ( :id, :name, :iconurl, :keywords ); ");
+					$stmt->bindValue(":id", 			1, 				Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":name", 			'Project', 		Database::VARTYPE_STRING);
+					$stmt->bindValue(":iconurl", 		'', 			Database::VARTYPE_STRING);
+					$stmt->bindValue(":keywords", 		'project', 		Database::VARTYPE_STRING);
+					$stmt->execute();
+
+					$stmt = $db->prepare("INSERT IGNORE INTO user (id, forename, surname, email, password, currentGame, admin, color, lastactivity) VALUES ( :id, :forename, :surname, :email, :password, :currentGame, :admin, :color, :lastactivity ); ");
+					$stmt->bindValue(":id", 			1, 						Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":forename", 		$data['forename'], 		Database::VARTYPE_STRING);
+					$stmt->bindValue(":surname", 		$data['surname'], 		Database::VARTYPE_STRING);
+					$stmt->bindValue(":email", 			$data['email'], 		Database::VARTYPE_STRING);
+					$stmt->bindValue(":password", 		md5($data['password']), Database::VARTYPE_STRING);
+					$stmt->bindValue(":currentGame", 	1, 						Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":admin", 			1, 						Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":color", 			'#000000', 				Database::VARTYPE_STRING);
+					$stmt->bindValue(":lastactivity", 	time(), 				Database::VARTYPE_INTEGER);
+					$stmt->execute();
+
+					$result = new stdClass();
+					$result->success = true;
+					api_result($result);
+				}
+			}
+
+		}
+		else if ($endpoint == "/install/cronjobs/") {
+			$require_config = false;
+			$require_login  = false;
+			include_once('init.php');
+
+			$perms = fileperms($uploadsDir);
+			$octalPerms = substr(sprintf('%o', $perms), -4);
+
+			if ($octalPerms != '0755') {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = $uploadsDir . ' permissions was not set correctly. It was set to ' . $octalPerms . '.';
+				api_result($result);
+			}
+
+			$perms = fileperms('includes/config/');
+			$octalPerms = substr(sprintf('%o', $perms), -4);
+
+			if ($octalPerms != '0755') {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = 'includes/config/ permissions was not set correctly. It was set to ' . $octalPerms . '.';
+				api_result($result);
+			}
+
+			$result = new stdClass();
+			$result->success = true;
+			api_result($result);
+		}
+		else if ($endpoint == "/install/system-email/") {
+			include_once("includes/util.php");
+			$required_fields = array(
+				array('name' => 'email_host',		'type' => 'textarea'),
+				array('name' => 'email_address', 	'type' => 'email'),
+				array('name' => 'email_password', 	'type' => 'textarea'),
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error)
+			{
+				session_start();
+
+				$data = $_GET;
+				if (count($data) > 4) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = "Too many parameters passed.";
+					api_result($result);
+					die();
+				}
+
+				$require_login = false;
+				$require_config = false;
+				include_once('includes/database.class.php');
+
+				$impresslist_emailIMAPHost = $data['email_host'];
+				$impresslist_emailAddress = $data['email_address'];
+				$impresslist_emailPassword = $data['email_password'];
+
+				$imap_connection = @imap_open("{" . $impresslist_emailIMAPHost . ":993/imap/ssl/novalidate-cert}INBOX", $impresslist_emailAddress, $impresslist_emailPassword);
+
+				if ( !$imap_connection ) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = imap_last_error();
+					$result->message .= ' You should try running the installer on the live server.';
+					api_result($result);
+				} else {
+					$_SESSION['install'] = array_merge($_SESSION['install'], $data);
+
+					$result = new stdClass();
+					$result->success = true;
+					api_result($result);
+				}
+
+			}
+		}
+		else if ($endpoint == "/install/twitter-settings/") {
+			$require_config = false;
+			$require_login  = false;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'twitter_consumer_key',		'type' => 'textarea'),
+				array('name' => 'twitter_consumer_secret', 	'type' => 'textarea'),
+				array('name' => 'twitter_oauth_token', 		'type' => 'textarea'),
+				array('name' => 'twitter_oauth_secret', 	'type' => 'textarea'),
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error)
+			{
+				session_start();
+
+				$data = $_GET;
+				if (count($data) > 5) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = "Too many parameters passed.";
+					api_result($result);
+					die();
+				}
+
+				$twitter_consumerKey = $data['twitter_consumer_key'];
+  				$twitter_consumerSecret = $data['twitter_consumer_secret'];
+				$twitter_oauthToken = $data['twitter_oauth_token'];
+				$twitter_oauthSecret = $data['twitter_oauth_secret'];
+
+				$twitterConfig = twitter_helpConfiguration();
+			//	print_r($twitterConfig);
+
+				//echo twitter_countFollowers("forcehabit");
+				if (!$twitterConfig || ( $twitterConfig && isset($twitterConfig->errors))) {
+					$errorMessage = ($twitterConfig->errors[0]->message)?:'';
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = 'Could not set up Twitter API. ' . $errorMessage;
+					api_result($result);
+				} else {
+					$result = new stdClass();
+					$result->success = true;
+					$result->configuration = $twitterConfig;
+
+					$_SESSION['install'] = array_merge($_SESSION['install'], $data);
+					$_SESSION['install']['twitter_configuration'] = $twitterConfig;
+				}
+
+			}
+		}
+		else if ($endpoint == "/install/youtube-settings/")
+		{
+			$require_config = false;
+			$require_login  = false;
+			include_once("init.php");
+			$required_fields = array(
+				array('name' => 'youtube_api_key',		'type' => 'textarea')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error)
+			{
+				session_start();
+
+				$data = $_GET;
+
+				$youtube_apiKey = $data['youtube_api_key'];
+				$info = youtube_v3_getInformation('forcehabit');
+				if (isset($info['id']) && isset($info['name'])) {
+					$result = new stdClass();
+					$result->success = true;
+
+					$_SESSION['install'] = array_merge($_SESSION['install'], ['youtube_api_key' => $youtube_apiKey ]);
+					unset($_SESSION['install']['endpoint']);
+
+
+
+				} else {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = 'Could not set up YouTube API. Please check the API key that you entered.';
+				}
+
+			}
+		}
+		else if ($endpoint == "/install/complete/")
+		{
+			$require_config = false;
+			$require_login  = false;
+			include_once("init.php");
+
+			$newConfigFile = 'includes/config/config.php';
+			if (file_exists( $newConfigFile )) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = 'Config file already exists. How are you running this installation?!';
+			}
+			else {
+
+				include_once('includes/database.class.php');
+
+				session_start();
+
+				$impresslist_mysqlServer 		= $_SESSION['install']['mysql_host'];
+				$impresslist_mysqlUsername		= $_SESSION['install']['mysql_username'];
+				$impresslist_mysqlPassword		= $_SESSION['install']['mysql_password'];
+				$impresslist_mysqlDatabaseName	= $_SESSION['install']['mysql_database'];
+				$impresslist_databaseType 		= Database::TYPE_MYSQL;
+
+				$db = Database::getInstance();
+
+				twitter_helpConfigurationSave($_SESSION['install']['twitter_configuration']);
+				$db->exec("UPDATE settings SET `value` = '" . $_SESSION['install']['twitter_consumer_key'] . "'    	WHERE `key` = 'twitter_consumerKey' ; ");
+				$db->exec("UPDATE settings SET `value` = '" . $_SESSION['install']['twitter_consumer_secret'] . "' 	WHERE `key` = 'twitter_consumerSecret' ; ");
+				$db->exec("UPDATE settings SET `value` = '" . $_SESSION['install']['twitter_oauth_token'] . "' 		WHERE `key` = 'twitter_oauthToken' ; ");
+				$db->exec("UPDATE settings SET `value` = '" . $_SESSION['install']['twitter_oauth_secret'] . "' 	WHERE `key` = 'twitter_oauthSecret' ; ");
+
+				$db->exec("UPDATE settings SET `value` = '" . $_SESSION['install']['youtube_api_key'] . "' 	WHERE `key` = 'youtube_apiKey' ; ");
+
+				$template = file_get_contents("includes/config/config.template.php");
+
+				$template = str_replace('{email_host}', 	$_SESSION['install']['email_host'], 	$template);
+				$template = str_replace('{email_address}', 	$_SESSION['install']['email_address'], 	$template);
+				$template = str_replace('{email_password}', $_SESSION['install']['email_password'], $template);
+
+				$template = str_replace('{mysql_host}', 	$_SESSION['install']['mysql_host'], 	$template);
+				$template = str_replace('{mysql_username}', $_SESSION['install']['mysql_username'], $template);
+				$template = str_replace('{mysql_password}', $_SESSION['install']['mysql_password'], $template);
+				$template = str_replace('{mysql_database}', $_SESSION['install']['mysql_database'], $template);
+
+				$result = file_put_contents($newConfigFile, $template);
+				if ($result === FALSE) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = 'Could not create config file.';
+					api_result($result);
+				}
+
+				unset($_SESSION['install']);
+				$result = new stdClass();
+				$result->success = true;
+
+
+			}
+
 		}
 		else if ($endpoint == "/social/account/facebook-page/query/")
 		{

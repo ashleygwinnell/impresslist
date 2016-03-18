@@ -1,6 +1,8 @@
+builds/
 data/database.sql
 data/backups/*
 data/uploads/*
-includes/config.php
+includes/config/config.php
+includes/config/config.backup.php
 js/vendor
 vendor

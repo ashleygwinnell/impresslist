@@ -1656,11 +1656,13 @@ API.request = function(endpoint, data, successCallback, failCallback) {
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') {
 				API.errorMessage(result);
+				failCallback();
 				return;
 			}
 			var json = JSON.parse(result);
 			if (!json.success) {
 				API.errorMessage(json.message);
+				failCallback();
 				return;
 			}
 			successCallback(json);

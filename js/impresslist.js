@@ -3075,6 +3075,7 @@ var impresslist = {
 		$('#nav-add-user').click(API.addUser);
 		$('#nav-user-changepassword').click(function() { thiz.findUserById(thiz.config.user.id).openChangePassword(); });
 		$('#nav-user-changeimapsettings').click(function() { thiz.findUserById(thiz.config.user.id).openChangeIMAPSettings(); });
+		$('.nav-user-changeimapsettings').click(function() { $('#nav-user-changeimapsettings').click(); });
 		$('#nav-home').click(this.changePage);
 		$('#nav-coverage').click(this.changePage);
 		$('#nav-keys').click(this.changePage);
@@ -4162,3 +4163,4 @@ impresslist.util = {
 		return str;
 	}
 }
+impresslist.noop = function() {}

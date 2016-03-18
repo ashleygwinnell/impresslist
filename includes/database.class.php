@@ -166,21 +166,22 @@ class MysqliDatabase extends Database {
 	public $type = Database::TYPE_MYSQL;
 
 	function __construct($server, $user, $password, $database) {
-		$this->db = new mysqli($server, $user, $password);
+		$this->db = @new mysqli($server, $user, $password);
 
 		if ($this->db->connect_errno) {
-			echo "Failed to connect to MySQL: (" . $this->db->connect_errno . ") " . $this->db->connect_error;
-			die();
+			throw new Exception("Failed to connect to MySQL: (" . $this->db->connect_errno . ") " . $this->db->connect_error);
 		}
 
 		//echo $_SERVER['REQUEST_URI'];
-		if ($_SERVER['REQUEST_URI'] == "/install.php") {
-			$this->exec("CREATE DATABASE IF NOT EXISTS " . $database);
-		}
+		//if ($_SERVER['REQUEST_URI'] == "/install.php") {
+		//	$this->exec("CREATE DATABASE IF NOT EXISTS " . $database);
+		//}
+
+
 
 		$selected = $this->db->select_db( $database );
 		if (!$selected) {
-			echo ("Could not select MySQL database: " . $database . ". Did you run the install script? " );
+			throw new Exception("Could not select MySQL database: " . $database . ". Does it exist? ");
 		}
 
 		// set charset unicode

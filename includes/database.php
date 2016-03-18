@@ -1,7 +1,12 @@
 <?php
 
-
-	$db = Database::getInstance();
+	try {
+		$db = Database::getInstance();
+	} catch (Exception $e) {
+		if ($impresslist_installed) {
+			die($e);
+		}
+	}
 
 	function sqlite_epoch($time = 0) {
 		return date("Y-m-d H:i:s", $time);
@@ -11,10 +16,14 @@
 
 		$extrasString = implode($extraFields, ',');
 		if (strlen($extrasString) > 0) {
-			$extrasString = ','.$extrasString;
+			$extrasString = ', '.$extrasString;
 		}
 
-		$results = $db->query("SELECT user.id, forename, surname, email, color, emailGmailIndex, emailIMAPServer, emailSMTPServer, currentGame, lastactivity, count(email.id) as num_emails, admin $extrasString FROM user LEFT JOIN email on email.user_id = user.id where user.removed = 0 and email.removed = 0 and user.id = " . $userId. " group by user.id ;");
+		$q = "SELECT user.id, forename, surname, email, color, emailGmailIndex, emailIMAPServer, emailSMTPServer, currentGame, lastactivity, count(email.id) as num_emails, admin, email.removed $extrasString FROM user LEFT JOIN email on email.user_id = user.id where user.removed = 0 and user.id = " . $userId. " group by user.id ;";
+		$results = $db->query($q);
+
+		//echo $q;
+	//	print_r($results);
 
 		return $results[0];
 	}
@@ -135,6 +144,392 @@
 		return $string;
 	}
 
+	function db_reset($db) {
+		$sql = "DROP TABLE email;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE emailcampaignsimple;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE emailqueue;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE game;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE game_key;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE oauth_facebookacc;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE oauth_facebookpage;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE oauth_twitteracc;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE person;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE person_publication;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE person_youtuber;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE publication;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE publication_coverage;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE settings;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE socialqueue;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE user;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE youtuber;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE youtuber_coverage;";
+		$db->exec($sql);
+	}
+
+	// Keep these in alphabetical order please.
+	function db_install($db)
+	{
+		// keywords
+		$autoincrement = "AUTOINCREMENT";
+		$blobTextDefaultToZero = " DEFAULT '0' ";
+		$sqlEngineAndCharset = '';
+		if ($db->type == Database::TYPE_MYSQL) {
+			$autoincrement = "AUTO_INCREMENT";
+			$blobTextDefaultToZero = "";
+			$sqlEngineAndCharset = ' ENGINE=InnoDB DEFAULT CHARSET=utf8 ';
+		}
+
+		// Emails
+		$sql = "CREATE TABLE IF NOT EXISTS email (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					user_id INTEGER NOT NULL,
+					person_id INTEGER NOT NULL,
+					utime INTEGER NOT NULL,
+					from_email VARCHAR(255) NOT NULL,
+					to_email VARCHAR(255) NOT NULL,
+					subject varchar(255) NOT NULL,
+					contents text NOT NULL,
+					unmatchedrecipient INTEGER NOT NULL,
+					removed INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		// Email camapaign system (simple)
+		$sql = "CREATE TABLE IF NOT EXISTS emailcampaignsimple (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					name VARCHAR(255) NOT NULL,
+					subject VARCHAR(255) NOT NULL,
+					recipients TEXT NOT NULL,
+					markdown TEXT NOT NULL,
+					`timestamp` INTEGER NOT NULL,
+					user INTEGER NOT NULL,
+					ready INTEGER NOT NULL DEFAULT 0,
+					sent INTEGER NOT NULL DEFAULT 0,
+					removed INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;" ;
+		$db->exec($sql);
+
+		// Email queue system (notifications)
+		$sql = "CREATE TABLE IF NOT EXISTS emailqueue (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					subject VARCHAR(255) NOT NULL,
+					to_address VARCHAR(255) NOT NULL,
+					headers TEXT NOT NULL,
+					message TEXT NOT NULL,
+					`timestamp` INTEGER NOT NULL,
+					sent INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		// Game / project data
+		$sql = "CREATE TABLE IF NOT EXISTS game (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					name VARCHAR(255),
+					iconurl VARCHAR(255) NOT NULL,
+					keywords TEXT NOT NULL
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		// Game keys
+		$sql = "CREATE TABLE IF NOT EXISTS game_key (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					game INTEGER NOT NULL,
+					platform VARCHAR(16) NOT NULL,
+					keystring VARCHAR(255) NOT NULL,
+					assigned INTEGER NOT NULL DEFAULT 0,
+					assignedToType VARCHAR(16) NOT NULL,
+					assignedToTypeId INTEGER NOT NULL,
+					assignedByUser INTEGER NOT NULL,
+					assignedByUserTimestamp INTEGER NOT NULL,
+					createdOn INTEGER NOT NULL,
+					expiresOn INTEGER NOT NULL,
+					removed INTEGER NOT NULL DEFAULT 0,
+					removedByUser INTEGER,
+					removedByUserTimestamp INTEGER
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql); // TODO: add indexes?
+
+		// Facebook accounts
+		$sql = "CREATE TABLE IF NOT EXISTS oauth_facebookacc (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					user INTEGER NOT NULL,
+					facebook_id VARCHAR(255) NOT NULL,
+					facebook_name VARCHAR(255) NOT NULL,
+					facebook_image TEXT NOT NULL,
+					facebook_accessToken TEXT NOT NULL,
+					lastSync INTEGER NOT NULL,
+					removed INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		// Facebook pages
+		$sql = "CREATE TABLE IF NOT EXISTS oauth_facebookpage (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					page_id VARCHAR(255) NOT NULL,
+					page_name VARCHAR(255) NOT NULL,
+					page_image TEXT NOT NULL,
+					page_accessToken TEXT NOT NULL,
+					lastSync INTEGER NOT NULL,
+					removed INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		// Twitter accounts
+		$sql = "CREATE TABLE IF NOT EXISTS oauth_twitteracc (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					twitter_id TEXT NOT NULL,
+					twitter_name TEXT NOT NULL,
+					twitter_handle TEXT NOT NULL,
+					twitter_image TEXT NOT NULL,
+					oauth_key TEXT NOT NULL,
+					oauth_secret TEXT NOT NULL,
+					removed INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		// People
+		$sql = "CREATE TABLE IF NOT EXISTS person (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					firstname VARCHAR(255) NOT NULL,
+					surnames VARCHAR(255) NOT NULL,
+					email VARCHAR(255) NOT NULL,
+					priorities VARCHAR(255) NOT NULL,
+					twitter VARCHAR(255) NOT NULL,
+					twitter_followers INTEGER NOT NULL DEFAULT 0,
+					twitter_updatedon INTEGER NOT NULL DEFAULT 0,
+					notes TEXT NOT NULL,
+					lastcontacted INTEGER NOT NULL,
+					lastcontactedby INTEGER NOT NULL DEFAULT 0,
+					removed INTEGER NOT NULL DEFAULT 0,
+					assigned INTEGER NOT NULL DEFAULT 0,
+					outofdate INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		// People - publications
+		$sql = "CREATE TABLE IF NOT EXISTS person_publication (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					person INTEGER NOT NULL,
+					publication INTEGER NOT NULL,
+					email VARCHAR(255) NOT NULL,
+					lastcontacted INTEGER NOT NULL,
+					lastcontactedby INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		// People - youtube channels
+		$sql = "CREATE TABLE IF NOT EXISTS person_youtuber (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					person INTEGER NOT NULL,
+					youtuber INTEGER NOT NULL
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		// create publications
+		$sql = "CREATE TABLE IF NOT EXISTS publication (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					name VARCHAR(255) NOT NULL,
+					url VARCHAR(255) NOT NULL,
+					iconurl VARCHAR(255) NOT NULL,
+					iconurl_updatedon INTEGER NOT NULL DEFAULT 0,
+					rssfeedurl VARCHAR(255) NOT NULL,
+					priorities VARCHAR(255) NOT NULL,
+					twitter VARCHAR(255) NOT NULL,
+					twitter_followers INTEGER NOT NULL,
+					twitter_updatedon INTEGER NOT NULL DEFAULT 0,
+					notes TEXT NOT NULL,
+					lastpostedon INTEGER NOT NULL,
+					lastpostedon_updatedon INTEGER NOT NULL DEFAULT 0,
+					removed INTEGER NOT NULL DEFAULT 0,
+					lastscrapedon INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		// Coverage from traditional games press.
+		$sql = "CREATE TABLE IF NOT EXISTS publication_coverage (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					publication INTEGER DEFAULT 0,
+					person INTEGER DEFAULT 0,
+					game INTEGER DEFAULT 0,
+					url VARCHAR(255) NOT NULL,
+					title TEXT NOT NULL,
+					utime INTEGER NOT NULL DEFAULT 0,
+					thanked INTEGER NOT NULL DEFAULT 0,
+					removed INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		$sql = "CREATE TABLE IF NOT EXISTS settings (
+					`key` VARCHAR(255) PRIMARY KEY NOT NULL,
+					`value` TEXT
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		// Social timeline / queue.
+		$sql = "CREATE TABLE IF NOT EXISTS socialqueue (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					type VARCHAR(255) NOT NULL,
+					typedata TEXT NOT NULL,
+					user_id INTEGER NOT NULL,
+					`timestamp` INTEGER NOT NULL,
+					ready INTEGER NOT NULL DEFAULT 0,
+					sent INTEGER NOT NULL DEFAULT 0,
+					removed INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		// Users
+		$sql = "CREATE TABLE IF NOT EXISTS user (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					forename VARCHAR(255) NOT NULL,
+					surname VARCHAR(255) NOT NULL,
+					email VARCHAR(255) NOT NULL,
+					emailGmailIndex INTEGER NOT NULL DEFAULT 0,
+					emailSMTPServer VARCHAR(255) NOT NULL,
+					emailIMAPServer VARCHAR(255) NOT NULL,
+					emailIMAPPassword VARCHAR(255) NOT NULL,
+					emailIMAPPasswordSalt VARCHAR(255) NOT NULL,
+					emailIMAPPasswordIV VARCHAR(255) NOT NULL,
+					password VARCHAR(32) NOT NULL,
+					passwordVersion INTEGER NOT NULL DEFAULT 1,
+					currentGame INTEGER NOT NULL,
+					coverageNotifications INTEGER NOT NULL DEFAULT 1,
+					color VARCHAR(10) NOT NULL DEFAULT '#000000',
+					admin INTEGER NOT NULL DEFAULT 0,
+					lastactivity INTEGER NOT NULL DEFAULT 0,
+					removed INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		// Youtuber profiles.
+		$sql = "CREATE TABLE IF NOT EXISTS youtuber (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					youtubeId VARCHAR(255) NOT NULL,
+					youtubeUploadsPlaylistId VARCHAR(255) NOT NULL,
+					name VARCHAR(255) NOT NULL,
+					description TEXT NOT NULL,
+					email VARCHAR(255) NOT NULL DEFAULT '',
+					priorities VARCHAR(255) NOT NULL,
+					channel VARCHAR(255) NOT NULL,
+					iconurl VARCHAR(255) NOT NULL,
+					subscribers TEXT NOT NULL {$blobTextDefaultToZero},
+					views TEXT NOT NULL {$blobTextDefaultToZero},
+					videos INTEGER NOT NULL,
+					twitter VARCHAR(255) NOT NULL DEFAULT '',
+					twitter_followers INTEGER NOT NULL DEFAULT 0,
+					twitter_updatedon INTEGER NOT NULL DEFAULT 0,
+					notes TEXT NOT NULL,
+					lastpostedon INTEGER NOT NULL,
+					lastpostedon_updatedon INTEGER NOT NULL DEFAULT 0,
+					removed INTEGER NOT NULL DEFAULT 0,
+					lastscrapedon INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		// Youtuber coverage.
+		$sql = "CREATE TABLE IF NOT EXISTS youtuber_coverage (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					youtuber INTEGER DEFAULT 0,
+					person INTEGER DEFAULT 0,
+					game INTEGER DEFAULT 0,
+					url VARCHAR(255) NOT NULL,
+					title TEXT NOT NULL,
+					thumbnail TEXT NOT NULL,
+					utime INTEGER NOT NULL DEFAULT 0,
+					thanked INTEGER NOT NULL DEFAULT 0,
+					removed INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		// Settings
+		$db->exec("INSERT IGNORE INTO settings VALUES ('company_name', 'Company Name'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES ('company_addressLine', 'Company Name, 1 Tree Hill, City, Country.'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES ('company_emailAddress', 'contact@yourwebdomain.com'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES ('company_twitter', 'http://twitter.com/company_name'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES ('company_facebook', 'http://facebook.com/company_name'); ");
+
+		$db->exec("INSERT IGNORE INTO settings VALUES ('cacheType', '" . Cache::TYPE_NONE . "'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES ('memcacheServer', 'localhost'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES ('memcachePort', '11211'); ");
+
+		$db->exec("INSERT IGNORE INTO settings VALUES ('auto_backup_email', ''); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES ('auto_backup_frequency', 0); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES ('manual_backup_lastbackedupon', 0); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES ('todolist', ''); ");
+
+		global $impresslist_version;
+		$db->exec("INSERT IGNORE INTO settings VALUES ('version', '" . $impresslist_version . "'); ");
+
+		// Youtube settings
+		$db->exec("INSERT IGNORE INTO settings VALUES ('youtube_apiKey', 'youtube_api_key'); ");
+
+		// Twitter API settings
+		$db->exec("INSERT IGNORE INTO settings VALUES ('twitter_configuration', '{}'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES ('twitter_consumerKey', 'consumer_key'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES ('twitter_consumerSecret', 'consumer_secret'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES ('twitter_oauthToken', 'oauth_token'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES ('twitter_oauthSecret', 'oauth_secret'); ");
+
+		// Facebook API settings - https://developers.facebook.com
+		$db->exec("INSERT IGNORE INTO settings VALUES ('facebook_appId', 'app_id'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES ('facebook_appSecret', 'app_secret'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES ('facebook_apiVersion', 'api_version'); ");
+
+		// Slack integration settings
+		$db->exec("INSERT IGNORE INTO settings VALUES ('slack_enabled', 'false'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES ('slack_apiUrl', 'https://hooks.slack.com/services/GENERATE/THIS/URL'); ");
+
+		return true;
+	}
+
+	function db_testdata($db) {
+		// Add some test data, who wants in here?
+	}
+
+	function db_getSettings($db) {
+		if ($db == null) { return array(); }
+
+		$keyedSettings = array();
+		$settings = $db->query("SELECT * FROM settings;");
+		foreach($settings as $setting) {
+			$keyedSettings[$setting['key']] = $setting['value'];
+		}
+		return $keyedSettings;
+	}
 
 
 ?>

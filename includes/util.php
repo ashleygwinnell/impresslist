@@ -263,27 +263,29 @@ function twitter_countFollowers($username)
 	if (strlen($username) == 0) { return 0; }
 
 	$twitter_connection = twitter_getConnectionWithAccessToken($twitter_oauthToken, $twitter_oauthSecret);
-	$twitter_content = $twitter_connection->get("users/lookup.json?callback=?&screen_name=" . $username . "&count=1");
-	if (isset($twitter_content->errors)) { return 0; }
-
+	$twitter_content = $twitter_connection->get("users/show", ['screen_name' => $username ]);
+	if (isset($twitter_content->errors)) {
+		//print_r($twitter_content);
+		return 0;
+	}
 	//echo json_encode($twitter_content);
-	return $twitter_content[0]->followers_count;
+	return $twitter_content->followers_count;
 }
 
 function twitter_getUserInfoById($oauthtoken, $oauthsecret, $id) {
-	$url = "https://api.twitter.com/1.1/users/show.json";
+	$url = "users/show";
 	$twitter_connection = twitter_getConnectionWithAccessToken($oauthtoken, $oauthsecret);
 	return $twitter_connection->get($url, array("user_id" => $id));
 }
 
 function twitter_postStatus($oauthtoken, $oauthsecret, $status) {
-	$url = "https://api.twitter.com/1.1/statuses/update.json";
+	$url = "statuses/update";
 	$twitter_connection = twitter_getConnectionWithAccessToken($oauthtoken, $oauthsecret);
 	return $twitter_connection->post($url, array("status" => $status));
 }
 
 function twitter_retweetStatus($oauthtoken, $oauthsecret, $status_id) {
-	$url = "https://api.twitter.com/1.1/statuses/retweet/{$status_id}.json";
+	$url = "statuses/retweet/{$status_id}";
 	$twitter_connection = twitter_getConnectionWithAccessToken($oauthtoken, $oauthsecret);
 	return $twitter_connection->post($url, array());
 }
@@ -294,25 +296,15 @@ function twitter_postStatusWithImage($oauthtoken, $oauthsecret, $status, $imagef
 	}
 	$twitter_connection = twitter_getConnectionWithAccessToken($oauthtoken, $oauthsecret);
 
-	//print_r($imagefiles);
-
 	$media_ids = array();
-	$url = "https://upload.twitter.com/1.1/media/upload.json";
 	for($i = 0; $i < count($imagefiles); $i++)
 	{
 		$file = $_SERVER['DOCUMENT_ROOT'] . "/" . $imagefiles[$i];
-		//echo $file;
-		$contents = file_get_contents($file);
-		//die();
-		$contents_b64 = base64_encode($contents);
-		$image = $twitter_connection->post($url, array(
-			"media_data" => $contents_b64,
-			"multipart/form-data" => true
-		));
+		$image = $twitter_connection->upload('media/upload', array('media' => $file ) );
 		$media_ids[] = $image->media_id_string;
 	}
 
-	$url = "https://api.twitter.com/1.1/statuses/update.json";
+	$url = "statuses/update";
 	return $twitter_connection->post($url, array(
 		"status" => $status,
 		"media_ids" => implode(",", $media_ids)
@@ -323,14 +315,20 @@ function twitter_helpConfiguration() {
 	global $twitter_oauthToken;
 	global $twitter_oauthSecret;
 
-	$url = "https://api.twitter.com/1.1/help/configuration.json";
+	$url = "help/configuration";
 	$twitter_connection = twitter_getConnectionWithAccessToken($twitter_oauthToken, $twitter_oauthSecret);
 	return $twitter_connection->get($url);
 }
-function twitter_helpConfigurationSave() {
+function twitter_helpConfigurationSave($config = false) {
 	global $db;
-	$r = twitter_helpConfiguration();
-	$rjson = json_encode($r);
+
+	if ($config == false) {
+		$config = twitter_helpConfiguration();
+	}
+	if (!$config || ( $config && isset($config->errors))) {
+		return false;
+	}
+	$rjson = json_encode($config);
 
 	$stmt = $db->prepare(" UPDATE settings SET `value` = :value WHERE `key` = :key; ");
 	$stmt->bindValue(":value", 	$rjson, 					Database::VARTYPE_STRING);
@@ -338,6 +336,20 @@ function twitter_helpConfigurationSave() {
 	return $stmt->execute();
 }
 
+function util_get_github_releases() {
+
+	$ch = curl_init();
+	curl_setopt ($ch, CURLOPT_URL, "https://api.github.com/repos/ashleygwinnell/impresslist/releases");
+	curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, 5);
+	curl_setopt ($ch, CURLOPT_RETURNTRANSFER, true);
+	$contents = curl_exec($ch);
+	if (curl_errno($ch)) {
+		return curl_error($ch);
+	} else {
+		curl_close($ch);
+	}
+	return $contents;
+}
 
 function url_get_contents($url) {
 
@@ -347,8 +359,8 @@ function url_get_contents($url) {
 	curl_setopt ($ch, CURLOPT_RETURNTRANSFER, true);
 	$contents = curl_exec($ch);
 	if (curl_errno($ch)) {
-		//echo curl_error($ch);
-		//echo "\n<br />";
+		echo curl_error($ch);
+		echo "\n<br />";
 		$contents = '';
 	} else {
 		curl_close($ch);

@@ -1,4 +1,1 @@
-
 {"time":1423859467,"user":1,"message":"Welcome to the chat, everyone!"}
-{"time":1424098651,"user":1,"message":"Yo!"}
-{"time":1445862657,"user":1,"message":"butts"}
