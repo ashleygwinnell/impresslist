@@ -4,6 +4,8 @@
 		$db = Database::getInstance();
 	} catch (Exception $e) {
 		if ($impresslist_installed) {
+			echo "impress[] is installed but the database cannot be initialised.<br/><br/>";
+			Database::printError();
 			die($e);
 		}
 	}

@@ -3,33 +3,15 @@
 session_start();
 
 $impresslist_version = "0.1.0";
+$impresslist_installed = false;
 
-// Make sure user has ran Composer.
-if (!file_exists($_SERVER['DOCUMENT_ROOT'] . "vendor/autoload.php")) {
-	echo "	impress[] requires you to run <u>composer update</u> in the terminal to download external PHP libraries.<br/>
-			<a href='https://getcomposer.org/'>Download Composer</a>";
-	die();
-}
-
-// Make sure user has ran Bower.
-if (!file_exists($_SERVER['DOCUMENT_ROOT'] . "js/vendor/bootstrap-multiselect/bower.json")) {
-	echo "	impress[] requires you to run <u>bower update</u> in the terminal to download external JS libraries.<br/>
-			<a href='http://bower.io/'>Download Bower</a>";
-	die();
-}
-
-// Make sure user has configured.
-if (!file_exists($_SERVER['DOCUMENT_ROOT'] . "includes/config/config.php") && $require_config) {
-	header('Location: install.php');
-	die();
-}
+include_once("includes/checks.php");
 
 include_once("vendor/autoload.php");
 
 include_once("includes/database.class.php");
 include_once("includes/cache.class.php");
 
-$impresslist_installed = false;
 if ($require_config) {
 	include_once("includes/config/config.php");
 }

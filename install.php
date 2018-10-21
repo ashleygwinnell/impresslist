@@ -5,12 +5,15 @@
 
 $require_login = false;
 $require_config = false;
-include_once("init.php");
+$impresslist_installed = false;
+include_once("includes/checks.php");
 
 if ($impresslist_installed) {
 	header("Location: /");
 	die();
 }
+
+include_once("init.php");
 
 ?>
 
@@ -196,6 +199,7 @@ if ($impresslist_installed) {
 			<div id='install-database' class='oa'>
 
 				<h4>Step 1 - create database</h4>
+				<div class='alert alert-warning'>Note: Advanced users can configure impress[] directly. Copy <span style='font-family:monospace;'>includes/config/config.template.php</span> to includes/config/config.php, fill out the variables, and then delete the config.template.php file.</div>
 				<div class='alert alert-info'>You should create a database and user on your web hosting provider before starting.</div>
 
 				<div class='form-group'>
@@ -216,7 +220,9 @@ if ($impresslist_installed) {
 					<input id='mysql-database' type='text' class='form-control' placeholder='yourwebd_impresslist'/>
 				</div>
 
-				<button id='install-database-submit' class='btn btn-large btn-primary fr'>Continue</button>
+				<button id='install-database-submit' class='btn btn-large btn-primary fr oa'>Continue</button>
+
+
 
 			</div>
 

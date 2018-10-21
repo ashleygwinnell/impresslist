@@ -5,6 +5,7 @@
 //
 $require_login = true;
 $require_config = true;
+include_once("includes/checks.php");
 include_once("init.php");
 
 // Users

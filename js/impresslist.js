@@ -471,7 +471,10 @@ Coverage = function(data) {
 		if (this.field('type') == 'youtuber') {
 			publicationName = "Unknown Youtuber";
 			if (this.fields['youtuber'] > 0) {
-				publicationName = impresslist.findYoutuberById(this.fields['youtuber']).name;
+				youtuberObj = impresslist.findYoutuberById(this.fields['youtuber']);
+				if (youtuberObj != null) {
+					publicationName = youtuberObj.name;
+				}
 			}
 
 			selector = "data-youtube-coverage-id";
@@ -3233,39 +3236,60 @@ var impresslist = {
 
 		// Keys functions
 		$('#nav-keys').click(function() {
+
+			$('.current-project-name').html(impresslist.findGameById(impresslist.config.user.game).field('name'));
+
+			var addremovekeysform = function(datacount){
+				// remove keys form
+				$('#keys-remove-submit').unbind('click');
+				$('#keys-remove-submit').click(function(){
+					var submitGame = impresslist.config.user.game;
+					var platform = $('#keys-remove-platform').val();
+					var amount = $('#keys-remove-amount').val();
+
+					API.popKeys(submitGame, platform, amount, function(data) {
+
+						// show removed keys
+						var html = "";
+						for(var i = 0; i < data.keys.length; i++) {
+							html += "<li>" + data.keys[i].keystring + "</li>";
+						}
+						$('#keys-removed-list').html(html);
+						$('#keys-removed-container').show();
+
+						$('#steam_keys_available_count').html( parseInt($('#' + platform + '_keys_available_count').html()) - data.count);
+					});
+
+				});
+
+				$('#keys-remove-form').show();
+			}
+
+
 			API.listKeys(impresslist.config.user.game, 'steam', true, function(data) {
 				$('#steam_keys_assigned_count').html(data.count);
 			});
-
 			API.listKeys(impresslist.config.user.game, 'steam', false, function(data) {
 				$('#steam_keys_available_count').html(data.count);
-
 				if (data.count > 0) {
-					// remove keys form
-					$('#keys-remove-submit').unbind('click');
-					$('#keys-remove-submit').click(function(){
-						var submitGame = impresslist.config.user.game;
-						var platform = $('#keys-remove-platform').val();
-						var amount = $('#keys-remove-amount').val();
-
-						API.popKeys(submitGame, platform, amount, function(data) {
-
-							// show removed keys
-							var html = "";
-							for(var i = 0; i < data.keys.length; i++) {
-								html += "<li>" + data.keys[i].keystring + "</li>";
-							}
-							$('#keys-removed-list').html(html);
-							$('#keys-removed-container').show();
-
-							$('#steam_keys_available_count').html( parseInt($('#steam_keys_available_count').html()) - data.count);
-						});
-
-					});
-
-					$('#keys-remove-form').show();
+					addremovekeysform();
 				}
 			});
+
+			API.listKeys(impresslist.config.user.game, 'switch', true, function(data) {
+				$('#switch_keys_assigned_count').html(data.count);
+			});
+			API.listKeys(impresslist.config.user.game, 'switch', false, function(data) {
+				$('#switch_keys_available_count').html(data.count);
+
+				if (data.count > 0) {
+					addremovekeysform();
+				}
+			});
+
+
+
+
 
 
 			// sort out timepicker
@@ -3279,7 +3303,6 @@ var impresslist = {
 			$('#keys-radio-expiry-time').click(function() { $('#keys-timepicker').show(); });
 			$('#keys-timepicker').hide();
 			$('#keys-radio-expiry-never').prop("checked", "true");
-
 		});
 		$('#keys-add-submit').click(function(){
 			var keys_setFormEnabled = function(boo) {
@@ -3318,6 +3341,8 @@ var impresslist = {
 				$('#keys-add-platform').val('---');
 				$('#keys-add-textfield').val('');
 				$('#nav-keys').click();
+			}, function(){
+				keys_setFormEnabled(true);
 			});
 
 		});

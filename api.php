@@ -73,8 +73,8 @@ function api_checkRequiredGETFieldsWithTypes($fields, &$result) {
 				}
 			} else if ($type == 'platform') {
 				$temp = $_GET[$fields[$i]['name']];
-				if ($temp != 'steam') {
-					$result = api_error($fields[$i]['name'] . " is not a valid platform. Steam only right now. -- " . $temp);
+				if (!util_isValidPlatformForProjectKeys($temp)) {
+					$result = api_error($fields[$i]['name'] . " is not a valid platform. " . implode(",",util_getValidPlatformsForProjectKeys()) . " only right now. -- " . $temp);
 					return true;
 				}
 			} else if ($type == 'url') {
@@ -2102,7 +2102,9 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once("init.php");
 
-			$publication_coverage = $db->query("SELECT * FROM publication_coverage WHERE removed = 0 ORDER BY utime DESC;");
+
+
+			$publication_coverage = $db->query("SELECT * FROM publication_coverage WHERE game = {$user_currentGame} AND removed = 0 ORDER BY utime DESC;");
 			$num_publication_coverage = count($publication_coverage);
 			for($i = 0; $i < $num_publication_coverage; $i++) {
 				//$publication_coverage[$i]['title'] = utf8_encode($publication_coverage[$i]['title']);
@@ -2112,7 +2114,7 @@ if (!isset($_GET['endpoint'])) {
 				$publication_coverage[$i]['type'] = "publication";
 			}
 
-			$youtuber_coverage = $db->query("SELECT * FROM youtuber_coverage WHERE removed = 0 ORDER BY utime DESC;");
+			$youtuber_coverage = $db->query("SELECT * FROM youtuber_coverage WHERE game = {$user_currentGame} AND removed = 0 ORDER BY utime DESC;");
 			$youtuber_coverage_coverage = count($youtuber_coverage);
 			for($i = 0; $i < $youtuber_coverage_coverage; $i++) {
 				$youtuber_coverage[$i]['type'] = "youtuber";
@@ -2348,7 +2350,7 @@ if (!isset($_GET['endpoint'])) {
 			include_once("init.php");
 
 			$dolist = true;
-			if ($_GET['platform'] != 'steam') {
+			if (!util_isValidPlatformForProjectKeys($_GET['platform'])) {
 				$result = api_error("Invalid 'platform' value.");
 				$dolist = false;
 			//} else if ($_GET['assigned'] != "true" && $_GET['assigned'] != "false") {
@@ -2396,7 +2398,7 @@ if (!isset($_GET['endpoint'])) {
 			include_once("init.php");
 
 			$dopop = true;
-			if ($_GET['platform'] != 'steam') {
+			if (!util_isValidPlatformForProjectKeys($_GET['platform'])) {
 				$result = api_error("Invalid 'platform' value.");
 				$dopop = false;
 			//} else if ($_GET['assigned'] != "true" && $_GET['assigned'] != "false") {
@@ -2432,12 +2434,14 @@ if (!isset($_GET['endpoint'])) {
 										WHERE game = :game
 											AND platform = :platform
 											AND assignedToTypeId = :assignedToTypeId
+											AND removed = :removed
 										LIMIT :amount
 									;");
 				$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":platform", $_GET['platform'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":assignedToTypeId", 0, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":amount", $_GET['amount'], Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
 				$keys = $stmt->query();
 
 				$time = time();
@@ -2449,17 +2453,27 @@ if (!isset($_GET['endpoint'])) {
 					$key['removedByUserTimestamp'] = $time;
 				}
 
-				$stmt = $db->prepare("UPDATE game_key SET removed = :removed, removedByUser = :removedByUser, removedByUserTimestamp = :removedByUserTimestamp WHERE id in ( :id ) ;");
-				$stmt->bindValue(":id", implode($keyIds, ','), Database::VARTYPE_STRING);
-				$stmt->bindValue(":removed", 1, Database::VARTYPE_INTEGER);
-				$stmt->bindValue(":removedByUser", $_SESSION['user'], Database::VARTYPE_INTEGER);
-				$stmt->bindValue(":removedByUserTimestamp", $time, Database::VARTYPE_INTEGER);
-				$stmt->execute();
+				if (count($keyIds) < $_GET['amount']) {
+					$result = api_error("Amount (" . $_GET['amount']. ") was less than the numbebr of keys found so none could be removed.");
+				} else {
 
-				$result = new stdClass();
-				$result->success = true;
-				$result->keys = $keys;
-				$result->count = count($keys);
+					$stmt = $db->prepare("UPDATE game_key SET removed = :removed, removedByUser = :removedByUser, removedByUserTimestamp = :removedByUserTimestamp WHERE id in ( :id ) ;");
+					$stmt->bindValue(":id", implode($keyIds, ','), Database::VARTYPE_STRING);
+					$stmt->bindValue(":removed", 1, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":removedByUser", $_SESSION['user'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":removedByUserTimestamp", $time, Database::VARTYPE_INTEGER);
+					$r = $stmt->execute();
+					if (!$r) {
+						$result = api_error("mysqli error" . $stmt->error);
+						print_r($r);
+					} else {
+
+						$result = new stdClass();
+						$result->success = true;
+						$result->keys = $keys;
+						$result->count = count($keys);
+					}
+				}
 			} else if (!$dopop && !$result){
 				$result = api_error("Unknown error. Invalid value.");
 			}
@@ -2487,37 +2501,45 @@ if (!isset($_GET['endpoint'])) {
 				else {
 
 					// Check format of keys.
+					$anyInvalidKeys = false;
 					$keysArray = explode("\n", $_GET['keys']);
 					for($j = 0; $j < count($keysArray); $j++) {
-						if (strlen($keysArray[$j]) != 17) {
-							$result = api_error("Steam keys must be in format XXXXX-XXXXX-XXXXX, and one per each line.");
+
+						if (!util_isValidKeyFormat($_GET['platform'], $keysArray[$j], $result)) {
+							$anyInvalidKeys = true;
 							break;
 						}
 					}
 
-					// if we get here then the keys are all good!
-					// TODO: should we check for duplicates..?
-					for($j = 0; $j < count($keysArray); $j++) {
-						$stmt = $db->prepare("INSERT INTO game_key (id, game, platform, keystring, assigned, assignedToType, assignedToTypeId, assignedByUser, assignedByUserTimestamp, createdOn, expiresOn, removed)
-												  			VALUES (NULL, :game, :platform, :keystring, :assigned, :assignedToType, :assignedToTypeId, :assignedByUser, :assignedByUserTimestamp, :createdOn, :expiresOn, :removed ); ");
-						$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
-						$stmt->bindValue(":platform", $_GET['platform'], Database::VARTYPE_STRING);
-						$stmt->bindValue(":keystring", $keysArray[$j], Database::VARTYPE_STRING);
-						$stmt->bindValue(":assigned", 0, Database::VARTYPE_INTEGER);
-						$stmt->bindValue(":assignedToType", '', Database::VARTYPE_STRING);
-						$stmt->bindValue(":assignedToTypeId", 0, Database::VARTYPE_INTEGER);
-						$stmt->bindValue(":assignedByUser", 0, Database::VARTYPE_INTEGER);
-						$stmt->bindValue(":assignedByUserTimestamp", 0, Database::VARTYPE_INTEGER);
-						$stmt->bindValue(":createdOn", time(), Database::VARTYPE_INTEGER);
-						$stmt->bindValue(":expiresOn", $_GET['expiresOn'], Database::VARTYPE_INTEGER);
-						$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
-						$stmt->execute();
-					}
+					if (!$anyInvalidKeys) {
+						// if we get here then the keys are all good!
+						// TODO: should we check for duplicates..?
+						for($j = 0; $j < count($keysArray); $j++) {
+							$stmt = $db->prepare("INSERT INTO game_key (id, game, platform, keystring, assigned, assignedToType, assignedToTypeId, assignedByUser, assignedByUserTimestamp, createdOn, expiresOn, removed)
+													  			VALUES (NULL, :game, :platform, :keystring, :assigned, :assignedToType, :assignedToTypeId, :assignedByUser, :assignedByUserTimestamp, :createdOn, :expiresOn, :removed ); ");
+							$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":platform", $_GET['platform'], Database::VARTYPE_STRING);
+							$stmt->bindValue(":keystring", $keysArray[$j], Database::VARTYPE_STRING);
+							$stmt->bindValue(":assigned", 0, Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":assignedToType", '', Database::VARTYPE_STRING);
+							$stmt->bindValue(":assignedToTypeId", 0, Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":assignedByUser", 0, Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":assignedByUserTimestamp", 0, Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":createdOn", time(), Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":expiresOn", $_GET['expiresOn'], Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
+							$stmt->execute();
+						}
 
-					$result = new stdClass();
-					$result->success = true;
-					$result->keys = $keysArray;
+						$result = new stdClass();
+						$result->success = true;
+						$result->keys = $keysArray;
+					} else {
+
+					}
 				}
+			} else {
+				$result = api_error("Unknown parameters passed e.g. platform value.");
 			}
 
 		}

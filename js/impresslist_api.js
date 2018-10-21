@@ -436,7 +436,7 @@ API.listKeys = function(game, platform, assigned, callbackfunction) {
 			API.errorMessage("Could not list keys.");
 		});
 }
-API.addKeys = function(keys, game, platform, expiresOn, callbackfunction) {
+API.addKeys = function(keys, game, platform, expiresOn, callbackfunction, failCallback) {
 	var url = "api.php?endpoint=/keys/add/" +
 					"&keys=" + encodeURIComponent(keys) +
 					"&game=" + encodeURIComponent(game) +
@@ -452,6 +452,7 @@ API.addKeys = function(keys, game, platform, expiresOn, callbackfunction) {
 			}
 			var json = JSON.parse(result);
 			if (!json.success) {
+				failCallback();
 				API.errorMessage(json.message);
 				return;
 			}
@@ -464,6 +465,7 @@ API.addKeys = function(keys, game, platform, expiresOn, callbackfunction) {
 			//impresslist.addSimpleMailout(simpleMailout, false);
 		})
 		.fail(function() {
+			failCallback();
 			API.errorMessage("Could not add Keys.");
 		});
 }

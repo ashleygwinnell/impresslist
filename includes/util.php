@@ -55,6 +55,32 @@ function getMIMEType($extension) {
 	}
 }
 
+$platformsForKeys = [
+	"steam" => "Steam",
+	"switch" => "Nintendo Switch"
+];
+function util_getValidPlatformsForProjectKeys() {
+	global $platformsForKeys;
+	return $platformsForKeys;
+}
+function util_isValidPlatformForProjectKeys($platform) {
+	global $platformsForKeys;
+	if (in_array($platform, array_keys($platformsForKeys))) {
+		return true;
+	}
+	return false;
+}
+function util_isValidKeyFormat($platform, $key, &$result) {
+	if ($platform == "steam") {
+		if (strlen($key) != 17) {
+			$result = api_error("Steam keys must be in format XXXXX-XXXXX-XXXXX, and one per each line.");
+			return false;
+		}
+		return true;
+	}
+	$result = api_error("Key format validation not implemented for platform: " . $platform);
+	return false;
+}
 
 /** Takes into account decimal points and negative values... **/
 function isNumeric($number, $name = "Field", $length = -1)

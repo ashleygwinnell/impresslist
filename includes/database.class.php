@@ -111,9 +111,16 @@ class MysqliDatabase_PreparedStatement extends PreparedStatement {
 	}
 	function execute() {
 		$this->finishBinds();
-		$this->stmt->execute();
+		$r = $this->stmt->execute();
+		if (!$r) {
+			global $impresslist_verbose;
+			if ($impresslist_verbose) {
+				echo "mysqli error: " . $this->stmt->error;
+			}
+		}
 		$this->stmt->free_result();
 		$this->stmt->close();
+		return $r;
 	}
 }
 class SQLiteDatabase extends Database {
@@ -192,7 +199,15 @@ class MysqliDatabase extends Database {
 	{
 		$results = array();
 		$rs = $this->db->query($sql);
-		if (!$rs) { echo "mysqli error: " . $this->db->error; die(); }
+		if (!$rs) {
+			global $impresslist_verbose;
+			if ($impresslist_verbose) {
+				echo "mysqli error: " . $this->db->error . "<br/><br/>";
+				print_r( debug_backtrace() );
+				echo $sql;
+			}
+			die();
+		}
 		while ($row = $rs->fetch_assoc()) {
 			$results[] = $row;
 		}
@@ -200,7 +215,15 @@ class MysqliDatabase extends Database {
 	}
 	function exec($sql) {
 		$rs = $this->db->query($sql);
-		if (!$rs) { echo "mysqli error: " . $this->db->error; die(); }
+		if (!$rs) {
+			global $impresslist_verbose;
+			if ($impresslist_verbose) {
+				echo "mysqli error: " . $this->db->error . "<br/><br/>";
+				print_r( debug_backtrace() );
+				echo $sql;
+			}
+			die();
+		}
 		return $rs;
 	}
 	function prepare($sql) {
@@ -246,9 +269,12 @@ class MysqliDatabase extends Database {
 
 		$stmt = $this->db->prepare($sql);
 		if ($stmt == false) {
-			echo "error: " . $sql;
-			echo " " . $osql;
-			print_r($order);
+			global $impresslist_verbose;
+			if ($impresslist_verbose) {
+				echo "error: " . $sql;
+				echo " " . $osql;
+				print_r($order);
+			}
 			die();
 		}
 		return new MysqliDatabase_PreparedStatement($stmt, $order);
@@ -314,7 +340,20 @@ class Database
 		return Database::$s_instance;
 	}
 
-
+	public static function printError() {
+		//print_r($GLOBALS);
+		global $impresslist_databaseType;
+		global $impresslist_mysqlServer;
+		global $impresslist_mysqlUsername;
+		global $impresslist_mysqlDatabaseName;
+		global $impresslist_verbose;
+		if ($impresslist_verbose) {
+			echo "<b>Type: </b>" . (($impresslist_databaseType == Database::TYPE_SQLITE)?"SQLITE":"MYSQL") . "<br/>";
+			echo "<b>Server: </b>" . $impresslist_mysqlServer . "<br/>";
+			echo "<b>Username: </b>" . $impresslist_mysqlUsername . "<br/>";
+			echo "<b>DB: </b>" . $impresslist_mysqlDatabaseName . "<br/>";
+		}
+	}
 
 	public function sql() {
 		global $impresslist_mysqlDatabaseName;
@@ -409,10 +448,22 @@ class Database
 						$ftype = $column['Type'];
 						$fpk = ($column['Key'] == "PRI")?"PRIMARY KEY":"";
 						$fnn = ($column['Null'] == "NO")?"NOT NULL":"";
-						$fdefault = (strlen($column['Default'])>0)?("DEFAULT ".$column['Default']):"";
+
+						$fdefault = "";
+						if (strlen($column['Default']) > 0) {
+							if (is_string($column['Default']) && !is_numeric($column['Default'])) {
+								$fdefault = "DEFAULT \"".$column['Default'] . "\"";
+							} else {
+								$fdefault = "DEFAULT ".$column['Default'];
+							}
+						}
+						$fextra = "";
+						if (strlen($column['Extra']) > 0) {
+							$fextra = $column['Extra'];
+						}
 
 						if ($count > 0) { $sql .= ",\n"; }
-						$sql .= "	`{$fname}` {$ftype} {$fpk} {$fnn} {$fdefault}";
+						$sql .= "	`{$fname}` {$ftype} {$fpk} {$fnn} {$fdefault} {$fextra}";
 						$count++;
 					}
 				$sql .= "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8  ;\n\n";
