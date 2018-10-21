@@ -1,6 +1,5 @@
 <?php
 
-
 $impresslist_emailIMAPHost = "{email_host}";
 $impresslist_emailAddress = "{email_address}";
 $impresslist_emailPassword = "{email_password}";
@@ -15,6 +14,7 @@ $impresslist_mysqlUsername = "{mysql_username}";
 $impresslist_mysqlPassword = "{mysql_password}";
 $impresslist_mysqlDatabaseName = "{mysql_database}";
 
+$impresslist_verbose = false;
 $impresslist_installed = true;
 
 ?>
