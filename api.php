@@ -1664,6 +1664,7 @@ if (!isset($_GET['endpoint'])) {
 			$stmt = $db->prepare("INSERT INTO emailcampaignsimple (id, name, subject, recipients, markdown, `timestamp`, user, ready, sent, removed)
 														VALUES ( NULL, :name, :subject, :recipients, :markdown, :ts, :user, :ready, :sent, :removed);
 								");
+			$stmt->bindValue(":game_id", 	$user_currentGame, 	Database::VARTYPE_INTEGER);
 			$stmt->bindValue(":name", 		'Unnamed Mailout', 	Database::VARTYPE_STRING);
 			$stmt->bindValue(":subject", 	"Subject", 			Database::VARTYPE_STRING);
 			$stmt->bindValue(":recipients", "[]", 				Database::VARTYPE_STRING);
@@ -1781,7 +1782,7 @@ if (!isset($_GET['endpoint'])) {
 
 					$doSend = true;
 
-					if (strpos($markdown, "{{steam_key}}") !== false) {
+					$assertEnoughKeys = function($platform) use ($mailout, &$doSend, &$result) {
 						$recipientsArray = json_decode($mailout['recipients'], true);
 						$countRecipients = count($recipientsArray);
 						// TODO: game_id should probably be part of the mailout data?!
@@ -1789,18 +1790,19 @@ if (!isset($_GET['endpoint'])) {
 											FROM game_key
 											WHERE
 												game = '" . $user_currentGame . "' AND
-												platform = 'steam' AND
+												platform = '" . $platform . " AND
 												assigned = 0;");
 						$countKeys = count($keysArray);
 
 						if ($countKeys < $countRecipients) {
 							$doSend = false;
 							$numNewKeysNeeded = $countRecipients - $countKeys;
-							$result = api_error("There are not enough Steam keys in the system to allocate to this mailout. {$numNewKeysNeeded} more needed.");
+							$result = api_error("There are not enough ".$platform." keys in the system to allocate to this mailout. {$numNewKeysNeeded} more needed.");
 						}
-					}
-					if (strpos($markdown, "{{steam_keys}}") !== false)
-					{
+						return false;
+					};
+
+					$assertEnoughKeysCountExisting = function($platform) use ($mailout, &$doSend, &$result) {
 						$recipientsArray = json_decode($mailout['recipients'], true);
 						$newKeysNeeded = 0;
 						for ($i = 0; $i < count($recipientsArray); $i++) {
@@ -1817,14 +1819,30 @@ if (!isset($_GET['endpoint'])) {
 											FROM game_key
 											WHERE
 												game = '" . $user_currentGame . "' AND
-												platform = 'steam' AND
+												platform = '" . $platform . "' AND
 												assigned = 0;");
 						$countKeys = count($keysArray);
 						if ($countKeys < $newKeysNeeded) {
 							$numNewKeysNeeded = $newKeysNeeded - $countKeys;
 							$doSend = false;
-							$result = api_error("There are not enough Steam keys in the system to allocate to this mailout. {$numNewKeysNeeded} more needed.");
+							$result = api_error("There are not enough " . $platform . " keys in the system to allocate to this mailout. {$numNewKeysNeeded} more needed.");
 						}
+					};
+
+					if (strpos($markdown, "{{steam_key}}") !== false) {
+						$assertEnoughKeys("steam");
+					}
+					if (strpos($markdown, "{{switch_key}}") !== false) {
+						$assertEnoughKeys("switch");
+					}
+
+					if (strpos($markdown, "{{steam_keys}}") !== false)
+					{
+						$assertEnoughKeysCountExisting("steam");
+					}
+					if (strpos($markdown, "{{switch_keys}}") !== false)
+					{
+						$assertEnoughKeysCountExisting("switch");
 					}
 
 					if ($doSend) {
@@ -2941,9 +2959,10 @@ if (!isset($_GET['endpoint'])) {
 				if ($twitter_followers == "") { $twitter_followers = 0; }
 				$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
 
-				$stmt = $db->prepare(" UPDATE publication SET name = :name, url = :url, rssfeedurl = :rssfeedurl, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes WHERE id = :id ");
+				$stmt = $db->prepare(" UPDATE publication SET name = :name, url = :url, email = :email, rssfeedurl = :rssfeedurl, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes WHERE id = :id ");
 				$stmt->bindValue(":name", $_GET['name'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":url", $_GET['url'], Database::VARTYPE_STRING);
+				$stmt->bindValue(":email", strtolower(trim($_GET['email'])), Database::VARTYPE_STRING);
 				$stmt->bindValue(":rssfeedurl", $_GET['rssfeedurl'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter", $_GET['twitter'], Database::VARTYPE_STRING);
 				if ($twitter_followers > 0) {
@@ -2989,8 +3008,8 @@ if (!isset($_GET['endpoint'])) {
 				$twitter = "youtube";
 				$twitter_followers = twitter_countFollowers($twitter);
 				if ($twitter_followers == "") { $twitter_followers = 0; }
-				$stmt = $db->prepare(" INSERT INTO youtuber (id, 	name,   description, email, channel,  priorities, iconurl,   subscribers, views, notes, twitter,   twitter_followers, 	lastpostedon, removed)
-													VALUES  (NULL, 'Blank', '', 	 	 '', 	:channel, '', 		  '', 		 0, 		  0, 	 '', 	:twitter, :twitter_followers, 	 0, 		  	0);	");
+				$stmt = $db->prepare(" INSERT INTO youtuber (id, 	name,   name_override, description, email, channel,  priorities, iconurl,   subscribers, views, notes, twitter,   twitter_followers, 	lastpostedon, removed)
+													VALUES  (NULL, 'Blank', 'Blank', 	 	 '', 	:channel, '', 		  '', 		 0, 		  0, 	 '', 	:twitter, :twitter_followers, 	 0, 		  	0);	");
 				$stmt->bindValue(":channel", $_GET['channel'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);

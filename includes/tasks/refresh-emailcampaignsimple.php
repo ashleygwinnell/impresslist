@@ -56,16 +56,39 @@ X-Mailer: impresslist/" . $impresslist_version;
 			$all_sent = false;
 			$person = null;
 			$person_email = "";
+			$use_firstname = "";
+			$use_surnames = "";
 			if ($recipients[$j]['type'] == "person")
 			{
 				$person = db_singleperson($db, $recipients[$j]['person_id']);
 				$person_email = $person['email'];
+				$use_firstname = $person['firstname'];
+				$use_surnames = $person['surnames'];
 			}
 			else if ($recipients[$j]['type'] == "personPublication")
 			{
 				$perpub = db_singlepersonpublication($db, $recipients[$j]['personPublication_id']);
 				$person = db_singleperson($db, $perpub['person']);
 				$person_email = $perpub['email'];
+				$use_firstname = $person['firstname'];
+				$use_surnames = $person['surnames'];
+			}
+			else if ($recipients[$j]['type'] == "publication")
+			{
+				$pub = db_singlepublication($db, $recipients[$j]['publication_id']);
+				$person_email = $pub['email'];
+				$use_firstname = $pub['name'];
+				$use_surnames = "";
+			}
+			else if ($recipients[$j]['type'] == "youtuber")
+			{
+				$youtuber = db_singleyoutuber($db, $recipients[$j]['youtuber_id']);
+				$person_email = $youtuber['email'];
+				$use_firstname = $youtuber['name'];
+				if (strlen($use_firstname) == 0 && strlen($youtuber['name_override']) > 0) {
+					$use_firstname = $youtuber['name_override'];
+				}
+				$use_surnames = "";
 			}
 			else {
 				echo "Skipping e-mail line: " . json_encode($recipients[$j]);
@@ -73,52 +96,74 @@ X-Mailer: impresslist/" . $impresslist_version;
 			}
 
 			echo "<hr/>";
-			echo "Sending e-mail <i>" . $campaign['subject'] . "</i> to " . $person['firstname'] . " " . $person['surnames'] . " (" . $person_email . "). <br/>\n";
+			echo "Sending e-mail <i>" . $campaign['subject'] . "</i> to " . $use_firstname . " " . $use_surnames . " (" . $person_email . "). <br/>\n";
 
 			// templates
 			$markdown = $campaign['markdown'];
-			$markdown = str_replace("{{first_name}}", $person['firstname'], $markdown);
+			$markdown = str_replace("{{first_name}}", $use_firstname, $markdown);
 
-			$assignsSingleSteamKey_id = 0;
-			$assignsSingleSteamKey_code = '';
-			$assignsSingleSteamKey = (strpos($markdown, "{{steam_key}}") !== false);
-			if ($assignsSingleSteamKey) {
-				echo "Replacing {{steam_key}} in email.<br/>\n";
-				$availableKey = db_singleavailablekeyforgame($db, $user['currentGame'], 'steam');
-				$assignsSingleSteamKey_id = $availableKey['id'];
-				$assignsSingleSteamKey_code = $availableKey['keystring'];
-				$markdown = str_replace("{{steam_key}}", $assignsSingleSteamKey_code, $markdown);
-			}
-			else if (strpos($markdown, "{{steam_keys}}") !== false) {
-				echo "Replacing {{steam_keys}} (plural) in email.<br/>\n";
-				$keysForContact = db_keysassignedtotype($db, $user['currentGame'], 'steam', 'person', $person['id']);
-				//print_r($keysForContact);
+			// Keys tagged
+			$assignsSingleKeys = [
+				"steam" => false,
+				"switch" => false
+			];
+			$assignsSingleKeys_id = [
+				"steam" => 0,
+				"switch" => 0
+			];
+			$assignsSingleKeys_code = [
+				"steam" => '',
+				"switch" => ''
+			];
 
-				if (count($keysForContact) == 0) {
-					echo "Assigning new key<br/>\n";
-					$availableKey = db_singleavailablekeyforgame($db, $user['currentGame'], 'steam');
-					//echo "key: " . $availableKey;
-					print_r($availableKey);
+			$assign_platform_keys_if_tagged = function($platform, $platformName) use ($markdown,
+																						&$assignsSingleKeys_id,
+																						&$assignsSingleKeys_code,
+																						&$assignsSingleKeys) {
 
-					$assignsSingleSteamKey = true;
-					$assignsSingleSteamKey_id = $availableKey['id'];
-					$assignsSingleSteamKey_code = $availableKey['keystring'];
-
-					$steam_keys_md = "**Steam Key:**\n\n";
-					$steam_keys_md .= "* {$assignsSingleSteamKey_code}\n\n";
-					$markdown = str_replace("{{steam_keys}}", $steam_keys_md, $markdown);
-				} else {
-					$plural = count($keysForContact) >= 2;
-					$steam_keys_md = "**Steam Key" . (($plural)?"s":"") . ":**\n\n";
-					for($k = 0; $k < count($keysForContact); $k++) {
-						$datetimestring = date("jS F Y", $keysForContact[$k]['assignedByUserTimestamp']);
-						$steam_keys_md .= "* " . $keysForContact[$k]['keystring'] . " *(Sent on " . $datetimestring . ")*\n";
-					}
-					$steam_keys_md .= "\n";
-
-					$markdown = str_replace("{{steam_keys}}", $steam_keys_md, $markdown);
+				$assignsSingleKeys[$platform] = (strpos($markdown, "{{".$platform."_key}}") !== false);
+				if ($$assignsSingleKeys[$platform]) {
+					echo "Replacing {{".$platform."_key}} in email.<br/>\n";
+					$availableKey = db_singleavailablekeyforgame($db, $user['currentGame'], $platform);
+					$assignsSingleKeys_id[$platform] = $availableKey['id'];
+					$assignsSingleKeys_code[$platform] = $availableKey['keystring'];
+					$markdown = str_replace("{{".$platform."_key}}", $assignsSingleKeys_code[$platform], $markdown);
 				}
-			}
+				else if (strpos($markdown, "{{".$platform."_keys}}") !== false) {
+					echo "Replacing {{".$platform."_keys}} (plural) in email.<br/>\n";
+					$keysForContact = db_keysassignedtotype($db, $user['currentGame'], $platform, 'person', $person['id']);
+					//print_r($keysForContact);
+
+					if (count($keysForContact) == 0) {
+						echo "Assigning new key<br/>\n";
+						$availableKey = db_singleavailablekeyforgame($db, $user['currentGame'], $platform);
+						//echo "key: " . $availableKey;
+						print_r($availableKey);
+
+						$assignsSingleKeys[$platform] = true;
+						$assignsSingleKeys_id[$platform] = $availableKey['id'];
+						$assignsSingleKeys_code[$platform] = $availableKey['keystring'];
+
+						$keys_md = "**".$platformName." Key:**\n\n";
+						$keys_md .= "* " . $assignsSingleKeys_code[$platform]. "\n\n";
+						$markdown = str_replace("{{".$platform."_keys}}", $keys_md, $markdown);
+					} else {
+						$plural = count($keysForContact) >= 2;
+						$keys_md = "**".$platformName." Key" . (($plural)?"s":"") . ":**\n\n";
+						for($k = 0; $k < count($keysForContact); $k++) {
+							$datetimestring = date("jS F Y", $keysForContact[$k]['assignedByUserTimestamp']);
+							$keys_md .= "* " . $keysForContact[$k]['keystring'] . " *(Sent on " . $datetimestring . ")*\n";
+						}
+						$keys_md .= "\n";
+
+						$markdown = str_replace("{{".$platform."_keys}}", $keys_md, $markdown);
+					}
+				}
+
+			};
+
+			$assign_platform_keys_if_tagged("steam", "Steam");
+			$assign_platform_keys_if_tagged("switch", "Nintendo Switch");
 
 
 			$html_contents = $Parsedown->text($markdown);
@@ -148,7 +193,7 @@ X-Mailer: impresslist/" . $impresslist_version;
 			$mail->Password = $userPassword;
 
 			$mail->setFrom($user['email'], $user['forename'] . " " . $user['surname']);
-			$mail->addAddress($person_email, $person['firstname'] . " " . $person['surnames']);
+			$mail->addAddress($person_email, $use_firstname . " " . $use_surnames);
 			//$mail->addBCC( $impresslist_emailAddress ); // We add this manually.
 
 			$mail->IsHTML(true);
@@ -207,8 +252,8 @@ X-Mailer: impresslist/" . $impresslist_version;
 					$stmt->execute();
 				}
 
-				// Assign the steam key/s
-				if ($assignsSingleSteamKey) {
+				// Assign the steam/switch key/s
+				$addTheKeyForTheRecipient = function($personId, $fromUserId, $platform) {
 					$stmt = $db->prepare("UPDATE game_key
 											SET assigned = :assigned,
 												assignedToType = :assignedToType,
@@ -216,13 +261,20 @@ X-Mailer: impresslist/" . $impresslist_version;
 												assignedByUser = :assignedByUser,
 												assignedByUserTimestamp = :assignedByUserTimestamp
 											WHERE id = :id ");
-					$stmt->bindValue(":id", $assignsSingleSteamKey_id, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":id", $assignsSingleKeys_id[$platform], Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":assigned", 1, Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":assignedToType", 'person', Database::VARTYPE_STRING);
-					$stmt->bindValue(":assignedToTypeId", $person['id'], Database::VARTYPE_INTEGER);
-					$stmt->bindValue(":assignedByUser", $user['id'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":assignedToTypeId", $personId, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":assignedByUser", $fromUserId, Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":assignedByUserTimestamp", time(), Database::VARTYPE_INTEGER);
 					$stmt->execute();
+				}
+
+				if ($assignsSingleKeys['steam']) {
+					$addTheKeyForTheRecipient( $person['id'], $user['id'], 'steam' );
+				}
+				if ($assignsSingleKeys['switch']) {
+					$addTheKeyForTheRecipient( $person['id'], $user['id'], 'switch' );
 				}
 			}
 		}

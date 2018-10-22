@@ -69,11 +69,13 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 			$rs2arr = $stmt2->query();
 			$count_recipients_1 = count($rs2arr);
 
-
 			$stmt3 = $db->prepare("SELECT * FROM person_publication WHERE email = :email; ");
 			$stmt3->bindValue(":email", $to, Database::VARTYPE_STRING);
 			$rs3arr = $stmt3->query();
 			$count_recipients_2 = count($rs3arr);
+
+			// TODO: check email accounts on publications
+			// TODO: check email accounts on youtubers
 
 			if ($count_recipients_1 > 1 || $count_recipients_2 > 1) {
 				echo "THIS EMAIL ADDRESS IS IN THE DATABASE FOR TWO PEOPLE. CANNOT ADD EMAIL.<br/>";

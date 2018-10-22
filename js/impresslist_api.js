@@ -1117,12 +1117,13 @@ API.setPublicationPriority = function(publication, priority, gameId) {
 			API.errorMessage("Could not set priority on Publication.");
 		});
 }
-API.savePublication = function(publication, name, url, rssfeedurl, twitter, notes) {
+API.savePublication = function(publication, name, url, email, rssfeedurl, twitter, notes) {
 
 	var url = "api.php?endpoint=/publication/save/" +
 					"&id=" + encodeURIComponent(publication.id) +
 					"&name=" + encodeURIComponent(name) +
 					"&url=" + encodeURIComponent(url) +
+					"&email=" + encodeURIComponent(email) +
 					"&rssfeedurl=" + encodeURIComponent(rssfeedurl) +
 					"&twitter=" + encodeURIComponent(twitter) +
 					"&notes=" + encodeURIComponent(notes);

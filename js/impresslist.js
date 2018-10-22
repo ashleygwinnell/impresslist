@@ -788,7 +788,15 @@ Youtuber = function(data) {
 
 	Youtuber.prototype.createTableRow = function() {
 		var html = "	<tr data-youtuber-id='" + this.field('id') + "' data-youtuber-tablerow='true' class='table-list' data-toggle='modal' data-target='.youtuber_modal'> \
-							<td data-youtuber-id='" + this.field('id') + "' data-field='name' data-value='" + this.field('name') + "'>" + this.field('name') + "</td> \
+							<!-- <td data-youtuber-id='" + this.field('id') + "' data-field='name' data-value='" + this.field('name') + "'>" + this.field('name') + "</td> -->\
+\
+							<!-- <td data-youtuber-id='" + this.field('id') + "' data-field='id' data-value='" + this.field('id') + "'>" + this.field('id') + "</td> -->\
+							<td data-value='" + this.field('name') + "'> \
+								<span data-youtuber-id='" + this.field('id') + "' data-field='name' >" + this.field('name') + "</span> \
+								<div data-youtuber-id='" + this.field('id') + "' data-field='email-list'></div> \
+							</td> \
+\
+\
 							<td data-youtuber-id='" + this.field('id') + "' data-field='priority' data-value='" + this.priority() + "'>" + Priority.name(this.priority()) + "</td> \
 							<td data-youtuber-id='" + this.field('id') + "' data-field='subscribers' data-value='" + this.field('subscribers') + "'><a href='http://youtube.com/user/" + this.field('channel') + "' target='new'>" + new Number(this.field('subscribers')).toLocaleString() + "</a></td> \
 							<td data-youtuber-id='" + this.field('id') + "' data-field='views' data-value='" + this.field('views') + "'>" + new Number(this.field('views')).toLocaleString() + "</td> \
@@ -891,9 +899,15 @@ Youtuber = function(data) {
 		$('.youtuber_modal').modal('hide');
 	}
 	Youtuber.prototype.filter = function(text) {
+		var elementExtras = $("#youtubers [data-youtuber-extra-tablerow='true'][data-youtuber-id='" + this.id + "']");
+		elementExtras.hide();
+
 		var element = $("#youtubers [data-youtuber-tablerow='true'][data-youtuber-id='" + this.id + "']");
 		if (this.search(text) && this.filter_isHighPriority() && this.filter_hasEmail()) { // && this.isContactedByMe() && this.isRecentlyContacted()) {
 			element.show();
+			if (impresslist.selectModeIsOpen) {
+				elementExtras.show();
+			}
 			return true;
 		} else {
 			element.hide();
@@ -943,6 +957,48 @@ Youtuber = function(data) {
 		var priority = $("[data-youtuber-id='" + this.id + "'][data-input-field='priority']").val();
 		API.setYoutuberPriority(this, priority, impresslist.config.user.game);
 	}
+	Youtuber.prototype.refreshEmails = function() {
+		// Extra (hidden) rows for each e-mail address the person has.
+		var emails = []
+		if (this.field('email').length > 0) {
+			emails.push({
+				type: "youtuber",
+				typeId: this.field("id"),
+				typeName: this.name + " (Youtuber)",
+				youtuber: this.field('id'),
+				name: this.name,
+				email: this.field('email')
+			});
+		}
+
+		var extraEmails = "";
+		for(var i = 0; i < emails.length; i++) {
+			extraEmails += "	<div data-type='youtuber' data-youtuber-id='" + this.field('id') + "' data-youtuber-extra-tablerow='true' style='padding:5px;'>";
+			extraEmails += "		<input \
+										data-type='youtuber' \
+										data-youtuber-id='" + this.field('id') + "' \
+										data-checkbox='true' \
+										data-youtuber-checkbox='true' \
+										data-mailout-name='" + emails[i]['name'] + " (Youtuber)' \
+										data-mailout-type='" + emails[i]['type'] + "' \
+										data-mailout-typeid='" + emails[i]['typeId'] + "' \
+										data-mailout-typename='" + emails[i]['typeName'] + "' \
+										data-mailout-email='" + emails[i]['email'] + "' \
+										type='checkbox' \
+										value='1'/>";
+			extraEmails += "		&nbsp; " + emails[i]['typeName'] + " - " + emails[i]['email'];
+			extraEmails += "	</div>";
+		}
+
+		$('div[data-youtuber-id="' + this.field('id') + '"][data-field="email-list"]').html(extraEmails);
+
+		var youtuber = this;
+		$("input[data-youtuber-id='" + this.field('id') + "'][data-checkbox='true']").click(function(e) {
+			impresslist.refreshMailoutRecipients();
+			youtuber.preventOpen();
+			e.stopPropagation();
+		});
+	};
 
 
 
@@ -1154,7 +1210,35 @@ SimpleMailout = function(data) {
 			}
 			recipients.push(obj);
 		}
+
+		var publicationsSelected = $('input[data-type="publication"][data-checkbox="true"]:checked');
+		for(var i = 0; i < publicationsSelected.length; i++) {
+			var obj = {	};
+			obj.type = $(publicationsSelected[i]).attr('data-mailout-type');
+			obj.sent = false;
+			obj.read = false;
+			if (obj.type == 'publication') {
+				obj.publication_id = $(publicationsSelected[i]).attr('data-mailout-typeid');
+			}
+			recipients.push(obj);
+		}
+		var youTubersSelected = $('input[data-type="youtuber"][data-checkbox="true"]:checked');
+		for(var i = 0; i < youTubersSelected.length; i++) {
+			var obj = {	};
+			obj.type = $(youTubersSelected[i]).attr('data-mailout-type');
+			obj.sent = false;
+			obj.read = false;
+			if (obj.type == 'youtuber') {
+				obj.youtuber_id = $(youTubersSelected[i]).attr('data-mailout-typeid');
+			}
+			recipients.push(obj);
+		}
+
 		console.log(JSON.stringify(recipients));
+
+
+
+
 		// #####
 		//  $('#mailout-radio-time-asap');
 		var whichtime = $('input[name="mailout-time-radio"]:checked').val();
@@ -1268,6 +1352,18 @@ SimpleMailout = function(data) {
 				var p = impresslist.findPersonPublicationById(this.recipientsData[i].personPublication_id);
 				if (p != null) {
 					var box = $('input[data-type="person"][data-mailout-typeid="' + p.id + '"][data-checkbox="true"][data-mailout-type="personPublication"]');
+					$(box).prop("checked", true);
+				}
+			} else if (this.recipientsData[i].type == "publication") {
+				var p = impresslist.findPublicationById(this.recipientsData[i].publication_id);
+				if (p != null) {
+					var box = $('input[data-type="publication"][data-mailout-typeid="' + p.id + '"][data-checkbox="true"][data-mailout-type="publication"]');
+					$(box).prop("checked", true);
+				}
+			} else if (this.recipientsData[i].type == "youtuber") {
+				var p = impresslist.findYouTuberById(this.recipientsData[i].youtuber_id);
+				if (p != null) {
+					var box = $('input[data-type="youtuber"][data-mailout-typeid="' + p.id + '"][data-checkbox="true"][data-mailout-type="youtuber"]');
 					$(box).prop("checked", true);
 				}
 			}
@@ -1449,6 +1545,20 @@ Person = function(data) {
 									<div class='form-group'>\
 										<label for='email'>Notes:&nbsp; </label> \
 										<textarea data-person-id='" + this.id + "' data-input-field='notes' class='form-control' style='height:100px;'>" + this.field('notes') + "</textarea>\
+									</div>\
+									<div class='row'>\
+										<div class='form-group col-md-3'>\
+											<label for='email'>Language:</label>";
+											var language = this.field('language');
+											html += "	<select data-person-id='" + this.id + "' data-input-field='lang' class='form-control'>\
+															<option value='en' " + ((language=='en')?"selected='true'":"") + ">English</option>\
+															<option value='fr' " + ((language=='fr')?"selected='true'":"") + ">French</option>\
+															<option value='it' " + ((language=='it')?"selected='true'":"") + ">Italian</option>\
+															<option value='de' " + ((language=='de')?"selected='true'":"") + ">German</option>\
+															<option value='es' " + ((language=='es')?"selected='true'":"") + ">Spanish</option>\
+															<option value='pt' " + ((language=='pt')?"selected='true'":"") + ">Portuguese</option>\
+														</select>";
+				html += "				</div>\
 									</div>\
 									<div class='form-group'>\
 										<label class='checkbox-inline'><input data-person-id='" + this.id + "' data-input-field='outofdate' type='checkbox' " + (((this.field('outofdate')==1)?"checked":"")) + "><strong>Out of date?</strong></label>\
@@ -2040,6 +2150,10 @@ Publication = function(data) {
 											<input data-publication-id='" + this.id + "' data-input-field='url' class='form-control' type='text' value='" + this.field('url') + "' />\
 										</div>\
 										<div class='form-group'>\
+											<label for='url'>General/Tips Email:&nbsp; </label> \
+											<input data-publication-id='" + this.id + "' data-input-field='email' class='form-control' type='text' value='" + this.field('email') + "' />\
+										</div>\
+										<div class='form-group'>\
 											<label for='rssfeedurl'>RSS Feed URL:&nbsp; </label> \
 											<input data-publication-id='" + this.id + "' data-input-field='rssfeedurl' class='form-control' type='text' value='" + this.field('rssfeedurl') + "' />\
 										</div>\
@@ -2078,11 +2192,12 @@ Publication = function(data) {
 	Publication.prototype.save = function() {
 		var name = $("[data-publication-id=" + this.id + "][data-input-field='name']").val();
 		var url = $("[data-publication-id=" + this.id + "][data-input-field='url']").val();
+		var email = $("[data-publication-id=" + this.id + "][data-input-field='email']").val();
 		var rssfeedurl = $("[data-publication-id=" + this.id + "][data-input-field='rssfeedurl']").val();
 		var twitter = $("[data-publication-id=" + this.id + "][data-input-field='twitter']").val();
 		var notes = $("[data-publication-id=" + this.id + "][data-input-field='notes']").val();
 
-		API.savePublication(this, name, url, rssfeedurl, twitter, notes);
+		API.savePublication(this, name, url, email, rssfeedurl, twitter, notes);
 	}
 	Publication.prototype.savePriority = function() {
 		var priority = $("[data-publication-id='" + this.id + "'][data-input-field='priority']").val();
@@ -2093,6 +2208,7 @@ Publication = function(data) {
 		$("[data-publication-id='" + this.id + "'][data-field='name']").html(this.name);
 		$("[data-publication-id='" + this.id + "'][data-field='priority']").html(Priority.name(this.priority()));
 		$("[data-publication-id='" + this.id + "'][data-field='url']").html(this.field('url'));
+		$("[data-publication-id='" + this.id + "'][data-field='email']").html(this.field('email'));
 		$("[data-publication-id='" + this.id + "'][data-field='twitter']").html(this.field('twitter'));
 		$("[data-publication-id='" + this.id + "'][data-field='twitter_followers']").html( this.twitterCell() );
 	}
@@ -2104,7 +2220,13 @@ Publication = function(data) {
 	Publication.prototype.createTableRow = function() {
 		var html = "	<tr data-publication-tablerow='true' data-publication-id='" + this.id + "' class='table-list' data-toggle='modal' data-target='.publication_modal'> \
 							<!-- <td data-publication-id='" + this.field('id') + "' data-field='id' 				data-value='" + this.field('id')+ "' >" + this.field('id') + "</td> --> \
-							<td data-publication-id='" + this.field('id') + "' data-field='name' 				data-value='" + this.field('name')+ "' >" + this.icon() + this.field('name') + "</td> \
+							<!-- <td data-publication-id='" + this.field('id') + "' data-field='name' 				data-value='" + this.field('name')+ "' >" + this.icon() + this.field('name') + "</td> -->\
+\
+							<td data-value='" + this.field('name') + "'> \
+								<span data-publication-id='" + this.field('id') + "' data-field='name' data-value='" + this.field('name')+ "'>" + this.icon() + this.field('name') + "</span> \
+								<div data-publication-id='" + this.field('id') + "' data-field='email-list'></div> \
+							</td> \
+\
 							<td data-publication-id='" + this.field('id') + "' data-field='priority' 			data-value='" + this.priority() + "'>" + Priority.name(this.priority()) + "</td> \
 							<td data-publication-id='" + this.field('id') + "' data-field='url' 				data-value='" + this.field('url')+ "'><a href='" + this.field('url') + "' target='new'>" + this.field('url') + "</a></td> \
 							<td data-publication-id='" + this.field('id') + "' data-field='twitter_followers' 	data-value='" + this.field('twitter_followers')+ "'>" + this.twitterCell() + "</td> \
@@ -2139,8 +2261,15 @@ Publication = function(data) {
 		}
 	}*/
 	Publication.prototype.filter = function(text) {
+
+		var elementExtras = $("#publications [data-publication-extra-tablerow='true'][data-publication-id='" + this.id + "']");
+		elementExtras.hide();
+
 		var element = $("#publications [data-publication-tablerow='true'][data-publication-id='" + this.id + "']");
 		if (this.search(text) && this.filter_isHighPriority()) { // && this.isContactedByMe() && this.isRecentlyContacted()) {
+			if (impresslist.selectModeIsOpen) {
+				elementExtras.show();
+			}
 			element.show();
 			return true;
 		} else {
@@ -2168,11 +2297,56 @@ Publication = function(data) {
 		ret = this.fields['url'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
+		ret = this.fields['email'].toLowerCase().indexOf(text) != -1;
+		if (ret) { return ret; }
+
 		ret = this.fields['twitter'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
 		return false;
 	}
+	Publication.prototype.refreshEmails = function() {
+		// Extra (hidden) rows for each e-mail address the person has.
+		var emails = []
+		if (this.field('email').length > 0) {
+			emails.push({
+				type: "publication",
+				typeId: this.field("id"),
+				typeName: this.name + " (Publication)",
+				publication: this.field('id'),
+				name: this.name,
+				email: this.field('email')
+			});
+		}
+
+		var extraEmails = "";
+		for(var i = 0; i < emails.length; i++) {
+			extraEmails += "	<div data-type='publication' data-publication-id='" + this.field('id') + "' data-publication-extra-tablerow='true' style='padding:5px;'>";
+			extraEmails += "		<input \
+										data-type='publication' \
+										data-publication-id='" + this.field('id') + "' \
+										data-checkbox='true' \
+										data-publication-checkbox='true' \
+										data-mailout-name='" + emails[i]['name'] + " (Publication)' \
+										data-mailout-type='" + emails[i]['type'] + "' \
+										data-mailout-typeid='" + emails[i]['typeId'] + "' \
+										data-mailout-typename='" + emails[i]['typeName'] + "' \
+										data-mailout-email='" + emails[i]['email'] + "' \
+										type='checkbox' \
+										value='1'/>";
+			extraEmails += "		&nbsp; " + emails[i]['typeName'] + " - " + emails[i]['email'];
+			extraEmails += "	</div>";
+		}
+
+		$('div[data-publication-id="' + this.field('id') + '"][data-field="email-list"]').html(extraEmails);
+
+		var publication = this;
+		$("input[data-publication-id='" + this.field('id') + "'][data-checkbox='true']").click(function(e) {
+			impresslist.refreshMailoutRecipients();
+			publication.preventOpen();
+			e.stopPropagation();
+		});
+	};
 
 OAuthTwitterAccount = function(data) {
 	DBO.call(this, data);
@@ -3196,10 +3370,16 @@ var impresslist = {
 			steam_keys_md += "* XXXXX-XXXXX-XXXXX *(Sent by Nick on 23rd March 2015)*\n";
 			steam_keys_md += "* XXXXX-XXXXX-XXXXX *(Sent by Ashley on 3rd March 2015)*\n\n";
 
+			var switch_keys_md = "**Nintendo Switch Keys:**\n\n";
+			switch_keys_md += "* XXXXX-XXXXX-XXXXX *(Sent by Nick on 23rd March 2015)*\n";
+			switch_keys_md += "* XXXXX-XXXXX-XXXXX *(Sent by Ashley on 3rd March 2015)*\n\n";
+
 			var md_content = $(this).val();
 			md_content = md_content.replace("{{first_name}}", "(First Name)");
 			md_content = md_content.replace("{{steam_key}}", "XXXXX-XXXXX-XXXXX");
 			md_content = md_content.replace("{{steam_keys}}", steam_keys_md);
+			md_content = md_content.replace("{{switch_key}}", "XXXXX-XXXXX-XXXXX");
+			md_content = md_content.replace("{{switch_keys}}", switch_keys_md);
 			var html_content = markdown.toHTML( md_content );
 			$('#mailout-preview').html(html_content);
 		});
@@ -3220,15 +3400,15 @@ var impresslist = {
 				}
 			})
 		}
-		$('#nav-select-edit').click(function(){
+		$('.nav-select-edit').click(function(){
 			impresslist.toggleSelectMode();
 		});
-		$('#nav-select-all').click(function(){
+		$('.nav-select-all').click(function(){
 			var type = $(this).attr('data-type');
 			selectAllCheckedForType(type, true);
 			impresslist.refreshMailoutRecipients();
 		});
-		$('#nav-deselect-all').click(function(){
+		$('.nav-deselect-all').click(function(){
 			var type = $(this).attr('data-type');
 			selectAllCheckedForType(type, false);
 			impresslist.refreshMailoutRecipients();
@@ -3463,9 +3643,23 @@ var impresslist = {
 		for(var i = 0; i < this.people.length; i++) {
 			this.people[i].refreshEmails();
 		}
+		for(var i = 0; i < this.publications.length; i++) {
+			this.publications[i].refreshEmails();
+		}
+		for(var i = 0; i < this.youtubers.length; i++) {
+			this.youtubers[i].refreshEmails();
+		}
 		this.refreshMailoutRecipients();
 
 		var type = 'person'; //$(this).attr('data-type');
+		$('.checkbox-column[data-type="' + type+ '"]').each(function(){
+			$(this).toggle();
+		});
+		type = 'publication'; //$(this).attr('data-type');
+		$('.checkbox-column[data-type="' + type+ '"]').each(function(){
+			$(this).toggle();
+		});
+		type = 'youtuber'; //$(this).attr('data-type');
 		$('.checkbox-column[data-type="' + type+ '"]').each(function(){
 			$(this).toggle();
 		});
@@ -3524,19 +3718,26 @@ var impresslist = {
 	},
 	refreshMailoutRecipients: function() {
 		var peopleSelected = $('input[data-type="person"][data-checkbox="true"]:checked');
+		var publicationsSelected = $('input[data-type="publication"][data-checkbox="true"]:checked');
+		var youtubersSelected = $('input[data-type="youtuber"][data-checkbox="true"]:checked');
 
-		if (peopleSelected.length == 0) {
+		if (peopleSelected.length + publicationsSelected.length + youtubersSelected.length == 0) {
 			$('#mailout-recipients-none').show();
 			$('#mailout-recipients').hide();
 			return;
 		}
 
-		var html = "";
-		for(var i = 0; i < peopleSelected.length; i++) {
+		var combined = [];
+		for(var i = 0; i < peopleSelected.length; i++) { combined.push(peopleSelected[i]); };
+		for(var i = 0; i < publicationsSelected.length; i++) { combined.push(publicationsSelected[i]); };
+		for(var i = 0; i < youtubersSelected.length; i++) { combined.push(youtubersSelected[i]); };
 
-			var readBool = $(peopleSelected[i]).attr('mailout-read');
-			var personName = $(peopleSelected[i]).attr('data-mailout-name');
-			var personTypeName = $(peopleSelected[i]).attr('data-mailout-typename');
+		var html = "";
+		for(var i = 0; i < combined.length; i++) {
+
+			var readBool = $(combined[i]).attr('mailout-read');
+			var personName = $(combined[i]).attr('data-mailout-name');
+			var personTypeName = $(combined[i]).attr('data-mailout-typename');
 			html += "<tr>"
 			html += "	<td data-value='" + personName + "'>" + personName + "</td>";
 			html += "	<td data-value='" + personTypeName + "'>" + personTypeName + "</td>";

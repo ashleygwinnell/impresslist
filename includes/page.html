@@ -81,22 +81,18 @@
 
 
 				  					<span
-				  						id='nav-select-edit'
 				  						data-type='person'
 				  						title='Select People'
-				  						class='nav-table-topright-item glyphicon glyphicon-edit'
+				  						class='nav-select-edit nav-table-topright-item glyphicon glyphicon-edit'
 				  						></span>
-
 				  					<span
-										id='nav-deselect-all'
-				  						data-type='person'
+										data-type='person'
 				  						title='Deselect All'
-				  						class='nav-table-topright-item glyphicon glyphicon-unchecked checkbox-column'></span>
+				  						class='nav-deselect-all nav-table-topright-item glyphicon glyphicon-unchecked checkbox-column'></span>
 				  					<span
-				  						id='nav-select-all'
 				  						data-type='person'
 				  						title='Select All'
-				  						class='nav-table-topright-item glyphicon glyphicon-check checkbox-column'
+				  						class='nav-select-all nav-table-topright-item glyphicon glyphicon-check checkbox-column'
 				  						></span>
 
 				  					<span class='fl'>People</span>
@@ -127,7 +123,27 @@
 						<!-- Publications / Sites -->
 						<div id='publications-container' >
 							<div class="panel panel-default">
-				  				<div class="panel-heading oa"><span class='fl'>Publications / Sites</span><span id='publication-count' class='fr'>(0)</span></div>
+
+								<div class="panel-heading oa">
+
+									<span
+				  						data-type='publication'
+				  						title='Select Publications'
+				  						class='nav-select-edit nav-table-topright-item glyphicon glyphicon-edit'
+				  						></span>
+
+				  					<span
+										data-type='publication'
+				  						title='Deselect All'
+				  						class='nav-deselect-all nav-table-topright-item glyphicon glyphicon-unchecked checkbox-column'></span>
+				  					<span
+				  						data-type='publication'
+				  						title='Select All'
+				  						class='nav-select-all nav-table-topright-item glyphicon glyphicon-check checkbox-column'
+				  						></span>
+
+									<span class='fl'>Publications / Sites</span><span id='publication-count' class='fr'>(0)</span>
+								</div>
 								<table class='table table-striped sortable' >
 									<thead>
 										<tr>
@@ -155,7 +171,26 @@
 						<!-- Youtubers -->
 						<div id='youtubers-container'>
 							<div class="panel panel-default">
-				  				<div class="panel-heading oa"><span class='fl'>YouTubers</span><span id='youtuber-count' class='fr'>(0)</span></div>
+				  				<div class="panel-heading oa">
+
+				  					<span
+				  						data-type='youtuber'
+				  						title='Select YouTubers'
+				  						class='nav-select-edit nav-table-topright-item glyphicon glyphicon-edit'
+				  						></span>
+
+				  					<span
+										data-type='youtuber'
+				  						title='Deselect All'
+				  						class='nav-deselect-all nav-table-topright-item glyphicon glyphicon-unchecked checkbox-column'></span>
+				  					<span
+				  						data-type='youtuber'
+				  						title='Select All'
+				  						class='nav-select-all nav-table-topright-item glyphicon glyphicon-check checkbox-column'
+				  						></span>
+
+				  					<span class='fl'>YouTubers</span><span id='youtuber-count' class='fr'>(0)</span>
+				  				</div>
 								<table class='table table-striped sortable' >
 									<thead>
 										<tr>
@@ -648,6 +683,9 @@
 
 						<p><b>{{steam_key}}</b><br/>Gives a new Steam key.</p>
 						<p><b>{{steam_keys}}</b><br/>List all Steam keys sent to this contact. Assigns a new one if never sent any.</p>
+
+						<p><b>{{switch_key}}</b><br/>Gives a new Nintendo Switch key.</p>
+						<p><b>{{switch_keys}}</b><br/>List all Switch keys sent to this contact. Assigns a new one if never sent any.</p>
 
 
 					</div>

@@ -209,10 +209,12 @@
 		$autoincrement = "AUTOINCREMENT";
 		$blobTextDefaultToZero = " DEFAULT '0' ";
 		$sqlEngineAndCharset = '';
+		$defaultNull = "0";
 		if ($db->type == Database::TYPE_MYSQL) {
 			$autoincrement = "AUTO_INCREMENT";
 			$blobTextDefaultToZero = "";
 			$sqlEngineAndCharset = ' ENGINE=InnoDB DEFAULT CHARSET=utf8 ';
+			$defaultNull = "NULL";
 		}
 
 		// Emails
@@ -220,6 +222,7 @@
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
 					user_id INTEGER NOT NULL,
 					person_id INTEGER NOT NULL,
+					game_id INTEGER DEFAULT {$defaultNull},
 					utime INTEGER NOT NULL,
 					from_email VARCHAR(255) NOT NULL,
 					to_email VARCHAR(255) NOT NULL,
@@ -233,6 +236,7 @@
 		// Email camapaign system (simple)
 		$sql = "CREATE TABLE IF NOT EXISTS emailcampaignsimple (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					game_id INTEGER DEFAULT {$defaultNull},
 					name VARCHAR(255) NOT NULL,
 					subject VARCHAR(255) NOT NULL,
 					recipients TEXT NOT NULL,
@@ -334,6 +338,7 @@
 					twitter_followers INTEGER NOT NULL DEFAULT 0,
 					twitter_updatedon INTEGER NOT NULL DEFAULT 0,
 					notes TEXT NOT NULL,
+					lang VARCHAR(30) NOT NULL,
 					lastcontacted INTEGER NOT NULL,
 					lastcontactedby INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0,
@@ -366,6 +371,7 @@
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
 					name VARCHAR(255) NOT NULL,
 					url VARCHAR(255) NOT NULL,
+					email VARCHAR(255) NOT NULL,
 					iconurl VARCHAR(255) NOT NULL,
 					iconurl_updatedon INTEGER NOT NULL DEFAULT 0,
 					rssfeedurl VARCHAR(255) NOT NULL,
@@ -374,6 +380,7 @@
 					twitter_followers INTEGER NOT NULL,
 					twitter_updatedon INTEGER NOT NULL DEFAULT 0,
 					notes TEXT NOT NULL,
+					lang VARCHAR(30) NOT NULL,
 					lastpostedon INTEGER NOT NULL,
 					lastpostedon_updatedon INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0,
@@ -384,9 +391,10 @@
 		// Coverage from traditional games press.
 		$sql = "CREATE TABLE IF NOT EXISTS publication_coverage (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
-					publication INTEGER DEFAULT 0,
-					person INTEGER DEFAULT 0,
-					game INTEGER DEFAULT 0,
+					publication INTEGER DEFAULT {$defaultNull},
+					person INTEGER DEFAULT {$defaultNull},
+					game INTEGER DEFAULT {$defaultNull},
+					watchedgame INTEGER DEFAULT {$defaultNull},
 					url VARCHAR(255) NOT NULL,
 					title TEXT NOT NULL,
 					utime INTEGER NOT NULL DEFAULT 0,
@@ -437,12 +445,30 @@
 				) {$sqlEngineAndCharset} ;";
 		$db->exec($sql);
 
+		// Watched Games
+		$sql = "CREATE TABLE IF NOT EXISTS watchedgame (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					name VARCHAR(255) NOT NULL,
+					keywords TEXT NOT NULL,
+					removed INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+		$sql = "CREATE TABLE IF NOT EXISTS game_watchedgame (
+					game_id INTEGER NOT NULL,
+					watchedgame_id INTEGER NOT NULL
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+		$sql = "ALTER TABLE `game_watchedgame` ADD PRIMARY KEY( `game_id`, `watchedgame_id`) ";
+		$db->exec($sql);
+
+
 		// Youtuber profiles.
 		$sql = "CREATE TABLE IF NOT EXISTS youtuber (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
 					youtubeId VARCHAR(255) NOT NULL,
 					youtubeUploadsPlaylistId VARCHAR(255) NOT NULL,
 					name VARCHAR(255) NOT NULL,
+					name_override VARCHAR(255) NOT NULL,
 					description TEXT NOT NULL,
 					email VARCHAR(255) NOT NULL DEFAULT '',
 					priorities VARCHAR(255) NOT NULL,
@@ -455,6 +481,7 @@
 					twitter_followers INTEGER NOT NULL DEFAULT 0,
 					twitter_updatedon INTEGER NOT NULL DEFAULT 0,
 					notes TEXT NOT NULL,
+					lang VARCHAR(30) NOT NULL,
 					lastpostedon INTEGER NOT NULL,
 					lastpostedon_updatedon INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0,
@@ -465,9 +492,10 @@
 		// Youtuber coverage.
 		$sql = "CREATE TABLE IF NOT EXISTS youtuber_coverage (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
-					youtuber INTEGER DEFAULT 0,
-					person INTEGER DEFAULT 0,
-					game INTEGER DEFAULT 0,
+					youtuber INTEGER DEFAULT {$defaultNull},
+					person INTEGER DEFAULT {$defaultNull},
+					game INTEGER DEFAULT {$defaultNull},
+					watchedgame INTEGER DEFAULT {$defaultNull},
 					url VARCHAR(255) NOT NULL,
 					title TEXT NOT NULL,
 					thumbnail TEXT NOT NULL,
