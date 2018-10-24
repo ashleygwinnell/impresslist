@@ -106,7 +106,7 @@ WatchedGame = function(data) {
 		var url = "";
 		var iconurl = "images/favicon.png";
 		var html = "";
-		html += "<hr/><div data-watchedgame-id='" + this.field('id') + "' class='media'>	\
+		html += "<div data-watchedgame-id='" + this.field('id') + "' class='media'>	\
 					<div class='oa'>\
 						<div class='fl'>\
 							<h3 data-watchedgame-id='" + this.id + "' data-field='name'>" + this.field('name') + "</h3>\
@@ -116,7 +116,7 @@ WatchedGame = function(data) {
 							<button id='edit-watchedgame' class='fr btn btn-default btn-sm' data-watchedgame-id='" + this.field('id') + "'  data-toggle='modal' data-target='.watchedgame_modal' ><span class='glyphicon glyphicon-pencil'></span></button> \
 						</div>\
 					</div>\
-					<h4>Coverage:</h4><br/>\
+					<h4>Coverage:</h4>\
 					<div data-watchedgame-id='" + this.id + "' data-field='items'>\
 					</div>\
 				</div>\
@@ -131,6 +131,14 @@ WatchedGame = function(data) {
 		for (var i = 0; i < this.coverage.length; i++) {
 			var c = new Coverage(this.coverage[i])
 			c.createItem(fromInit, "[data-watchedgame-id='" + this.id + "'][data-field='items']");
+		}
+		if (this.coverage.length == 0) {
+			var err = "<div class='alert alert-info' role='alert'> \
+							<span class='glyphicon glyphicon-thumbs-down' aria-hidden='true'></span> \
+							<span class='sr-only'>Error:</span> \
+							Dang! There is currently no coverage for this Watched Game.\
+						</div>";
+			$("[data-watchedgame-id='" + this.id + "'][data-field='items']").append(err);
 		}
 
 		var t = this;
@@ -1009,6 +1017,10 @@ Youtuber = function(data) {
 												<label for='url'>Channel Name:&nbsp; </label> \
 												<input data-youtuber-id='" + this.id + "' data-input-field='channel' class='form-control' type='text' value='" + this.field('channel') + "' />\
 											</div>\
+											<div class='form-group col-md-8'>\
+												<label for='url'>Name (Override):&nbsp; </label> \
+												<input data-youtuber-id='" + this.id + "' data-input-field='name' class='form-control' type='text' value='" + this.field('name_override') + "' />\
+											</div>\
 											<div class='form-group col-md-4'>\
 												<label for='url'>Priority:&nbsp; </label>"
 													var priority = this.priority();
@@ -1117,12 +1129,13 @@ Youtuber = function(data) {
 		return false;
 	}
 	Youtuber.prototype.save = function() {
+		var nameOverride = $("[data-youtuber-id=" + this.id + "][data-input-field='name']").val();
 		var channel = $("[data-youtuber-id=" + this.id + "][data-input-field='channel']").val();
 		var email   = $("[data-youtuber-id=" + this.id + "][data-input-field='email']").val();
 		var twitter = $("[data-youtuber-id=" + this.id + "][data-input-field='twitter']").val();
 		var notes   = $("[data-youtuber-id=" + this.id + "][data-input-field='notes']").val();
 
-		API.saveYoutuber(this, channel, email, twitter, notes);
+		API.saveYoutuber(this, channel, nameOverride, email, twitter, notes);
 	};
 	Youtuber.prototype.savePriority = function() {
 		var priority = $("[data-youtuber-id='" + this.id + "'][data-input-field='priority']").val();

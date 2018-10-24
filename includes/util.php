@@ -382,6 +382,11 @@ function url_get_contents($url) {
 	$ch = curl_init();
 	curl_setopt ($ch, CURLOPT_URL, $url);
 	curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, 5);
+	curl_setopt ($ch, CURLOPT_TIMEOUT_MS, 5000);
+	curl_setopt ($ch, CURLOPT_FAILONERROR, true);
+	curl_setopt ($ch, CURLOPT_VERBOSE, true);
+	curl_setopt ($ch, CURLOPT_FOLLOWLOCATION, true);
+	curl_setopt ($ch, CURLOPT_MAXREDIRS, 100);
 	curl_setopt ($ch, CURLOPT_RETURNTRANSFER, true);
 	$contents = curl_exec($ch);
 	if (curl_errno($ch)) {

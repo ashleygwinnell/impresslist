@@ -12,7 +12,7 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 //$db->exec("UPDATE publication SET lastscrapedon = 0;");
 
 // Youtubers
-$youtubers = $db->query("SELECT * FROM youtuber WHERE lastscrapedon < " . (time()-3600) . " AND removed = 0;");
+$youtubers = $db->query("SELECT * FROM youtuber WHERE lastscrapedon < " . (time()-3600) . " AND removed = 0 ORDER BY lastscrapedon ASC;");
 $num_youtubers = count($youtubers);
 
 // Games
@@ -134,7 +134,7 @@ for($i = 0; $i < $num_youtubers; ++$i)
 			}
 		}
 		$db->exec("UPDATE youtuber SET lastscrapedon = " . time() . " WHERE id = " . $youtubers[$i]['id'] . " ;");
-		sleep(5);
+		sleep(1);
 		//die();
 
 		/*$youtubeDetails = youtube_getUploads($youtubeChannel);

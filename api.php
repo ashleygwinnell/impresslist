@@ -3084,7 +3084,8 @@ if (!isset($_GET['endpoint'])) {
 			include_once("init.php");
 
 			$required_fields = array(
-				array('name' => 'channel', 'type' => 'alphanumerichyphens'),
+				array('name' => 'name', 'type' => 'alphanumericspaces'),
+				array('name' => 'channel', 'type' => 'textarea'),
 				array('name' => 'email', 'type' => 'email'),
 				array('name' => 'twitter', 'type' => 'alphanumericunderscores'),
 				array('name' => 'notes', 'type' => 'textarea')
@@ -3105,6 +3106,7 @@ if (!isset($_GET['endpoint'])) {
 					$stmt = $db->prepare(" UPDATE youtuber SET
 												channel = :channel,
 												name = :name,
+												name_override = :name_override,
 												description = :description,
 												email = :email,
 												iconurl = :iconurl,
@@ -3121,10 +3123,20 @@ if (!isset($_GET['endpoint'])) {
 					$stmt->bindValue(":channel", $_GET['channel'], Database::VARTYPE_STRING);
 					$stmt->bindValue(":email", $_GET['email'], Database::VARTYPE_STRING);
 
-					$stmt->bindValue(":name", $youtuber['name'], Database::VARTYPE_STRING);
+					$ytname = $youtuber['name'];
+					if (strlen(trim($ytname)) == 0) {
+						$ytname = $_GET['name'];
+					}
+					$stmt->bindValue(":name", $ytname, Database::VARTYPE_STRING);
+					$stmt->bindValue(":name_override", $_GET['name'], Database::VARTYPE_STRING);
 					$stmt->bindValue(":description", $youtuber['description'], Database::VARTYPE_STRING);
 
-					$stmt->bindValue(":iconurl", $youtuber['iconurl'], Database::VARTYPE_STRING);
+					$ytIconUrl = $youtuber['iconurl'];
+					if (strlen(trim($ytIconUrl)) == 0) {
+						$ytIconUrl = "images/favicon.png";
+					}
+
+					$stmt->bindValue(":iconurl", $ytIconUrl, Database::VARTYPE_STRING);
 					$stmt->bindValue(":subscribers", "" . $youtuber['subscribers'], Database::VARTYPE_STRING);
 					$stmt->bindValue(":views", "" . $youtuber['views'], Database::VARTYPE_STRING);
 					$stmt->bindValue(":lastpostedon", $youtuber['lastpostedon'], Database::VARTYPE_INTEGER);

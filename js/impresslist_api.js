@@ -1308,11 +1308,12 @@ API.setYoutuberPriority = function(youtuber, priority, gameId) {
 			API.errorMessage("Could not set priority on Youtuber.");
 		});
 }
-API.saveYoutuber = function(youtuber, channel, email, twitter, notes) {
+API.saveYoutuber = function(youtuber, channel, nameOverride, email, twitter, notes) {
 
 	var url = "api.php?endpoint=/youtuber/save/" +
 					"&id=" + encodeURIComponent(youtuber.id) +
 					"&channel=" + encodeURIComponent(channel) +
+					"&name=" + encodeURIComponent(nameOverride) +
 					"&email=" + encodeURIComponent(email) +
 					"&twitter=" + encodeURIComponent(twitter) +
 					"&notes=" + encodeURIComponent(notes);
