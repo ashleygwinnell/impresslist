@@ -19,10 +19,12 @@ $num_youtubers = count($youtubers);
 $games = $db->query("SELECT * FROM game;");
 $num_games = count($games);
 
+// Watched Games
+$watchedgames = $db->query("SELECT * FROM watchedgame;");
+$num_watchedgames = count($watchedgames);
 
 
-
-function tryAddYoutubeCoverage($youtuberId, $youtuberName, $gameId, $title, $url, $thumbnail, $time) {
+function tryAddYoutubeCoverage($youtuberId, $youtuberName, $gameId, $watchedGameId, $title, $url, $thumbnail, $time) {
 	global $db;
 	// YES! We got coverage.
 	// ... but we need to make sure we don't have it saved already!
@@ -39,10 +41,11 @@ function tryAddYoutubeCoverage($youtuberId, $youtuberName, $gameId, $title, $url
 		echo $thumbnail . "<br/>\n";
 		echo "<hr/>\n";
 		// Add it to the database.
-		$stmt = $db->prepare("INSERT INTO youtuber_coverage (id, youtuber, person, game, url, title, thumbnail, `utime`)
-														VALUES (NULL, :youtuber, NULL, :game, :url, :title, :thumbnail, :utime ); ");
+		$stmt = $db->prepare("INSERT INTO youtuber_coverage (id, youtuber, person, game, watchedgame, url, title, thumbnail, `utime`)
+														VALUES (NULL, :youtuber, NULL, :game, :watchedgame, :url, :title, :thumbnail, :utime ); ");
 		$stmt->bindValue(":youtuber", $youtuberId, Database::VARTYPE_INTEGER);
 		$stmt->bindValue(":game", $gameId, Database::VARTYPE_INTEGER);
+		$stmt->bindValue(":watchedgame", $watchedGameId, Database::VARTYPE_INTEGER);
 		$stmt->bindValue(":url", $url, Database::VARTYPE_STRING);
 		$stmt->bindValue(":title", $title, Database::VARTYPE_STRING);
 		$stmt->bindValue(":thumbnail", $thumbnail, Database::VARTYPE_STRING);
@@ -102,6 +105,24 @@ for($i = 0; $i < $num_youtubers; ++$i)
 							$youtubers[$i]['id'],
 							$youtubers[$i]['name'],
 							$game['id'],
+							0,
+							$title,
+							$link,
+							$thumbnail,
+							$published
+						);
+					}
+				}
+
+				foreach ($watchedgames as $watchedgame) {
+					if (strpos($title, $watchedgame['name']) !== FALSE ||
+						strpos($description, $watchedgame['name']) !== FALSE)
+					{
+						tryAddYoutubeCoverage(
+							$youtubers[$i]['id'],
+							$youtubers[$i]['name'],
+							0,
+							$watchedgame['id'],
 							$title,
 							$link,
 							$thumbnail,
@@ -148,6 +169,7 @@ for($i = 0; $i < $num_youtubers; ++$i)
 							$youtubers[$i]['id'],
 							$youtubers[$i]['name'],
 							$game['id'],
+							0
 							$title,
 							$link,
 							$published

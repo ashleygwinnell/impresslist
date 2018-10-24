@@ -44,6 +44,7 @@ h3 {
 #home-page { display:block; }
 #social-page { display:none; }
 #coverage-page { display:none; }
+#watchedgames-page { display:none; }
 #keys-page { display:none; }
 #mailout-page { display:none; }
 #admin-page { display:none; }
@@ -51,7 +52,7 @@ h3 {
 #importtool-page { display:none; }
 
 /* Override text input for tags */
-.bootstrap-tagsinput { 
+.bootstrap-tagsinput {
 	min-height:34px;
 	/*height:34px;*/
 	display:none;
@@ -87,7 +88,7 @@ h3 {
 #mailout-homepage { display:inherit; }
 #mailout-writepage { display:none; }
 #mailout-preview {
-	border-bottom:1px solid #ddd; 
+	border-bottom:1px solid #ddd;
 	padding:5px;
 	margin-bottom:10px;
 }
@@ -97,7 +98,7 @@ h3 {
 #mailout-recipients { display:none; }
 
 .nav-table-topright-item {
-	float:right; 
+	float:right;
 	margin-left:10px;
 	font-size:18px;
 	cursor:pointer;
@@ -110,7 +111,7 @@ h3 {
 
 /* social queue formatting*/
 
-.socialqueue-item {       
+.socialqueue-item {
 	border: 1px solid #d4d4d4;
 	border-radius: 2px;
 	padding: 20px;
@@ -147,11 +148,11 @@ h3 {
 .socialqueue-item.ready.thin { border-top:5px solid #5cb85c; padding-top:7px; }
 .socialqueue-item.ready.thinnest { border-top:5px solid #5cb85c; padding-top:8px; }
 
-.socialqueue-imageattachment-container { 
+.socialqueue-imageattachment-container {
 	height:100px;
 	overflow:hidden;
 }
-.socialqueue-imageattachment { 
+.socialqueue-imageattachment {
 	width:100%;
 	margin-top:-25%;
 	cursor:pointer;

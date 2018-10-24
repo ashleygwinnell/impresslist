@@ -21,6 +21,10 @@ $num_publications = count($publications);
 $games = $db->query("SELECT * FROM game;");
 $num_games = count($games);
 
+// Watched Games
+$watchedgames = $db->query("SELECT * FROM watchedgame;");
+$num_watchedgames = count($watchedgames);
+
 function fixrelativeurl($host, $url) {
 	if (substr($url, 0, 1) == "/") {
 		if (substr($host, -1, 1) == "/") {
@@ -31,7 +35,7 @@ function fixrelativeurl($host, $url) {
 	return $url;
 }
 
-function tryAddPublicationCoverage($publicationId, $publicationName, $gameId, $title, $url, $time) {
+function tryAddPublicationCoverage($publicationId, $publicationName, $gameId, $watchedGameId, $title, $url, $time) {
 	global $db;
 	// YES! We got coverage.
 	// ... but we need to make sure we don't have it saved already!
@@ -47,10 +51,11 @@ function tryAddPublicationCoverage($publicationId, $publicationName, $gameId, $t
 		echo $time . "<br/>\n";
 		echo "<hr/>\n";
 		// Add it to the database.
-		$stmt = $db->prepare("INSERT INTO publication_coverage (id, publication, person, game, url, title, `utime`)
-														VALUES (NULL, :publication, NULL, :game, :url, :title, :utime ); ");
+		$stmt = $db->prepare("INSERT INTO publication_coverage (id, publication, person, game, watchedgame, url, title, `utime`)
+														VALUES (NULL, :publication, NULL, :game, :watchedgame, :url, :title, :utime ); ");
 		$stmt->bindValue(":publication", $publicationId, Database::VARTYPE_INTEGER);
 		$stmt->bindValue(":game", $gameId, Database::VARTYPE_INTEGER);
+		$stmt->bindValue(":watchedgame", $watchedGameId, Database::VARTYPE_INTEGER);
 		$stmt->bindValue(":url", $url, Database::VARTYPE_STRING);
 		$stmt->bindValue(":title", $title, Database::VARTYPE_STRING);
 		$stmt->bindValue(":utime", $time, Database::VARTYPE_INTEGER);
@@ -112,16 +117,12 @@ for($i = 0; $i < $num_publications; ++$i) {
 
 				foreach ($games as $game) {
 					if (strpos($title, $game['name']) !== FALSE) {
-
-						tryAddPublicationCoverage(
-							$publications[$i]['id'],
-							$publications[$i]['name'],
-							$game['id'],
-							$title,
-							$url,
-							$time
-						);
-
+						tryAddPublicationCoverage( $publications[$i]['id'], $publications[$i]['name'], $game['id'], null, $title, $url, $time );
+					}
+				}
+				foreach($watchedgames as $watchedgame) {
+					if (strpos($title, $watchedgame['name']) !== FALSE) {
+						tryAddPublicationCoverage( $publications[$i]['id'], $publications[$i]['name'], null, $watchedgame['id'], $title, $url, $time );
 					}
 				}
 			}
@@ -161,12 +162,10 @@ for($i = 0; $i < $num_publications; ++$i) {
 		else
 		{
 
-			foreach ($games as $game) {
-				$gamename = $game['name'];
-				$gamename_safe = strtolower(str_replace(" ", "-", $game['name']));
+			$checkForGameOrWatchedGame = function($name, $name_safe, $gameId, $watchedGameId) use ($xml) {
 
-				// match any links that contain the game name
-				$arr = $xml->xpath('//a[contains(concat(" ", @href, " "), "' . $gamename_safe . '")] | //a[contains(concat(" ", @title, " "), "' . $gamename . '")]');
+				// match any links that contain the game/watchedgame name
+				$arr = $xml->xpath('//a[contains(concat(" ", @href, " "), "' . $name_safe . '")] | //a[contains(concat(" ", @title, " "), "' . $name . '")]');
 
 				//print_r($arr);
 
@@ -234,13 +233,32 @@ for($i = 0; $i < $num_publications; ++$i) {
 					tryAddPublicationCoverage(
 						$publications[$i]['id'],
 						$publications[$i]['name'],
-						$game['id'],
+						$gameId,
+						$watchedGameId,
 						$checkedUrls[$key]['title'],
 						fixrelativeurl($publications[$i]['url'], $checkedUrls[$key]['url']),
 						$checkedUrls[$key]['time']
 					);
 				}
+			}
 
+
+			foreach ($games as $game) {
+				$checkForGameOrWatchedGame(
+					$game['name'],
+					strtolower(str_replace(" ", "-", $game['name'])),
+					$game['id'],
+					0
+				);
+			}
+
+			foreach ($watchedgames as $watchedgame) {
+				$checkForGameOrWatchedGame(
+					$watchedgame['name'],
+					strtolower(str_replace(" ", "-", $watchedgame['name'])),
+					$watchedgame['id'],
+					0
+				);
 			}
 
 		}

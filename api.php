@@ -162,6 +162,8 @@ if (!isset($_GET['endpoint'])) {
 		"/youtuber/set-priority/",
 		"/youtuber/remove/",
 
+		// TODO: Twitch Channels
+
 		// Projects
 		"/project/add/",
 
@@ -171,12 +173,14 @@ if (!isset($_GET['endpoint'])) {
 		"/admin/user/save/",
 		"/admin/user/remove/",
 		"/admin/user/change-password/",
+		//"/admin/user/change-project/",
 		"/backup/",
 		"/backup-sql/",
 
 		// User settings
 		"/user/change-imap-settings/",
 		"/user/change-password/",
+		"/user/change-project/",
 
 		"/job/list/",
 		"/job/save-all/",
@@ -210,6 +214,12 @@ if (!isset($_GET['endpoint'])) {
 		"/coverage/youtuber/add/",
 		"/coverage/youtuber/save/",
 		"/coverage/youtuber/remove/",
+
+		// Watched Game management.
+		"/watchedgame/list/",
+		"/watchedgame/add/",
+		"/watchedgame/save/",
+		"/watchedgame/remove/",
 
 		// Social
 		"/social/timeline/",
@@ -2114,6 +2124,50 @@ if (!isset($_GET['endpoint'])) {
 		}
 
 
+		else if ($endpoint == "/watchedgame/list/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$watchedgames = $db->query("SELECT watchedgame.*
+										FROM watchedgame
+										LEFT JOIN game_watchedgame on watchedgame.id = game_watchedgame.watchedgame_id
+										WHERE game_watchedgame.game_id = {$user_currentGame} AND watchedgame.removed = 0 ORDER BY name ASC;");
+
+			// TODO refactor this into two calls rather than two for each game.
+			for($j = 0; $j < count($watchedgames); $j++) {
+
+				$id = $watchedgames[$j]['id'];
+
+				$publication_coverage = $db->query("SELECT * FROM publication_coverage WHERE watchedgame = {$id} AND removed = 0 ORDER BY utime DESC;");
+				$num_publication_coverage = count($publication_coverage);
+				for($i = 0; $i < $num_publication_coverage; $i++) {
+					//$publication_coverage[$i]['title'] = utf8_encode($publication_coverage[$i]['title']);
+					if ($publication_coverage[$i]['title'] == null) {
+						$publication_coverage[$i]['title'] = "Untitled Article";
+					}
+					$publication_coverage[$i]['type'] = "publication";
+				}
+
+				$youtuber_coverage = $db->query("SELECT * FROM youtuber_coverage WHERE watchedgame = {$id} AND removed = 0 ORDER BY utime DESC;");
+				$youtuber_coverage_coverage = count($youtuber_coverage);
+				for($i = 0; $i < $youtuber_coverage_coverage; $i++) {
+					$youtuber_coverage[$i]['type'] = "youtuber";
+				}
+
+				$coverage = array_merge($publication_coverage, $youtuber_coverage);
+
+				$watchedgames[$j]['coverage'] = $coverage;
+
+				// usort($coverage, "sortByUtime");
+
+			}
+
+			$result = new stdClass();
+			$result->success = true;
+			$result->watchedgames = $watchedgames;
+
+		}
 
 		else if ($endpoint == "/coverage/")
 		{
@@ -3483,6 +3537,41 @@ if (!isset($_GET['endpoint'])) {
 							$result = new stdClass();
 							$result->success = true;
 						}
+					}
+				}
+
+
+			}
+
+		}
+		else if ($endpoint == "/user/change-project/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			//error_reporting(0);
+			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer'),
+				array('name' => 'newProject', 'type' => 'integer')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+				if ($user_id != $_GET['id']) {
+					$result = api_error("You can only change your own project.");
+				} else {
+
+					$newProject = $_GET['newProject'];
+
+					$stmt = $db->prepare("UPDATE user SET currentGame = :newProject WHERE id = :id ;");
+					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":newProject", $newProject, Database::VARTYPE_INTEGER);
+					$rs = $stmt->execute();
+					if (!$rs) {
+						$result = new stdClass();
+						$result->success = false;
+					} else {
+						$result = new stdClass();
+						$result->success = true;
 					}
 				}
 

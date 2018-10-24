@@ -357,6 +357,7 @@ API.listYoutubeChannels = function(fromInit) {
 			if (fromInit) {
 				impresslist.refreshFilter();
 				API.listCoverage(fromInit);
+				API.listWatchedGames(fromInit);
 			}
 			impresslist.loading.set('youtubeChannels', false);
 		})
@@ -413,9 +414,93 @@ API.listCoverage = function(fromInit) {
 			impresslist.loading.set('coverage', false);
 		})
 		.fail(function() {
-			API.errorMessage("Could not list Emails.");
+			API.errorMessage("Could not list Coverage.");
 		});
 }
+API.listWatchedGames = function(fromInit) {
+	if (typeof fromInit == 'undefined') { fromInit = true; }
+
+	impresslist.loading.set('watchedgames', true);
+	var url = "api.php?endpoint=/watchedgame/list/";
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			for(var i = 0; i < json.watchedgames.length; ++i) {
+				var watchedgame = new WatchedGame(json.watchedgames[i]);
+				impresslist.addWatchedGame(watchedgame, fromInit);
+			}
+			if (fromInit) { impresslist.refreshFilter(); }
+			impresslist.loading.set('watchedgames', false);
+		})
+		.fail(function() {
+			API.errorMessage("Could not list Watched Games.");
+		});
+}
+API.saveWatchedGame = function(watchedgame, name, keywords, successCallback, failCallback) {
+	var url = "api.php?endpoint=/watchedgame/save/" +
+					"&id=" + encodeURIComponent(watchedgame.id) +
+					"&name=" + encodeURIComponent(name) +
+					"&keywords=" + encodeURIComponent(keywords);
+	console.log(url);
+
+	$.ajax( {
+		method: 'GET',
+		url: url
+	})
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				if (failCallback) failCallback();
+				return;
+			}
+			API.successMessage("Watched Game saved.");
+			obj.init(json.watchedgame);
+			obj.update();
+			if (successCallback) successCallback();
+		})
+		.fail(function() {
+			API.errorMessage("Could not save Watched Game.");
+			if (failCallback) failCallback();
+		});
+}
+API.removeWatchedGame = function(watchedgame, successCallback, failCallback) {
+	var url = "api.php?endpoint=/watchedgame/remove/&id=" + encodeURIComponent(watchedgame.id);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				if (failCallback) failCallback();
+				return;
+			}
+			API.successMessage("Watched Game removed.");
+			impresslist.removeWatchedGame(person);
+			if (successCallback) successCallback();
+		})
+		.fail(function() {
+			API.errorMessage("Could not remove Watched Game.");
+			if (failCallback) failCallback();
+		});
+}
+
 API.listKeys = function(game, platform, assigned, callbackfunction) {
 	var url = "api.php?endpoint=/keys/list/" +
 				"&game=" + encodeURIComponent(game) +
@@ -1296,6 +1381,29 @@ API.userChangeIMAPSettings = function(user, smtpServer, imapServer, imapPassword
 		})
 		.fail(function() {
 			API.errorMessage("Could not change IMAP settings.");
+		});
+}
+API.userChangeProject = function(user, newProject, onSuccess, onFail) {
+	var url = "api.php?endpoint=/user/change-project/&id=" + encodeURIComponent(user.id) + "&newProject=" + encodeURIComponent(newProject);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				if (onFail) onFail();
+				return;
+			}
+			API.successMessage("Project changed.");
+			if (onSuccess) onSuccess();
+		})
+		.fail(function() {
+			API.errorMessage("Could not change Project.");
+			if (onFail) onFail();
 		});
 }
 API.userChangePassword = function(user, currentPassword, newPassword) {

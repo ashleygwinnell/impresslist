@@ -77,12 +77,141 @@ Email = function(data) {
 	}
 
 
+WatchedGame = function(data) {
+	DBO.call(this, data);
+}
+	WatchedGame.prototype = Object.create(DBO.prototype)
+	WatchedGame.prototype.constructor = WatchedGame;
+	WatchedGame.prototype.init = function(data) {
+		DBO.prototype.init.call(this, data);
+		this.id = parseInt(this.field('id'));
+		this.coverage = this.field('coverage');
+	}
+	WatchedGame.prototype.filter = function(text) {
+		var element = $("#watchedgames [data-watchedgame-id='" + this.id + "']");
+		if (this.search(text)) {
+			element.show();
+			return true;
+		} else {
+			element.hide();
+			return false;
+		}
+	}
+	WatchedGame.prototype.search = function(text) {
+		return true;
+	}
+	WatchedGame.prototype.createItem = function(fromInit) {
+		console.log(this);
+
+		var url = "";
+		var iconurl = "images/favicon.png";
+		var html = "";
+		html += "<hr/><div data-watchedgame-id='" + this.field('id') + "' class='media'>	\
+					<div class='oa'>\
+						<div class='fl'>\
+							<h3 data-watchedgame-id='" + this.id + "' data-field='name'>" + this.field('name') + "</h3>\
+							<!-- <p data-watchedgame-id='" + this.id + "' data-field='keywords' style='font-style:italic'>" + this.field('keywords') + "</p><br/> -->\
+						</div>\
+						<div class='fr'>\
+							<button id='edit-watchedgame' class='fr btn btn-default btn-sm' data-watchedgame-id='" + this.field('id') + "'  data-toggle='modal' data-target='.watchedgame_modal' ><span class='glyphicon glyphicon-pencil'></span></button> \
+						</div>\
+					</div>\
+					<h4>Coverage:</h4><br/>\
+					<div data-watchedgame-id='" + this.id + "' data-field='items'>\
+					</div>\
+				</div>\
+				<hr/>";
+		if (fromInit) {
+			$('#watchedgames').append(html);
+		} else {
+			$('#watchedgames').prepend(html);
+		}
+		this.update();
+
+		for (var i = 0; i < this.coverage.length; i++) {
+			var c = new Coverage(this.coverage[i])
+			c.createItem(fromInit, "[data-watchedgame-id='" + this.id + "'][data-field='items']");
+		}
+
+		var t = this;
+		$("#edit-watchedgame[data-watchedgame-id='" + this.id + "']").click(function() { t.open(); });
+	}
+	WatchedGame.prototype.update = function() {
+		var selector = "data-watchedgame-id";
+
+		$("[" + selector + "='" + this.id + "'][data-field='name']").html(this.field('name'));
+		//$("[" + selector + "='" + this.id + "'][data-field='url']").attr('href', this.field('url'));
+		//$("[" + selector + "='" + this.id + "'][data-field='url']").html(this.field('title'));
+		//$("[" + selector + "='" + this.id + "'][data-field='utime']").html( impresslist.util.relativetime_contact(this.field('utime')) );
+	}
+	WatchedGame.prototype.open = function() {
+
+		var html = "<div class='modal fade watchedgame_modal' tabindex='-1' role='dialog'> \
+						<div class='modal-dialog'> \
+							<div class='modal-content' style='padding:5px;'> \
+								<div style='min-height:100px;padding:20px;'>";
+
+			html += "				<h3>Edit Watched Game</h3>";
+			html += "				<form role='form' class='oa' onsubmit='return false;'>	\
+										<div class='row'>\
+											<div class='form-group col-md-5'>\
+												<label>Name:</label> \
+												<input id='watchedgame-edit-name' class='form-control' type='text' value='" + this.field('name') + "' style='width:100%;'/>\
+											</div>\
+										</div> \
+										<div class='row'>\
+											<div class='form-group col-md-5'>\
+												<label>Keywords/Search Terms:</label> \
+												<input id='watchedgame-edit-keywords' class='form-control' type='text' value='" + this.field('keywords') + "' style='width:100%;'/>\
+											</div>\
+										</div> \
+										<div class='fl'> \
+											<button id='save_watchedGameId" + this.id + "' type='submit' class='btn btn-primary'>Save</button>";
+			html += "						&nbsp;<button id='close_watchedGameId" + this.id + "' type='submit' class='btn btn-default'>Close</button>";
+			html += " 					</div><div class='fr'> \
+											<button id='delete_watchedGameId" + this.id + "' type='submit' class='btn btn-danger'>Remove</button> \
+										</div>\
+									</form>";
+
+		html += "				</div>\
+							</div>\
+						</div>\
+					</div>";
+		$('#modals').html(html);
+
+		//$('#coverage-edit-title').attr('value', this.field('title'));
+
+
+		var watchedGame = this;
+		$("#save_watchedGameId" + this.id).click(function() { watchedGame.save(); });
+		$("#close_watchedGameId" + this.id).click(function() { watchedGame.close(); });
+		$("#delete_watchedGameId" + this.id).click(function() { watchedGame.remove(); });
+	}
+	WatchedGame.prototype.onAdded = function(fromInit) {
+		this.createItem(fromInit);
+	}
+	WatchedGame.prototype.onRemoved = function() {
+		this.removeItem();
+		this.close();
+	}
+	WatchedGame.prototype.save = function() {
+		var name = $('#watchedgame-edit-name').val();
+		var keywords = $('#watchedgame-edit-keywords').val();
+		API.saveWatchedGame(this, name, keywords);
+	}
+	WatchedGame.prototype.close = function() {
+		$('.watchedgame_modal').modal('hide');
+	}
+	WatchedGame.prototype.remove = function() {
+		API.removeWatchedGame(this);
+	}
+
 
 Coverage = function(data) {
 	DBO.call(this, data);
 }
 	Coverage.prototype = Object.create(DBO.prototype)
-	Coverage.prototype.constructor = Email;
+	Coverage.prototype.constructor = Coverage;
 	Coverage.prototype.init = function(data) {
 		DBO.prototype.init.call(this, data);
 		this.id = parseInt(this.field('id'));
@@ -127,7 +256,9 @@ Coverage = function(data) {
 
 		return false;
 	}
-	Coverage.prototype.createItem = function(fromInit) {
+	Coverage.prototype.createItem = function(fromInit, parent) {
+		parent = parent || "#coverage";
+
 		var url = "";
 		var iconurl = "images/favicon.png";
 		//var pubname = "Unknown Publication";
@@ -185,9 +316,9 @@ Coverage = function(data) {
 							</div>";
 		}
 		if (fromInit) {
-			$('#coverage').append(html);
+			$(parent).append(html);
 		} else {
-			$('#coverage').prepend(html);
+			$(parent).prepend(html);
 		}
 		this.update();
 
@@ -594,6 +725,46 @@ User = function(data) {
 	}
 	User.prototype.fullname = function() {
 		return this.field('forename') + " " + this.field('surname');
+	}
+	User.prototype.openChangeProject = function() {
+		var curProj = impresslist.config.user.game;
+		var html = "<div class='modal fade changeproject_modal' tabindex='-1' role='dialog'> \
+						<div class='modal-dialog'> \
+							<div class='modal-content' style='padding:5px;'> \
+								<div style='min-height:100px;padding:20px;'> \
+									<h3>Change Project</h3> \
+									<form role='form' class='oa' onsubmit='return false;'>	\
+										<div class='form-group'>\
+											<select id='user-change-project-new' data-project-id='" + this.id + "' data-input-field='id' class='form-control'>";
+											for(var i = 0; i < impresslist.games.length; i++) {
+												html += "<option value='" + impresslist.games[i].id + "' " + ((impresslist.games[i].id==curProj)?"selected='true'":"") + ">" + impresslist.games[i].name + "</option>\n";
+											}
+		html +=	"							</select>\
+										</div>\
+										<div class='fl'> \
+											<button id='user-change-project-submit' type='submit' class='btn btn-primary'>Save</button> \
+											&nbsp;<button id='user-change-project-close' type='submit' class='btn btn-default'>Close</button> \
+										</div>\
+									</form> \
+								</div>\
+							</div>\
+						</div>\
+					</div>";
+		$('#modals').html(html);
+
+		var thiz = this;
+		$('#user-change-project-submit').click(function() {
+			var newProject = $('#user-change-project-new').val();
+			console.log(newProject);
+			API.userChangeProject(thiz, newProject, function(){
+				window.location.href = window.location.href;
+			});
+
+			$('.changeproject_modal').modal("hide");
+		});
+		$('#user-change-project-close').click(function() {
+			$('.changeproject_modal').modal("hide");
+		});
 	}
 	User.prototype.openChangePassword = function() {
 		var html = "<div class='modal fade password_modal' tabindex='-1' role='dialog'> \
@@ -3196,6 +3367,7 @@ var impresslist = {
 	users: [],
 	games: [],
 	coverage: [],
+	watchedgames: [],
 	simpleMailouts: [],
 	oauthTwitterAccounts: [],
 	oauthFacebookAccounts: [],
@@ -3250,12 +3422,14 @@ var impresslist = {
 		$('#nav-add-coverage-youtuber').click(API.addYoutuberCoverage);
 		$('#nav-add-simplemailout').click(API.addSimpleMailout);
 		$('#nav-add-user').click(API.addUser);
+		$('#nav-user-changeproject').click(function() { thiz.findUserById(thiz.config.user.id).openChangeProject(); });
 		$('#nav-user-changepassword').click(function() { thiz.findUserById(thiz.config.user.id).openChangePassword(); });
 		$('#nav-user-changeimapsettings').click(function() { thiz.findUserById(thiz.config.user.id).openChangeIMAPSettings(); });
 		$('.nav-user-changeimapsettings').click(function() { $('#nav-user-changeimapsettings').click(); });
 		$('#nav-home').click(this.changePage);
 		$('#nav-coverage').click(this.changePage);
 		$('#nav-keys').click(this.changePage);
+		$('#nav-watchedgames').click(this.changePage);
 		$('#nav-social').click(this.changePage);
 		$('#nav-mailout').click(this.changePage);
 		$('#nav-mailout-addrecipients').click(this.changePage);
@@ -3415,9 +3589,12 @@ var impresslist = {
 		});
 
 		// Keys functions
+		$('#nav-keys,#nav-coverage,#nav-watchedgames').click(function() {
+			$('.current-project-name').html(impresslist.findGameById(impresslist.config.user.game).field('name'));
+		});
 		$('#nav-keys').click(function() {
 
-			$('.current-project-name').html(impresslist.findGameById(impresslist.config.user.game).field('name'));
+
 
 			var addremovekeysform = function(datacount){
 				// remove keys form
@@ -3698,11 +3875,16 @@ var impresslist = {
 		for(var i = 0; i < impresslist.coverage.length; i++) {
 			if (impresslist.coverage[i].filter(text)) { countCoverageVisible++; }
 		}
+		var countWatchedGamesVisible = 0;
+		for(var i = 0; i < impresslist.watchedgames.length; i++) {
+			if (impresslist.watchedgames[i].filter(text)) { countWatchedGamesVisible++; }
+		}
 
 		if (countPeopleVisible == 0) { $('#people-footer').show(); } else { $('#people-footer').hide(); }
 		if (countPublicationsVisible == 0) { $('#publications-footer').show(); } else { $('#publications-footer').hide(); }
 		if (countYoutubeChannelsVisible == 0) { $('#youtubers-footer').show(); } else { $('#youtubers-footer').hide(); }
 		if (countCoverageVisible == 0) { $('#coverage-footer').show(); } else { $('#coverage-footer').hide(); }
+		if (countWatchedGamesVisible == 0) { $('#watchedgames-footer').show(); } else { $('#watchedgames-footer').hide(); }
 
 		if (impresslist.people.length > 0 && countPeopleVisible == 0) { $('#people-container').hide(); } else { $('#people-container').show(); }
 		if (impresslist.publications.length > 0 && countPublicationsVisible == 0) { $('#publications-container').hide(); } else { $('#publications-container').show(); }
@@ -3794,6 +3976,21 @@ var impresslist = {
 	addCoverage: function(obj, fromInit) {
 		this.coverage.push(obj);
 		obj.onAdded(fromInit);
+	},
+	addWatchedGame: function(obj, fromInit) {
+		this.watchedgames.push(obj);
+		obj.onAdded(fromInit);
+	},
+	removeWatchedGame: function(obj) {
+		for(var i = 0, len = this.watchedgames.length; i < len; ++i) {
+			if (this.watchedgames[i].id == obj.id) {
+				console.log('watched game removed: ' + obj.id);
+				obj.onRemoved();
+				this.watchedgames.splice(i, 1);
+				impresslist.refreshFilter();
+				break;
+			}
+		}
 	},
 
 	addOAuthTwitterAccount: function(obj, fromInit) {

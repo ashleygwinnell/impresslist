@@ -475,6 +475,49 @@
 
 		</div>
 
+		<!-- Watched Games -->
+		<div id='watchedgames-page' data-type-page='true' data-page='watchedgames'>
+			<div class='container mycontainer'>
+				<div class='filters' style='float:left;text-align:left;'>
+					<p><b><span class='current-project-name'>{project name}</span></b></p>
+					<div class='filter-item'><b>Watched Games (Coverage)</b></div>
+				</div>
+			</div><br/>
+
+			<div class='container mycontainer'>
+				<div id='watchedgames-loading-true'>
+					<div class="alert alert-info" role="alert">
+						<span class="glyphicon glyphicon-loading" aria-hidden="true"></span>
+						<span class="sr-only"></span>
+						Loading...
+					</div>
+				</div>
+				<div id='watchedgames-loading-false'>
+					<div id='watchedgames'>
+
+					</div>
+					<div id='watchedgames-footer'>
+						<div class="alert alert-info" role="alert">
+							<span class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
+							<span class="sr-only">Error:</span>
+							Dang! There is currently no coverage for your project's Watched Games.
+						</div>
+						<!--
+							<div class='row'>
+								<div class='col-sm-3 fr'>
+									<button class='btn btn-primary add-coverage' style='width:100%'>Add Coverage</button>
+								</div>
+							</div>
+						-->
+					</div>
+				</div>
+
+
+			</div>
+			<br/><br/>
+
+		</div>
+
 		<!-- Mailout -->
 		<div id='social-page' data-type-page='true' data-page='social'>
 			<div class='container mycontainer'>
