@@ -1,0 +1,10 @@
+{
+  "devDependencies": {
+    "grunt": "^1.0.3",
+    "grunt-ftp-deploy": "^0.2.0",
+    "grunt-sftp-deploy": "^0.2.5"
+  },
+  "dependencies": {
+    "grunt-cli": "^1.2.0"
+  }
+}
