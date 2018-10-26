@@ -136,12 +136,14 @@ for($i = 0; $i < $num_publications; $i++) {
 					//echo
 
 					foreach ($games as $game) {
-						if (strpos($title, $game['name']) !== FALSE) {
+						if (strpos(strtolower($title), strtolower($game['name'])) !== FALSE ||
+							util_containsKeywords($title, $game['keywords']) ) {
 							tryAddPublicationCoverage( $publications[$i]['id'], $publications[$i]['name'], $game['id'], null, $title, $url, $time );
 						}
 					}
 					foreach($watchedgames as $watchedgame) {
-						if (strpos($title, $watchedgame['name']) !== FALSE) {
+						if (strpos(strtolower($title), strtolower($watchedgame['name'])) !== FALSE ||
+							util_containsKeywords($title, $watchedgame['keywords'])) {
 							tryAddPublicationCoverage( $publications[$i]['id'], $publications[$i]['name'], null, $watchedgame['id'], $title, $url, $time );
 						}
 					}

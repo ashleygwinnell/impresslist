@@ -81,6 +81,26 @@ function util_isValidKeyFormat($platform, $key, &$result) {
 	$result = api_error("Key format validation not implemented for platform: " . $platform);
 	return false;
 }
+function util_containsKeywords($haystack, $keywordsRaw) {
+	$haystack = strtolower($haystack);
+	$keywordsRaw = strtolower($keywordsRaw);
+
+	if (strlen($keywordsRaw) == 0) { return false; }
+	if (strpos($keywordsRaw, ",") == FALSE) {
+		echo $haystack . " - " . $keywordsRaw . "<br/>";
+		return (strpos($haystack, $keywordsRaw) !== FALSE);
+	}
+	$bits = explode(",", $keywordsRaw);
+	print_r($bits);
+	for ($i = 0; $i < count($bits); $i++) {
+		$bit = trim($bits[$i]);
+		echo $bit . "<br/>";
+		if (strpos($haystack, $bit) !== FALSE) {
+			return true;
+		}
+	}
+	return false;
+}
 
 /** Takes into account decimal points and negative values... **/
 function isNumeric($number, $name = "Field", $length = -1)

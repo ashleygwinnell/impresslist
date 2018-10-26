@@ -23,6 +23,9 @@ $num_games = count($games);
 $watchedgames = $db->query("SELECT * FROM watchedgame;");
 $num_watchedgames = count($watchedgames);
 
+//print_r($games);
+//print_r($watchedgames);
+
 
 function tryAddYoutubeCoverage($youtuberId, $youtuberName, $gameId, $watchedGameId, $title, $url, $thumbnail, $time) {
 	global $db;
@@ -99,9 +102,12 @@ for($i = 0; $i < $num_youtubers; ++$i)
 				echo $title . "<br/>";
 
 				foreach ($games as $game) {
-					if (strpos($title, $game['name']) !== FALSE ||
-						strpos($description, $game['name']) !== FALSE)
+					if (strpos(strtolower($title), strtolower($game['name'])) !== FALSE ||
+						strpos(strtolower($description), strtolower($game['name'])) !== FALSE ||
+						util_containsKeywords($title, $game['keywords']) ||
+						util_containsKeywords($description, $game['keywords']))
 					{
+						echo "<h4>Found Coverage!</h4>";
 						tryAddYoutubeCoverage(
 							$youtubers[$i]['id'],
 							$youtubers[$i]['name'],
@@ -116,9 +122,12 @@ for($i = 0; $i < $num_youtubers; ++$i)
 				}
 
 				foreach ($watchedgames as $watchedgame) {
-					if (strpos($title, $watchedgame['name']) !== FALSE ||
-						strpos($description, $watchedgame['name']) !== FALSE)
+					if (strpos(strtolower($title), strtolower($watchedgame['name'])) !== FALSE ||
+						strpos(strtolower($description), strtolower($watchedgame['name'])) !== FALSE ||
+						util_containsKeywords($title, $watchedgame['keywords']) ||
+						util_containsKeywords($description, $watchedgame['keywords']))
 					{
+						echo "<h4>Found Coverage!</h4>";
 						tryAddYoutubeCoverage(
 							$youtubers[$i]['id'],
 							$youtubers[$i]['name'],

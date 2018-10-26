@@ -2157,10 +2157,11 @@ if (!isset($_GET['endpoint'])) {
 				}
 
 				$coverage = array_merge($publication_coverage, $youtuber_coverage);
+				usort($coverage, "sortByUtime");
 
 				$watchedgames[$j]['coverage'] = $coverage;
 
-				// usort($coverage, "sortByUtime");
+
 
 			}
 
@@ -3056,7 +3057,7 @@ if (!isset($_GET['endpoint'])) {
 			include_once("init.php");
 
 			$required_fields = array(
-				array('name' => 'search', 'type' => 'alphanumericspaces'),
+				array('name' => 'search', 'type' => 'textarea'),
 			);
 
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
@@ -3275,9 +3276,10 @@ if (!isset($_GET['endpoint'])) {
 					$result->message = 'Name and icon must be set.';
 				} else {
 
-					$stmt = $db->prepare(" INSERT INTO game (id, name, iconurl)
+					$stmt = $db->prepare(" INSERT INTO game (id, name, keywords, iconurl)
 													VALUES (NULL, :name, :iconurl) ");
 					$stmt->bindValue(":name", 		$data['name'], 		Database::VARTYPE_STRING);
+					$stmt->bindValue(":keywords", 	"", 		Database::VARTYPE_STRING);
 					$stmt->bindValue(":iconurl", 	$data['iconurl'], 	Database::VARTYPE_STRING);
 					$rs = $stmt->execute();
 
