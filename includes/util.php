@@ -444,6 +444,25 @@ function util_isLocalhost() {
 	return $_SERVER['HTTP_HOST'] == "localhost";
 }
 
+function youtube_v3_search($terms, $sinceTimestamp = 0) {
+	global $youtube_apiKey;
+	if (strlen($terms) == 0) { return 0; }
+
+	$url = "https://www.googleapis.com/youtube/v3/search?key=" . $youtube_apiKey . "&part=snippet&q=" . urlencode($terms) . "&maxResults=50&order=date&type=video";
+	if ($sinceTimestamp > 0) {
+		$url .= "publishedAfter=";
+	}
+
+	$text = url_get_contents($url);
+	//echo $text;
+	if (substr($text, 0, 1) != "{") {
+		return 0;
+	}
+	$content = json_decode($text, JSON_ASSOC);
+	//print_r($content);
+	return $content;
+
+}
 function youtube_v3_getInformation($channel) {
 	global $youtube_apiKey;
 	if (strlen($channel) == 0) { return 0; }
@@ -454,6 +473,16 @@ function youtube_v3_getInformation($channel) {
 		return 0;
 	}
 	$content = json_decode($text, JSON_ASSOC);
+
+	if (count($content['items']) == 0) {
+		$url = "https://www.googleapis.com/youtube/v3/channels?id=" .$channel . "&key=" . $youtube_apiKey . "&part=contentDetails,snippet,statistics&maxResults=50";
+		$text = url_get_contents($url);
+		if (substr($text, 0, 1) != "{") {
+			return 0;
+		}
+		$content = json_decode($text, JSON_ASSOC);
+	}
+
 	$result = array(
 		"id" => $content['items'][0]['id'],
 		"name" => $content['items'][0]['snippet']['localized']['title'],

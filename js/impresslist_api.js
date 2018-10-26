@@ -1256,7 +1256,32 @@ API.removePublication = function(publication) {
 		});
 }
 
-API.addYoutuber = function() {
+API.searchYouTube = function(search, successCallback, failCallback) {
+	var url = "api.php?endpoint=/youtuber/search-youtube/&search=" + encodeURIComponent(search);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				if (failCallback) failCallback();
+				return;
+			}
+
+			if (successCallback) successCallback(json.results);
+
+		})
+		.fail(function() {
+			API.errorMessage("Could not Search YouTube.");
+			if (failCallback) failCallback();
+		});
+}
+API.addYoutuber = function(openImmediately, successCallback, failCallback) {
+	openImmediately = (typeof openImmediately == 'undefined')?true:openImmediately;
 	var name = "Blank";
 	var url = "api.php?endpoint=/youtuber/add/&channel=youtube";
 	console.log(url);
@@ -1269,6 +1294,7 @@ API.addYoutuber = function() {
 			var json = JSON.parse(result);
 			if (!json.success) {
 				API.errorMessage(json.message);
+				if (failCallback) failCallback();
 				return;
 			}
 			API.successMessage("Youtuber added.");
@@ -1276,10 +1302,16 @@ API.addYoutuber = function() {
 
 			var youtuber = new Youtuber(json.youtubechannel);
 			impresslist.addYoutuber(youtuber, false);
-			$(youtuber.openSelector()).click();
+			if (openImmediately) {
+				$(youtuber.openSelector()).click();
+			}
+			if (successCallback) {
+				successCallback(youtuber);
+			}
 		})
 		.fail(function() {
 			API.errorMessage("Could not add Youtuber.");
+			if (failCallback) failCallback();
 		});
 }
 API.setYoutuberPriority = function(youtuber, priority, gameId) {

@@ -63,6 +63,7 @@ function tryAddYoutubeCoverage($youtuberId, $youtuberName, $gameId, $watchedGame
 
 
 
+
 // for each publication
 for($i = 0; $i < $num_youtubers; ++$i)
 {

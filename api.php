@@ -157,6 +157,7 @@ if (!isset($_GET['endpoint'])) {
 
 		// Youtubers
 		"/youtuber/list/",
+		"/youtuber/search-youtube/",
 		"/youtuber/add/",
 		"/youtuber/save/",
 		"/youtuber/set-priority/",
@@ -3049,6 +3050,38 @@ if (!isset($_GET['endpoint'])) {
 				$result->success = true;
 			}
 		}
+		else if ($endpoint == "/youtuber/search-youtube/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'search', 'type' => 'alphanumericspaces'),
+			);
+
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+
+				$data = youtube_v3_search(urldecode($_GET['search']));
+				$results = array();
+				for($i = 0; $i < count($data['items']); $i++) {
+					$one = array();
+					$one['channel']['id'] = $data['items'][$i]['snippet']['channelId'];
+					$one['channel']['title'] = $data['items'][$i]['snippet']['channelTitle'];
+					$one['video']['id'] = $data['items'][$i]['id']['videoId'];
+					$one['video']['thumbnail'] = $data['items'][$i]['snippet']['thumbnails']['default']['url'];
+					$one['video']['title'] = $data['items'][$i]['snippet']['title'];
+					$one['video']['description'] = $data['items'][$i]['snippet']['description'];
+					$one['video']['timestamp'] = strtotime($data['items'][$i]['snippet']['publishedAt']);
+					$results[] = $one;
+				}
+
+				$result = new stdClass();
+				$result->success = true;
+				$result->results = $results;
+			}
+
+		}
 		else if ($endpoint == "/youtuber/add/")
 		{
 			$require_login = true;
@@ -3062,8 +3095,8 @@ if (!isset($_GET['endpoint'])) {
 				$twitter = "youtube";
 				$twitter_followers = twitter_countFollowers($twitter);
 				if ($twitter_followers == "") { $twitter_followers = 0; }
-				$stmt = $db->prepare(" INSERT INTO youtuber (id, 	name,   name_override, description, email, channel,  priorities, iconurl,   subscribers, views, notes, twitter,   twitter_followers, 	lastpostedon, removed)
-													VALUES  (NULL, 'Blank', 'Blank', 	 	 '', 	:channel, '', 		  '', 		 0, 		  0, 	 '', 	:twitter, :twitter_followers, 	 0, 		  	0);	");
+				$stmt = $db->prepare(" INSERT INTO youtuber (id, 	youtubeId, youtubeUploadsPlaylistId, name,   name_override, description, email, channel,  priorities, iconurl,   subscribers, views, notes, twitter,   twitter_followers, 	twitter_updatedon, lastpostedon, removed)
+													VALUES  (NULL, '', '', 'Blank', 'Blank', 	 	 '', '',	:channel, '', 		  '', 		 0, 		  0, 	 '', 	:twitter, :twitter_followers, 0,	 0, 		  	0);	");
 				$stmt->bindValue(":channel", $_GET['channel'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
@@ -3099,7 +3132,10 @@ if (!isset($_GET['endpoint'])) {
 				} else {
 
 					$twitter = $_GET['twitter'];
-					$twitter_followers = twitter_countFollowers($_GET['twitter']);
+					$twitter_followers = 0;
+					if (strlen($twitter) > 0) {
+						$twitter_followers = twitter_countFollowers($_GET['twitter']);
+					}
 					if ($twitter_followers == "") { $twitter_followers = 0; }
 					$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
 

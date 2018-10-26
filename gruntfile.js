@@ -32,6 +32,18 @@ module.exports = function(grunt) {
 	var ftphostdata = grunt.file.readJSON(".ftphost")[authKey];
 	grunt.initConfig({
 		'ftp-deploy': {
+			quickdeploy: {
+				auth: {
+					host: ftphostdata['host'],
+					port: ftphostdata['port'],
+					authKey: authKey
+				},
+				src: '.',
+				dest: ftphostdata['path'],
+				exclusions: [".ftphost", ".ftppass", ".gitignore", "bower.json", "composer.json", "composer.lock", "gruntfile.js", "LICENSE", "package.json", "README.md",
+							 ".git", "node_modules", "vendor", "js/vendor"],
+				forceVerbose: true
+			},
 			deploy: {
 				auth: {
 					host: ftphostdata['host'],
@@ -40,7 +52,8 @@ module.exports = function(grunt) {
 				},
 				src: '.',
 				dest: ftphostdata['path'],
-				exclusions: [""],
+				exclusions: [".ftphost", ".ftppass", ".gitignore", "bower.json", "composer.json", "composer.lock", "gruntfile.js", "LICENSE", "package.json", "README.md",
+							 ".git", "node_modules"],
 				forceVerbose: true
 			}
 		}
@@ -53,6 +66,7 @@ module.exports = function(grunt) {
 		grunt.log.writeln('Complete at: '+ new Date().toTimeString());
 	});
 
-	grunt.registerTask('default', ["deploy"]);
+	grunt.registerTask('default', ["quick"]);
+	grunt.registerTask('quick', ['ftp-deploy:quickdeploy', 'alldone']);
 	grunt.registerTask('deploy', ['ftp-deploy:deploy', 'alldone']);
 };
