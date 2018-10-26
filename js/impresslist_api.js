@@ -1256,8 +1256,8 @@ API.removePublication = function(publication) {
 		});
 }
 
-API.searchYouTube = function(search, successCallback, failCallback) {
-	var url = "api.php?endpoint=/youtuber/search-youtube/&search=" + encodeURIComponent(search);
+API.searchYouTube = function(search, order, successCallback, failCallback) {
+	var url = "api.php?endpoint=/youtuber/search-youtube/&search=" + encodeURIComponent(search) + "&order=" + encodeURIComponent(order);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {

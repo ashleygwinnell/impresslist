@@ -3058,12 +3058,13 @@ if (!isset($_GET['endpoint'])) {
 
 			$required_fields = array(
 				array('name' => 'search', 'type' => 'textarea'),
+				array('name' => 'order', 'type' => 'alphanumeric') // date/relevance/rating/title/viewCount
 			);
 
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				$data = youtube_v3_search(urldecode($_GET['search']));
+				$data = youtube_v3_search(urldecode($_GET['search']), $_GET['order']);
 				$results = array();
 				for($i = 0; $i < count($data['items']); $i++) {
 					$one = array();

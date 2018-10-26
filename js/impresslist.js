@@ -964,11 +964,14 @@ YouTuberBatchModal = function() {
 									<h3>Youtuber Batch Add</h3> \
 									<form role='form' class='oa' onsubmit='return false;'>	\
 										<div class='row'>\
-											<div class='form-group col-md-9'>\
+											<div class='form-group col-md-5'>\
 												<input id='youtuber_batch_add_modal_search_text' class='form-control' type='text' value='' placeholder='Search'/>\
 											</div>\
+											<div class='form-group col-md-3'>\
+												<button id='youtuber_batch_add_modal_search_relevance' type='submit' class='btn btn-primary'>Search (Relevance)</button>\
+											</div>\
 											<div class='form-group col-md-2'>\
-												<button id='youtuber_batch_add_modal_search' type='submit' class='btn btn-primary'>Search</button>\
+												<button id='youtuber_batch_add_modal_search_latest' type='submit' class='btn btn-primary' style='margin-left:10px;'>Search (Latest)</button>\
 											</div>\
 										</div>\
 									</form>\
@@ -993,56 +996,59 @@ YouTuberBatchModal = function() {
 
 		$('.youtuber_batch_add_modal').modal('show');
 
-		$('#youtuber_batch_add_modal_search').click(function(){
+		var resultsFunc = function(results) {
+			$('#youtuber_batch_add_results_list').html('');
+			if (results.length == 0) {
+				$('#youtuber_batch_add_no_results').show();
+				$('#youtuber_batch_add_results_container').hide();
+			}
+			else if (results.length > 0) {
+				$('#youtuber_batch_add_no_results').hide();
+				$('#youtuber_batch_add_results_container').show();
+			}
+
+			for(var i = 0; i < results.length; i++) {
+				var channelExists = impresslist.findYoutuberByChannelId(results[i].channel.id) != null;
+				var html = "";
+				html += "<div class='oa' style='padding-bottom:10px;'>";
+				html += "<div class='fl' style='width:80px'><img src='" + results[i].video.thumbnail + "' width=80px/></div>";
+				html += "<div class='fl' style='width:400px;padding-left:10px;'>";
+				html += 	"<p><b><a href='http://youtube.com/watch?v=" + results[i].video.id + "' target='new'>" + results[i].video.title + "</a></b></p>"
+				html += 	"<p><b>Channel:</b> <a href='http://www.youtube.com/channel/" + results[i].channel.id + "'><i>" + results[i].channel.title + "</i></a></p>";
+				if (!channelExists) {
+					html += 	"<button \
+									id='youtuber_batch_add_channel_" + results[i].channel.id + "'  \
+									data-channel-id='" + results[i].channel.id + "' \
+									data-channel-title='" + results[i].channel.title + "' \
+									type='submit' \
+									class='btn btn-primary btn-sm'\
+									>Add YouTuber</button>";
+				}
+				//html += 	"<button id='youtuber_batch_add_channel' type='submit' class='btn btn-success btn-sm'>Add YouTuber</button>";
+				html += "</div>";
+				$('#youtuber_batch_add_results_list').append(html);
+
+				$('#youtuber_batch_add_channel_' + results[i].channel.id).unbind('click');
+				$('#youtuber_batch_add_channel_' + results[i].channel.id).off('click');
+				$('#youtuber_batch_add_channel_' + results[i].channel.id).click(function(){
+					var channelId = $(this).attr('data-channel-id');
+					var channelName = $(this).attr('data-channel-title');
+					API.addYoutuber(false, function(yter){
+						//yter.youtubeId = channelId;
+						//yter.name_override = channelName;
+						yter.saveWith(channelId, channelName);
+					});
+				})
+			}
+		}
+
+		$('#youtuber_batch_add_modal_search_latest').click(function(){
 			var str = $('#youtuber_batch_add_modal_search_text').val();
-			console.log(str);
-			API.searchYouTube(str, function(results){
-
-				$('#youtuber_batch_add_results_list').html('');
-				if (results.length == 0) {
-					$('#youtuber_batch_add_no_results').show();
-					$('#youtuber_batch_add_results_container').hide();
-				}
-				else if (results.length > 0) {
-					$('#youtuber_batch_add_no_results').hide();
-					$('#youtuber_batch_add_results_container').show();
-				}
-
-				for(var i = 0; i < results.length; i++) {
-					var channelExists = impresslist.findYoutuberByChannelId(results[i].channel.id) != null;
-					var html = "";
-					html += "<div class='oa' style='padding-bottom:10px;'>";
-					html += "<div class='fl' style='width:80px'><img src='" + results[i].video.thumbnail + "' width=80px/></div>";
-					html += "<div class='fl' style='width:400px;padding-left:10px;'>";
-					html += 	"<p><b><a href='http://youtube.com/watch?v=" + results[i].video.id + "' target='new'>" + results[i].video.title + "</a></b></p>"
-					html += 	"<p><b>Channel:</b> <a href='http://www.youtube.com/channel/" + results[i].channel.id + "'><i>" + results[i].channel.title + "</i></a></p>";
-					if (!channelExists) {
-						html += 	"<button \
-										id='youtuber_batch_add_channel_" + results[i].channel.id + "'  \
-										data-channel-id='" + results[i].channel.id + "' \
-										data-channel-title='" + results[i].channel.title + "' \
-										type='submit' \
-										class='btn btn-primary btn-sm'\
-										>Add YouTuber</button>";
-					}
-					//html += 	"<button id='youtuber_batch_add_channel' type='submit' class='btn btn-success btn-sm'>Add YouTuber</button>";
-					html += "</div>";
-					$('#youtuber_batch_add_results_list').append(html);
-
-					$('#youtuber_batch_add_channel_' + results[i].channel.id).click(function(){
-						var channelId = $(this).attr('data-channel-id');
-						var channelName = $(this).attr('data-channel-title');
-						API.addYoutuber(false, function(yter){
-							//yter.youtubeId = channelId;
-							//yter.name_override = channelName;
-							yter.saveWith(channelId, channelName);
-						});
-					})
-				}
-
-			}, function(){
-
-			});
+			API.searchYouTube(str, "date", resultsFunc, function(){});
+		});
+		$('#youtuber_batch_add_modal_search_relevance').click(function(){
+			var str = $('#youtuber_batch_add_modal_search_text').val();
+			API.searchYouTube(str, "relevance", resultsFunc, function(){});
 		});
 	}
 

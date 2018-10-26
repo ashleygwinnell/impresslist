@@ -464,11 +464,11 @@ function util_isLocalhost() {
 	return $_SERVER['HTTP_HOST'] == "localhost";
 }
 
-function youtube_v3_search($terms, $sinceTimestamp = 0) {
+function youtube_v3_search($terms, $order = "date", $sinceTimestamp = 0) {
 	global $youtube_apiKey;
 	if (strlen($terms) == 0) { return 0; }
 
-	$url = "https://www.googleapis.com/youtube/v3/search?key=" . $youtube_apiKey . "&part=snippet&q=" . urlencode($terms) . "&maxResults=50&order=date&type=video";
+	$url = "https://www.googleapis.com/youtube/v3/search?key=" . $youtube_apiKey . "&part=snippet&q=" . urlencode($terms) . "&maxResults=50&order=" . $order. "&type=video";
 	if ($sinceTimestamp > 0) {
 		$url .= "publishedAfter=";
 	}
