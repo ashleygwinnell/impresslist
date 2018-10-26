@@ -3118,7 +3118,7 @@ if (!isset($_GET['endpoint'])) {
 			include_once("init.php");
 
 			$required_fields = array(
-				array('name' => 'name', 'type' => 'alphanumericspaces'),
+				array('name' => 'name', 'type' => 'textarea'),
 				array('name' => 'channel', 'type' => 'textarea'),
 				array('name' => 'email', 'type' => 'email'),
 				array('name' => 'twitter', 'type' => 'alphanumericunderscores'),
