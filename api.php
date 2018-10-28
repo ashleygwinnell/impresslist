@@ -145,6 +145,8 @@ if (!isset($_GET['endpoint'])) {
 		"/person/remove-publication/",
 		"/person/add-youtube-channel/",
 		"/person/remove-youtube-channel/",
+		"/person/add-twitchchannel/",
+		"/person/remove-twitchchannel/",
 		"/person/set-priority/",
 		"/person/set-assignment/",
 
@@ -163,7 +165,12 @@ if (!isset($_GET['endpoint'])) {
 		"/youtuber/set-priority/",
 		"/youtuber/remove/",
 
-		// TODO: Twitch Channels
+		// Twitch Channels
+		"/twitchchannel/list/",
+		"/twitchchannel/add/",
+		"/twitchchannel/save/",
+		"/twitchchannel/set-priority/",
+		"/twitchchannel/remove/",
 
 		// Projects
 		"/project/add/",
@@ -188,6 +195,7 @@ if (!isset($_GET['endpoint'])) {
 
 		"/person-publication/list/",
 		"/person-youtube-channel/list/",
+		"/person-twitchchannel/list/",
 		"/email/list/",
 		"/email/remove/",
 
@@ -215,6 +223,9 @@ if (!isset($_GET['endpoint'])) {
 		"/coverage/youtuber/add/",
 		"/coverage/youtuber/save/",
 		"/coverage/youtuber/remove/",
+		"/coverage/twitchchannel/add/",
+		"/coverage/twitchchannel/save/",
+		"/coverage/twitchchannel/remove/",
 
 		// Watched Game management.
 		"/watchedgame/list/",
@@ -246,6 +257,8 @@ if (!isset($_GET['endpoint'])) {
 		"/social/account/facebook-page/add/",
 		"/social/account/facebook-page/remove/",
 		"/social/account/facebook-page/list/",
+
+		"/social/account/twitch/add-callback/",
 
 		// Chat
 		"/chat/online-users/",
@@ -1955,7 +1968,7 @@ if (!isset($_GET['endpoint'])) {
 						if (strlen($line) == 0) { continue; }
 						$csv = str_getcsv($line, $delimiter, $enclosure);
 
-						print_r($csv);
+						//print_r($csv);
 						if (count($csv) != $importOrderLength) {
 							$importerror = true;
 							$importerrorint = $i;
@@ -1975,8 +1988,150 @@ if (!isset($_GET['endpoint'])) {
 
 						$result = new stdClass();
 						$result->success = true;
-						$result->data = $list;
-						$result->order = $importOrder;
+						//$result->data = $list;
+						//$result->order = $importOrder;
+
+						$order = explode(",", $importOrder);
+						if (strpos($order[0], "person") === 0) {
+							$result->type = "person";
+						}
+						else if (strpos($order[0], "publication") === 0) {
+							$result->type = "publication";
+						}
+						else if (strpos($order[0], "twitchchannel") === 0) {
+							$result->type = "twitchchannel";
+
+							// Build data
+							$map = [
+								"twitchchannel_name" => "twitchUsername",
+								"twitchchannel_email" => "email",
+								"twitchchannel_notes" => "notes",
+								"twitchchannel_twitter" => "twitter",
+								"twitchchannel_unknown" => ""
+							];
+
+							$countImports = 0;
+							$countSkips = 0;
+							$skips = [];
+							for($i = 0; $i < count($list); $i++) {
+
+
+								$data = [
+									'twitchId' => '',
+									'twitchDescription' => '',
+									'twitchBroadcasterType' => '',
+									'twitchProfileImageUrl' => '',
+									'twitchOfflineImageUrl' => '',
+									'twitchUsername' => '',
+									'name' => '',
+									'email' => '',
+									'priorities' => '',
+									'subscribers' => '0',
+									'views' => '0',
+									'twitter' => '',
+									'twitter_followers' => 0,
+									'twitter_updatedon' => 0,
+									'notes' => '',
+									'lang' => '',
+									'lastpostedon' => 0,
+									'lastpostedon_updatedon' => 0,
+									'removed' => 0,
+									'lastscrapedon' => 0
+								];
+
+								$thisUsername = "";
+								$intoHeaders = [];
+								$intoKeys = [];
+								$intoVals = [];
+								$existing = false;
+								for($j = 0; $j < count($order); $j++) {
+									if ($map[$order[$j]] == "") {
+										continue;
+									}
+									$h = $map[$order[$j]];
+									$v = $list[$i][$j];
+
+
+									//echo $v . "<br/>\n";
+									if ($v == ""){
+										continue;
+									}
+
+									$intoHeaders[] = $h;
+									//$intoKeys[] = ":var" . count($intoKeys);
+									$intoVals[] = $v;
+
+									$data[$h] = $v;
+
+
+									if ($h == "twitchUsername") {
+										$thisUsername = $v;
+										$existingItem = db_singletwitchchannelbyusername($db, $v);
+										if ($existingItem != null) {
+											$existing = true;
+										}
+									}
+								}
+								if ($existing) {
+									$skips[] = $thisUsername;
+									$countSkips++;
+									continue;
+								}
+
+								//print_r($intoHeaders);
+								//print_r($intoKeys);
+
+								// " . implode(",", $intoHeaders) . "
+								// " . implode(",", $intoKeys) . "
+
+								$keys = array_keys($data);
+								$vals = "";
+								for($j = 0; $j < count($keys); $j++) {
+									$vals .= ":" . $keys[$j];
+									if ($j < count($keys) - 1) {
+										$vals .= ",";
+									}
+								}
+
+								$stmt = $db->prepare(" INSERT INTO twitchchannel  (
+																			id,
+																			" . implode(",", $keys) . "
+																		) VALUES (
+																			NULL,
+																			" . $vals . "
+																		);");
+
+								$twitchUser = twitch_getUsersFromLogin($thisUsername);
+								if (!$twitchUser || !$twitchUser['data'] || !$twitchUser['data'][0]) {
+									$skips[] = $thisUsername;
+									$countSkips++;
+									continue;
+								}
+
+								$data['twitchId'] = $twitchUser['data'][0]['id'];
+								$data['twitchUsername'] = $twitchUser['data'][0]['login'];
+								$data['name'] = $twitchUser['data'][0]['display_name'];
+								$data['twitchDescription'] = $twitchUser['data'][0]['description'];
+								$data['twitchBroadcasterType'] = $twitchUser['data'][0]['broadcaster_type'];
+								$data['twitchProfileImageUrl'] = $twitchUser['data'][0]['profile_image_url'];
+								$data['twitchOfflineImageUrl'] = $twitchUser['data'][0]['offline_image_url'];
+								$data['views'] = $twitchUser['data'][0]['view_count'];
+
+
+ 								for($j = 0; $j < count($keys); $j++) {
+									$stmt->bindValue(":" . $keys[$j], $data[$keys[$j]], (is_numeric($data[$keys[$j]])? Database::VARTYPE_INTEGER : Database::VARTYPE_STRING));
+								}
+
+							 	// for($j = 0; $j < count($intoVals); $j++) {
+							 	// 	$stmt->bindValue(":var" . $j, $intoVals[$j], Database::VARTYPE_STRING);
+							 	// }
+							 	$stmt->execute();
+							 	$countImports++;
+
+							}
+							$result->message = "Imported " . $countImports . " items. Skipped " . $countSkips . " items (" . implode(",", $skips) . ").";
+
+						}
 
 					}
 
@@ -2046,6 +2201,18 @@ if (!isset($_GET['endpoint'])) {
 			$result->success = true;
 			$result->personYoutubeChannels = $personYoutubers;
 		}
+		else if ($endpoint == "/person-twitchchannel/list/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$personTwitchChannels = $db->query("SELECT * FROM person_twitchchannel; ");
+			usort($personTwitchChannels, "sortById");
+
+			$result = new stdClass();
+			$result->success = true;
+			$result->personTwitchChannels = $personTwitchChannels;
+		}
 		else if ($endpoint == "/youtuber/list/")
 		{
 			$require_login = true;
@@ -2064,6 +2231,25 @@ if (!isset($_GET['endpoint'])) {
 			$result = new stdClass();
 			$result->success = true;
 			$result->youtubechannels = $youtubeChannels;
+		}
+		else if ($endpoint == "/twitchchannel/list/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$twitchchannels = $db->query("SELECT * FROM twitchchannel WHERE removed = 0;");
+			$num_youtubeChannels = count($twitchchannels);
+			//usort($youtubeChannels, "sortByName");
+			usort($twitchchannels, "sortById");
+
+			for($i = 0; $i < $num_youtubeChannels; $i++) {
+				$twitchchannels[$i]['notes'] = utf8_encode($twitchchannels[$i]['notes']);
+				$twitchchannels[$i]['description'] = utf8_encode($twitchchannels[$i]['description']);
+			}
+
+			$result = new stdClass();
+			$result->success = true;
+			$result->twitchchannels = $twitchchannels;
 		}
 		else if ($endpoint == "/email/list/")
 		{
@@ -2194,7 +2380,17 @@ if (!isset($_GET['endpoint'])) {
 				$youtuber_coverage[$i]['type'] = "youtuber";
 			}
 
-			$coverage = array_merge($publication_coverage, $youtuber_coverage);
+			$twitchchannel_coverage = $db->query("SELECT * FROM twitchchannel_coverage WHERE game = {$user_currentGame} AND removed = 0 ORDER BY utime DESC;");
+			$num_twitchchannel_coverage = count($twitchchannel_coverage);
+			for($i = 0; $i < $num_twitchchannel_coverage; $i++) {
+				$twitchchannel_coverage[$i]['type'] = "twitchchannel";
+				$twitchchannel_coverage[$i]['thumbnail'] = str_replace("%{width}", "300", $twitchchannel_coverage[$i]['thumbnail']);
+				$twitchchannel_coverage[$i]['thumbnail'] = str_replace("%{height}", "200", $twitchchannel_coverage[$i]['thumbnail']);
+				// iconurl = iconurl.replace("\%{width}", "300");
+				// iconurl = iconurl.replace("\%{height}", "300");
+			}
+
+			$coverage = array_merge($publication_coverage, $youtuber_coverage, $twitchchannel_coverage);
 
 			usort($coverage, "sortByUtime");
 
@@ -2410,6 +2606,116 @@ if (!isset($_GET['endpoint'])) {
 			if (!$error) {
 
 				$stmt = $db->prepare(" UPDATE youtuber_coverage SET removed = 1 WHERE id = :id");
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+				$stmt->execute();
+
+				$result = new stdClass();
+				$result->success = true;
+			}
+		}
+
+		else if ($endpoint == "/coverage/twitchchannel/add/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$stmt = $db->prepare(" INSERT INTO twitchchannel_coverage  	 (id, 	twitchchannel,  person,  game,  url,  title,  thumbnail,  `utime`,  thanked, removed)
+															  VALUES      (NULL, 0, 		    0,       :game, :url, :title, :thumbnail, :utime,  :thanked, :removed); ");
+			$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":url", "http://twitch.tv/", Database::VARTYPE_STRING);
+			$stmt->bindValue(":title", "An awesome video stream of your game project.", Database::VARTYPE_STRING);
+			$stmt->bindValue(":thumbnail", "", Database::VARTYPE_STRING);
+			$stmt->bindValue(":utime", time(), Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":thanked", 0, Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
+			$stmt->execute();
+
+			$coverageId = $db->lastInsertRowID();
+
+			$coverages = $db->query("SELECT * FROM twitchchannel_coverage WHERE id = {$coverageId};");
+			$coverages[0]['type'] = "twitchchannel";
+			$result = new stdClass();
+			$result->success = true;
+			$result->coverage = $coverages[0];
+		}
+		else if ($endpoint == "/coverage/twitchchannel/save/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer'),
+				array('name' => 'title', 'type' => 'textarea'),
+				array('name' => 'url', 'type' => 'url'),
+				array('name' => 'thanked', 'type' => 'boolean')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+
+				// validate person
+				$person = $_GET['person'];
+				if ($_GET['person'] != "" && !util_isInteger($person)) {
+					$result = api_error("person was not an integer");
+				} else {
+
+					// validate publication
+					$twitchchannel = $_GET['twitchchannel'];
+					if ($_GET['twitchchannel'] != "" && !util_isInteger($twitchchannel)) {
+						$result = api_error("twitchchannel was not an integer");
+					} else {
+
+						$title = "";
+						$thanked = ($_GET['thanked'] == "true")?1:0;
+						//die($_GET['thanked']);
+						$video_id = substr($_GET['url'], strrpos($_GET['url'], "=") + 1);
+						$thumbnail = "";// ($video_id === FALSE)?"http://www.youtube.com/yt/brand/media/image/YouTube-icon-full_color.png":"https://i.ytimg.com/vi/{$video_id}/default.jpg";
+
+
+						$stmt = $db->prepare(" UPDATE twitchchannel_coverage
+												SET
+													twitchchannel = :twitchchannel,
+													person = :person,
+													game = :game,
+													url = :url,
+													title = :title,
+													thumbnail = :thumbnail,
+													utime = :utime,
+													thanked = :thanked
+												WHERE id = :id;");
+						$stmt->bindValue(":twitchchannel", $twitchchannel, Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":person", $person, Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":url", $_GET['url'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":title", strip_tags(stripslashes($_GET['title'])), Database::VARTYPE_STRING);
+						$stmt->bindValue(":thumbnail", $thumbnail, Database::VARTYPE_STRING);
+						$stmt->bindValue(":utime", $_GET['timestamp'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":thanked", $thanked, Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+						$stmt->execute();
+						//echo $_GET['title'];
+						$coverages = $db->query("SELECT * FROM twitchchannel_coverage WHERE id = " . $_GET['id'] . ";");
+						$coverages[0]['type'] = "twitchchannel";
+						$result = new stdClass();
+						$result->success = true;
+						$result->coverage = $coverages[0];
+						//$result->test = $_GET['title'];
+					}
+				}
+			}
+		}
+		else if ($endpoint == "/coverage/twitchchannel/remove/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer')
+			);
+
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+
+				$stmt = $db->prepare(" UPDATE twitchchannel_coverage SET removed = 1 WHERE id = :id");
 				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
 				$stmt->execute();
 
@@ -2852,6 +3158,62 @@ if (!isset($_GET['endpoint'])) {
 				$result->success = true;
 			}
 		}
+		else if ($endpoint == "/person/add-twitchchannel/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'person', 'type' => 'integer'),
+				array('name' => 'twitchchannel', 'type' => 'integer')
+			);
+
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error)
+			{
+				// make sure this user doesn't have this youtube channel already.
+				$stmt = $db->prepare("SELECT COUNT(*) as count FROM person_twitchchannel WHERE person = :person AND twitchchannel = :twitchchannel ;");
+				$stmt->bindValue(":person", $_GET['person'], Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":twitchchannel", $_GET['twitchchannel'], Database::VARTYPE_INTEGER);
+				$row = $stmt->query();
+				if ($row[0]['count'] > 0) {
+					$result = api_error("This person already has this Twitch Channel attached.");
+				} else {
+
+					$stmt = $db->prepare(" INSERT INTO person_twitchchannel (id, person, twitchchannel) VALUES (NULL, :person, :twitchchannel); ");
+					$stmt->bindValue(":person", $_GET['person'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":twitchchannel", $_GET['twitchchannel'], Database::VARTYPE_INTEGER);
+					$rs = $stmt->execute();
+
+					$personTwitchChannel_id = $db->lastInsertRowID();
+
+					$result = new stdClass();
+					$result->success = true;
+					$result->personTwitchChannel = db_singlepersontwitchchannel($db, $personTwitchChannel_id);
+				}
+			}
+		}
+		else if ($endpoint == "/person/remove-twitchchannel/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'personTwitchChannel', 'type' => 'integer')
+			);
+
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error)
+			{
+				$stmt = $db->prepare(" DELETE FROM person_twitchchannel WHERE id = :id;");
+				$stmt->bindValue(":id", $_GET['personTwitchChannel'], Database::VARTYPE_INTEGER);
+				$rs = $stmt->execute();
+
+				$result = new stdClass();
+				$result->success = true;
+			}
+		}
+
 		else if ($endpoint == "/person/set-assignment/")
 		{
 			$require_login = true;
@@ -3249,6 +3611,219 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 				$stmt = $db->prepare("UPDATE youtuber SET removed = 1 WHERE id = :id;");
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+				$rs = $stmt->execute();
+
+				$result = new stdClass();
+				$result->success = true;
+			}
+		}
+		else if ($endpoint == "/twitchchannel/add/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				//array('name' => 'channel', 'type' => 'textarea'),
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+
+				$twitchDefault = 'twitch';
+				$twitch = twitch_getUsersFromLogin($twitchDefault);
+				if (!$twitch) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = "Could not get Twitch channel defaults from Twitch API.";
+				} else {
+					$data = $twitch['data'][0];
+
+					$subs = twitch_countSubscribers($data['id']);
+
+
+					$twitter = "twitch";
+					$twitter_followers = twitter_countFollowers($twitter);
+					if ($twitter_followers == "") { $twitter_followers = 0; }
+
+					$stmt = $db->prepare("INSERT INTO twitchchannel (
+											`id`,
+											`twitchId`, `twitchDescription`, `twitchBroadcasterType`, `twitchProfileImageUrl`, `twitchOfflineImageUrl`, `twitchUsername`,
+											`name`,
+											`email`,
+											priorities,
+											subscribers,
+											`views`,
+											twitter,
+											twitter_followers,
+											twitter_updatedon,
+											notes,
+											lang,
+											lastpostedon,
+											lastpostedon_updatedon,
+											removed,
+											lastscrapedon
+										)
+										VALUES (
+											NULL,
+											:twitchId, :twitchDescription, :twitchBroadcasterType, :twitchProfileImage, :twitchOfflineImage, :twitchUsername,
+											:name,  :email, :priorities, :subs, 			 :views,  :twitter, 		:twitter_followers, :twitter_updatedon,      		'',  	'', 	0,  		0, 						0, 			0
+										); ");
+					$stmt->bindValue(":twitchId", $data['id'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":twitchDescription", $data['description'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":twitchBroadcasterType", $data['broadcaster_type'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":twitchProfileImage", $data['profile_image_url'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":twitchOfflineImage", $data['offline_image_url'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":twitchUsername", $data['login'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":name", $data['display_name'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":email", '', Database::VARTYPE_STRING);
+					$stmt->bindValue(":priorities", db_defaultPrioritiesString($db), Database::VARTYPE_STRING);
+					$stmt->bindValue(":views", $data['view_count'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":subs", $subs, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);
+					$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_STRING);
+					$stmt->bindValue(":twitter_updatedon", time(), Database::VARTYPE_STRING);
+					$stmt->execute();
+
+					$twitchchannel_id = $db->lastInsertRowID();
+
+					$result = new stdClass();
+					$result->success = true;
+					$result->twitchchannel = db_singletwitchchannel($db, $twitchchannel_id);
+				}
+
+			}
+		}
+		else if ($endpoint == "/twitchchannel/save/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'channel', 'type' => 'textarea'),
+				array('name' => 'email', 'type' => 'email'),
+				array('name' => 'twitter', 'type' => 'alphanumericunderscores'),
+				array('name' => 'notes', 'type' => 'textarea')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+
+				$twitch = twitch_getUsersFromLogin($_GET['channel']);
+				if (!$twitch) {
+					$result = api_error("Twitch channel '" . $_GET['channel'] . "' not found.");
+				} else {
+
+					//print_r($twitch);
+					$data = $twitch['data'][0];
+
+					$subs = twitch_countSubscribers($data['id']);
+
+					$twitter = $_GET['twitter'];
+					$twitter_followers = 0;
+					if (strlen($twitter) > 0) {
+						$twitter_followers = twitter_countFollowers($_GET['twitter']);
+					}
+					if ($twitter_followers == "") { $twitter_followers = 0; }
+					$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
+
+					$stmt = $db->prepare(" UPDATE twitchchannel SET
+												twitchId = :twitchId,
+												twitchDescription = :twitchDescription,
+												twitchBroadcasterType = :twitchBroadcasterType,
+												twitchProfileImageUrl = :twitchProfileImage,
+												twitchOfflineImageUrl = :twitchOfflineImage,
+												twitchUsername = :twitchUsername,
+												name = :name,
+												email = :email,
+												subscribers = :subscribers,
+												views = :views,
+												lastpostedon = :lastpostedon,
+												twitter = :twitter,
+												" . $twitter_followers_sql . "
+												notes = :notes
+											WHERE
+												id = :id;
+										");
+					$stmt->bindValue(":twitchId", intval($data['id']), Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":twitchDescription", $data['description'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":twitchBroadcasterType", $data['broadcaster_type'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":twitchProfileImage", $data['profile_image_url'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":twitchOfflineImage", $data['offline_image_url'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":twitchUsername", $data['login'], Database::VARTYPE_STRING);
+
+					$stmt->bindValue(":name", $data['display_name'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":email", $_GET['email'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":subscribers", "" . $subs, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":views", "" . $data['view_count'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":lastpostedon", 0, Database::VARTYPE_INTEGER);
+
+					$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);
+					if ($twitter_followers > 0) {
+						$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
+					}
+					$stmt->bindValue(":notes", strip_tags(stripslashes($_GET['notes'])), Database::VARTYPE_STRING);
+					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+					$rs = $stmt->execute();
+
+
+					$result = new stdClass();
+					$result->success = true;
+					$result->twitchchannel = db_singletwitchchannel($db, $_GET['id']);
+				}
+			}
+		}
+		else if ($endpoint == "/twitchchannel/set-priority/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer'),
+				array('name' => 'priority', 'type' => 'priority'),
+				array('name' => 'game', 'type' => 'integer')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+
+				// TODO: validate that game passed is actually a game.
+				// TODO: validate that id passed is actually a youtuber.
+
+				$singleTwitchChannel = db_singletwitchchannel($db, $_GET['id']);
+				$games = explode(",", $singleTwitchChannel['priorities']);
+				$foundGame = false;
+				for($i = 0; $i < count($games); $i++) {
+					$pieces = explode("=", $games[$i]);
+					if ($pieces[0] == $_GET['game']) {
+						$foundGame = true;
+						$pieces[1] = $_GET['priority'];
+						$games[$i] = implode("=", $pieces);
+					}
+				}
+				if ($foundGame == false) {
+					$games[] = $_GET['game'] . "=" . $_GET['priority'];
+				}
+				$priorities = implode(",", $games);
+
+				$stmt = $db->prepare(" UPDATE twitchchannel SET priorities = :priorities WHERE id = :id ");
+				$stmt->bindValue(":priorities", $priorities, Database::VARTYPE_STRING);
+				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+				$rs = $stmt->execute();
+
+				$result = new stdClass();
+				$result->success = true;
+				$result->twitchchannel = db_singletwitchchannel($db, $_GET['id']);
+			}
+		}
+		else if ($endpoint == "/twitchchannel/remove/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+				$stmt = $db->prepare("UPDATE twitchchannel SET removed = 1 WHERE id = :id;");
 				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
 				$rs = $stmt->execute();
 

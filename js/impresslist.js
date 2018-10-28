@@ -260,6 +260,15 @@ Coverage = function(data) {
 					if (ret) { return ret; }
 				}
 			}
+		} else if (this.field('type') == "twitchchannel") {
+			// Search all YOuTubers too.
+			for(var i = 0; i < impresslist.twitchchannels.length; ++i) {
+				if (impresslist.twitchchannels[i].field('id') == this.field('twitchchannel')) {
+					var pub = impresslist.findTwitchChannelById( this.field('twitchchannel') );
+					ret = pub.search(text);
+					if (ret) { return ret; }
+				}
+			}
 		}
 
 		return false;
@@ -286,6 +295,9 @@ Coverage = function(data) {
 		var type = this.field('type');
 		if (type == "publication") {
 			html = "		<div data-coverage-id='" + this.field('id') + "' data-coverage-type='" + this.field('type') + "' class='media'>	\
+								<div class='media-left' style='min-width:50px; width:50px;'> \
+									<img class='media-object fl' style='width:50px;text-align:right;' src='/images/icon-web.png' alt='Image'></a> \
+								</div> \
 								<div class='media-left' style='min-width:74px; width:74px;'> \
 									<a href='" + url + "' style='text-align:right;'><img class='media-object fr' style='width:16px;text-align:right;' src='" + iconurl + "' alt='Image'></a> \
 								</div> \
@@ -301,12 +313,16 @@ Coverage = function(data) {
 									<button id='edit-coverage' class='btn btn-default btn-lg' data-coverage-id='" + this.field('id') + "'  data-toggle='modal' data-target='.coverage_modal' ><span class='glyphicon glyphicon-pencil'></span></button> \
 								</div> \
 							</div>";
-		} else if (type == "youtuber") {
+		}
+		else if (type == "youtuber") {
 			//var youtuber = impresslist.findYoutuberById( this.field('youtuber') );
 			iconurl = this.field('thumbnail');
 			//url = youtuber.field('url');;
 
 			html = "		<div data-youtube-coverage-id='" + this.field('id') + "' data-coverage-type='" + this.field('type') + "' class='media'>	\
+								<div class='media-left' style='min-width:50px; width:50px;'> \
+									<img class='media-object fl' style='width:50px;text-align:right;' src='/images/icon-youtube.png' alt='Image'></a> \
+								</div> \
 								<div class='media-left'> \
 									<a href='" + url + "'><img data-youtube-coverage-id='" + this.id + "' data-field='thumbnail' class='media-object' width=64 src='" + iconurl + "' alt='Image'></a> \
 								</div> \
@@ -323,6 +339,35 @@ Coverage = function(data) {
 								</div> \
 							</div>";
 		}
+		else if (type == "twitchchannel") {
+			//var youtuber = impresslist.findYoutuberById( this.field('youtuber') );
+			iconurl = this.field('thumbnail');
+			// console.log(iconurl);
+			// iconurl = iconurl.replace("\%{width}", "300");
+			// iconurl = iconurl.replace("\%{height}", "300");
+			// console.log(iconurl);
+			//url = youtuber.field('url');;
+
+			html = "		<div data-twitchchannel-coverage-id='" + this.field('id') + "' data-coverage-type='" + this.field('type') + "' class='media'>	\
+								<div class='media-left' style='min-width:50px; width:50px;'> \
+									<img class='media-object fl' style='width:50px;text-align:right;' src='/images/icon-twitch.png' alt='Image'></a> \
+								</div> \
+								<div class='media-left'> \
+									<a href='" + url + "'><img data-twitchchannel-coverage-id='" + this.id + "' data-field='thumbnail' class='media-object' width=64 src='" + encodeURIComponent(iconurl) + "' alt='Image'></a> \
+								</div> \
+								<div class='media-body'> \
+									<div class='fr' style='text-align:right;'>\
+										<p style='margin-bottom:5px;font-style:italic;'><span data-twitchchannel-coverage-id='" + this.id + "' data-field='utime' >" + impresslist.util.relativetime_contact(this.field('utime')) + "</span></p>\
+										<p data-twitchchannel-coverage-id='" + this.id + "' data-field='thanked'></p>\
+									</div> \
+									<h4 data-twitchchannel-coverage-id='" + this.id + "' data-field='name' data-youtuber-id='" + this.fields['twitchchannel'] + "' class='media-heading' >Unknown Twitch Channel</h4> \
+									<p><a data-twitchchannel-coverage-id='" + this.id + "' data-field='url' href='" + this.field('url') + "' target='new'>" + this.field('title') + "</a><br/>\
+								</div> \
+								<div class='media-right'> \
+									<button id='edit-twitchchannel-coverage' class='btn btn-default btn-lg' data-twitchchannel-coverage-id='" + this.field('id') + "'  data-toggle='modal' data-target='.coverage_modal' ><span class='glyphicon glyphicon-pencil'></span></button> \
+								</div> \
+							</div>";
+		}
 		if (fromInit) {
 			$(parent).append(html);
 		} else {
@@ -334,17 +379,26 @@ Coverage = function(data) {
 		if (type == "publication") {
 			var t = this;
 			$("#edit-coverage[data-coverage-id='" + this.id + "']").click(function() { t.open(); });
-		} else if (type == "youtuber") {
+		}
+		else if (type == "youtuber") {
 			var t = this;
 			$("#edit-youtube-coverage[data-youtube-coverage-id='" + this.id + "']").click(function() { t.open(); });
+		}
+		else if (type == "twitchchannel") {
+			var t = this;
+			$("#edit-twitchchannel-coverage[data-twitchchannel-coverage-id='" + this.id + "']").click(function() { t.open(); });
 		}
 
 	}
 	Coverage.prototype.removeItem = function() {
 		if (this.field('type') == 'publication') {
 			$(".media[data-coverage-id='" + this.field('id') + "']").remove();
-		} else if (this.field('type') == 'youtuber') {
+		}
+		else if (this.field('type') == 'youtuber') {
 			$(".media[data-youtube-coverage-id='" + this.field('id') + "']").remove();
+		}
+		else if (this.field('type') == 'twitchchannel') {
+			$(".media[data-twitchchannel-coverage-id='" + this.field('id') + "']").remove();
 		}
 	}
 	Coverage.prototype.getPersonName = function() {
@@ -352,6 +406,8 @@ Coverage = function(data) {
 		if (p > 0) {
 			return impresslist.findPersonById(p).fullname();
 		} else if (this.fields['youtuber'] > 0) {
+			return "";
+		} else if (this.fields['twitchchannel'] > 0) {
 			return "";
 		}
 		return "Unknown";
@@ -370,6 +426,13 @@ Coverage = function(data) {
 		if (this.fields['youtuber'] > 0) {
 			youtuberId = this.fields['youtuber'];
 			youtuberName = impresslist.findYoutuberById(youtuberId).field('name');
+		}
+
+		var twitchchannelId = "";
+		var twitchchannelName = "";
+		if (this.fields['twitchchannel'] > 0) {
+			twitchchannelId = this.fields['twitchchannel'];
+			twitchchannelName = impresslist.findTwitchChannelById(twitchchannelId).field('name');
 		}
 
 		var personId = "";
@@ -429,6 +492,25 @@ Coverage = function(data) {
 													<label>Results:</label>\
 													<table class='table table-striped' style='margin-bottom:0px;'>\
 														<tbody id='coverage-edit-youtuber-results'> \
+														</tbody> \
+													</table>\
+												</div>\
+											</div>";
+			}
+			else if (this.field('type') == 'twitchchannel') {
+				html += "					<div class='row'>\
+												<div class='form-group col-md-2'>\
+													<label>Twitchchannel:&nbsp; </label> \
+													<input id='coverage-edit-twitchchannel-id' class='form-control' type='text' value='" + twitchchannelId + "' style='width:100%;'/>\
+												</div>\
+												<div class='form-group col-md-4'>\
+													<label>&nbsp; </label> \
+													<input id='coverage-edit-twitchchannel-search' data-twitchchannel-coverage-id='" + this.id + "' data-input-field='twitchchannel' class='form-control' type='text' value='" + twitchchannelName + "' placeholder='Search...' />\
+												</div>\
+												<div id='coverage-edit-twitchchannel-results-container' class='form-group col-md-6' style='display:none;'>\
+													<label>Results:</label>\
+													<table class='table table-striped' style='margin-bottom:0px;'>\
+														<tbody id='coverage-edit-twitchchannel-results'> \
 														</tbody> \
 													</table>\
 												</div>\
@@ -564,6 +646,38 @@ Coverage = function(data) {
 					$('#coverage-edit-youtuber-results-container').hide();
 				});
 			});
+		} else if (this.field('type') == 'twitchchannel') {
+			$("#coverage-edit-twitchchannel-search").keyup(function() {
+				var searchfield = $(this);
+				var text = $(this).val().toLowerCase();
+				if (text.length == 0) {
+					$("#coverage-edit-twitchchannel-results").html("");
+					$('#coverage-edit-twitchchannel-results-container').hide();
+					return;
+				}
+				var html = "";
+				for(var i = 0; i < impresslist.twitchchannels.length; i++) {
+					var include = impresslist.twitchchannels[i].search(text);
+					if (include) {
+						html += "	<tr class='table-list' data-twitchchannel-id='" + impresslist.twitchchannels[i].id + "' data-coverage-edit-twitchchannel-result='true' >\
+										<td>" + impresslist.twitchchannels[i].name + "</td> \
+									</tr>";
+					}
+				}
+				if (html.length == 0) {
+					html += "	<tr> <td colspan='2'>No Results</td> </tr>";
+				}
+				$("#coverage-edit-twitchchannel-results").html(html);
+				$('#coverage-edit-twitchchannel-results-container').show();
+
+				$("[data-coverage-edit-twitchchannel-result='true']").click(function() {
+					var twId = $(this).attr("data-twitchchannel-id");
+					$('#coverage-edit-twitchchannel-id').val("" + twId);
+					$("#coverage-edit-twitchchannel-search").val( $(this).find('td').html() );
+					$("#coverage-edit-twitchchannel-results").html("");
+					$('#coverage-edit-twitchchannel-results-container').hide();
+				});
+			});
 		}
 
 		// Edit perosn binds
@@ -580,9 +694,9 @@ Coverage = function(data) {
 				var include = impresslist.people[i].search(text);
 				if (include) {
 					html += "	<tr class='table-list' data-person-id='" + impresslist.people[i].id + "' data-coverage-edit-person-result='true' >\
-									<td>" + impresslist.people[i].name + "</td> \
+									<td>" + impresslist.people[i].fullname() + "</td> \
 								</tr>";
-				}
+				}// fullname
 			}
 			if (html.length == 0) {
 				html += "	<tr> <td colspan='2'>No Results</td> </tr>";
@@ -617,6 +731,19 @@ Coverage = function(data) {
 			}
 
 			selector = "data-youtube-coverage-id";
+
+			$("[" + selector + "='" + this.id + "'][data-field='thumbnail']").attr('src', this.field('thumbnail'));
+		}
+		if (this.field('type') == 'twitchchannel') {
+			publicationName = "Unknown Twitch Channel";
+			if (this.fields['twitchchannel'] > 0) {
+				youtuberObj = impresslist.findTwitchChannelById(this.fields['twitchchannel']);
+				if (youtuberObj != null) {
+					publicationName = youtuberObj.name;
+				}
+			}
+
+			selector = "data-twitchchannel-coverage-id";
 
 			$("[" + selector + "='" + this.id + "'][data-field='thumbnail']").attr('src', this.field('thumbnail'));
 		}
@@ -682,6 +809,25 @@ Coverage = function(data) {
 			console.log("thanked: " + thanked);*/
 			API.saveYoutuberCoverage(this, youtuber, person, title, url, timestamp, thanked);
 		}
+		else if (this.field('type') == 'twitchchannel') {
+			var title = $('#coverage-edit-title').val();
+			var url = $('#coverage-edit-url').val();
+			var timestamp = moment($('#coverage-edit-timestamp').val(), "L h:mma").format("X");
+			var twitchchannel = $('#coverage-edit-twitchchannel-id').val();
+			var person = $('#coverage-edit-person-id').val();
+			var thanked = $('#coverage-edit-thanked').is(':checked');
+
+			/*console.log("youtube coverage save");
+			console.log("----");
+			console.log(this);
+			console.log("title: " + title);
+			console.log("url: " + url);
+			console.log("timestamp: " + timestamp);
+			console.log("youtuber: " + youtuber);
+			console.log("person: " + person);
+			console.log("thanked: " + thanked);*/
+			API.saveTwitchChannelCoverage(this, twitchchannel, person, title, url, timestamp, thanked);
+		}
 
 	}
 	Coverage.prototype.close = function() {
@@ -692,6 +838,8 @@ Coverage = function(data) {
 			API.removePublicationCoverage(this);
 		} else if (this.field('type') == 'youtuber') {
 			API.removeYoutuberCoverage(this);
+		} else if (this.field('type') == 'twitchchannel') {
+			API.removeTwitchChannelCoverage(this);
 		}
 	}
 
@@ -1053,6 +1201,244 @@ YouTuberBatchModal = function() {
 	}
 
 
+TwitchChannel = function(data) {
+	DBO.call(this, data);
+}
+	TwitchChannel.prototype = Object.create(DBO.prototype);
+	TwitchChannel.prototype.constructor = TwitchChannel;
+	TwitchChannel.prototype.init = function(data) {
+		DBO.prototype.init.call(this, data);
+		this.id = parseInt(this.field('id'));
+		this.name = this.field('name');
+
+		this.initPriorities('priorities');
+	}
+
+	TwitchChannel.prototype.createTableRow = function() {
+		var html = "	<tr data-twitchchannel-id='" + this.field('id') + "' data-twitchchannel-tablerow='true' class='table-list' data-toggle='modal' data-target='.twitchchannel_modal'> \
+							<!-- <td data-twitchchannel-id='" + this.field('id') + "' data-field='name' data-value='" + this.field('name') + "'>" + this.field('name') + "</td> -->\
+\
+							<!-- <td data-twitchchannel-id='" + this.field('id') + "' data-field='id' data-value='" + this.field('id') + "'>" + this.field('id') + "</td> -->\
+							<td data-value='" + this.field('name') + "'> \
+								<span data-twitchchannel-id='" + this.field('id') + "' data-field='name' >" + this.field('name') + "</span> \
+								<div data-twitchchannel-id='" + this.field('id') + "' data-field='email-list'></div> \
+							</td> \
+\
+\
+							<td data-twitchchannel-id='" + this.field('id') + "' data-field='priority' data-value='" + this.priority() + "'>" + Priority.name(this.priority()) + "</td> \
+							<td data-twitchchannel-id='" + this.field('id') + "' data-field='subscribers' data-value='" + this.field('subscribers') + "'>" + new Number(this.field('subscribers')).toLocaleString() + "</td> \
+							<td data-twitchchannel-id='" + this.field('id') + "' data-field='views' data-value='" + this.field('views') + "'>" + new Number(this.field('views')).toLocaleString() + "</td> \
+							<td data-twitchchannel-id='" + this.field('id') + "' data-field='twitter_followers' data-value='" + this.field('twitter_followers') + "'>" + this.twitterCell() + "</td> \
+							<td data-twitchchannel-id='" + this.field('id') + "' data-field='lastpostedon' data-value='" + this.field('lastpostedon') + "'>" + impresslist.util.relativetime_contact(this.field('lastpostedon')) + "</td> \
+						</tr>";
+		$('#twitchchannels').append(html);
+
+		var twitchchannel = this;
+		$(this.openSelector()).click(function() {
+			twitchchannel.open();
+		});
+	};
+	TwitchChannel.prototype.openSelector = function() {
+		return "#twitchchannels [data-twitchchannel-tablerow='true'][data-twitchchannel-id='" + this.id + "']";
+	};
+
+	TwitchChannel.prototype.removeTableRow = function() {
+		$("#twitchchannels [data-twitchchannel-tablerow='true'][data-twitchchannel-id='" + this.id + "']").remove();
+	}
+	TwitchChannel.prototype.onAdded = function() {
+		this.createTableRow();
+	}
+	TwitchChannel.prototype.onRemoved = function() {
+		//$("[data-twitchchannel-id='" + this.id + "'][data-twitchchannel-tablerow='true']").remove();
+		this.removeTableRow();
+		this.close();
+	}
+	TwitchChannel.prototype.preventOpen = function() {
+		$('#modals').html("");
+	}
+	TwitchChannel.prototype.open = function() {
+		var html = "<div class='modal fade twitchchannel_modal' tabindex='-1' role='dialog'> \
+						<div class='modal-dialog'> \
+							<div class='modal-content' style='padding:5px;'> \
+								<div style='min-height:100px;padding:20px;'>";
+
+			html += " 				<h3 data-twitchchannel-id='" + this.id + "' data-field='name'>" + this.field('name') + "</h3> ";
+			html += "				<form role='form' class='oa' onsubmit='return false;'>	\
+										<div class='row'>\
+											<div class='form-group col-md-8'>\
+												<label for='url'>Channel Name:&nbsp; </label> \
+												<input data-twitchchannel-id='" + this.id + "' data-input-field='twitchUsername' class='form-control' type='text' value='" + this.field('twitchUsername') + "' />\
+											</div>\
+											<div class='form-group col-md-4'>\
+												<label for='url'>Priority:&nbsp; </label>"
+													var priority = this.priority();
+													html += "	<select data-twitchchannel-id='" + this.id + "' data-input-field='priority' class='form-control'>\
+																	<option value='3' " + ((priority==3)?"selected='true'":"") + ">High</option>\
+																	<option value='2' " + ((priority==2)?"selected='true'":"") + ">Medium</option>\
+																	<option value='1' " + ((priority==1)?"selected='true'":"") + ">Low</option>\
+																	<option value='0' " + ((priority==0)?"selected='true'":"") + ">N/A</option>\
+																</select>";
+			html += "						</div>\
+										</div>\
+										<div class='form-group'>\
+											<p data-twitchchannel-id='" + this.id + "' data-field='twitchDescription'>" + this.field("twitchDescription") + "</p>\
+										</div>\
+										<div class='form-group'>\
+											<label for='email'>Email:&nbsp; </label> \
+											<input data-twitchchannel-id='" + this.id + "' data-input-field='email' class='form-control' type='text' value='" + this.field('email') + "' />\
+										</div>\
+										<div class='form-group'>\
+											<label for='twitter'>Twitter Username:&nbsp; </label> \
+											<input data-twitchchannel-id='" + this.id + "' data-input-field='twitter' class='form-control' type='text' value='" + this.field('twitter') + "' />\
+										</div>\
+										<div class='form-group'>\
+											<label for='email'>Notes:&nbsp; </label> \
+											<textarea data-twitchchannel-id='" + this.id + "' data-input-field='notes' class='form-control' style='height:100px;'>" + this.field('notes') + "</textarea>\
+										</div>\
+										<div class='fl'> \
+											<button id='save_twitchchannelId" + this.id + "' type='submit' class='btn btn-primary'>Save</button>";
+			html += "						&nbsp;<button id='close_twitchchannelId" + this.id + "' type='submit' class='btn btn-default'>Close</button>";
+			html += " 					</div><div class='fr'> \
+											<button id='delete_twitchchannelId" + this.id + "' type='submit' class='btn btn-danger'>Remove</button> \
+										</div>\
+									</form>";
+
+		html += "				</div>\
+							</div>\
+						</div>\
+					</div>";
+		$('#modals').html(html);
+
+		var twitchchannel = this;
+		$("#save_twitchchannelId" + this.id).click(function() { twitchchannel.save(); });
+		$("#close_twitchchannelId" + this.id).click(function() { twitchchannel.close(); });
+		$("#delete_twitchchannelId" + this.id).click(function() { API.removeTwitchChannel(twitchchannel); });
+
+		$("[data-twitchchannel-id='" + this.id + "'][data-input-field='priority']").change(function() {
+			twitchchannel.savePriority();
+		});
+	}
+	TwitchChannel.prototype.update = function() {
+		$("[data-twitchchannel-id='" + this.id + "'][data-field='name']").html(this.name);
+		$("[data-twitchchannel-id='" + this.id + "'][data-field='twitchUsername']").html(this.field('twitchUsername'));
+		$("[data-twitchchannel-id='" + this.id + "'][data-field='priority']").html(Priority.name(this.priority()));
+		$("[data-twitchchannel-id='" + this.id + "'][data-field='twitchDescription']").html(this.field('twitchDescription'));
+		$("[data-twitchchannel-id='" + this.id + "'][data-field='views']").html( new Number(this.field('views')).toLocaleString() );
+		$("[data-twitchchannel-id='" + this.id + "'][data-field='twitter']").html(this.field('twitter'));
+		$("[data-twitchchannel-id='" + this.id + "'][data-field='twitter_followers']").html( this.twitterCell() );
+		$("[data-twitchchannel-id='" + this.id + "'][data-field='lastpostedon']").html( impresslist.util.relativetime_contact(this.field('lastpostedon')) );
+	};
+
+	TwitchChannel.prototype.close = function() {
+		$('.twitchchannel_modal').modal('hide');
+	}
+	TwitchChannel.prototype.filter = function(text) {
+		var elementExtras = $("#twitchchannels [data-twitchchannel-extra-tablerow='true'][data-twitchchannel-id='" + this.id + "']");
+		elementExtras.hide();
+
+		var element = $("#twitchchannels [data-twitchchannel-tablerow='true'][data-twitchchannel-id='" + this.id + "']");
+		if (this.search(text) && this.filter_isHighPriority() && this.filter_hasEmail()) { // && this.isContactedByMe() && this.isRecentlyContacted()) {
+			element.show();
+			if (impresslist.selectModeIsOpen) {
+				elementExtras.show();
+			}
+			return true;
+		} else {
+			element.hide();
+			return false;
+		}
+	}
+	TwitchChannel.prototype.filter_isHighPriority = function() {
+		if ($('#filter-high-priority').is(':checked')) {
+			return (this.priority() == 3);
+		}
+		return true;
+	}
+	TwitchChannel.prototype.filter_hasEmail = function() {
+		if ($('#filter-email-attached').is(':checked')) {
+			return (this.field('email').length > 0);
+		}
+		return true;
+	}
+	TwitchChannel.prototype.search = function(text) {
+		var ret = true;
+
+		if (text.length == 0) { return ret; }
+
+		ret = this.name.toLowerCase().indexOf(text) != -1;
+		if (ret) { return ret; }
+
+		ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
+		if (ret) { return ret; }
+
+		ret = this.fields['description'].toLowerCase().indexOf(text) != -1;
+		if (ret) { return ret; }
+
+		ret = this.fields['twitter'].toLowerCase().indexOf(text) != -1;
+		if (ret) { return ret; }
+
+		return false;
+	}
+	TwitchChannel.prototype.save = function() {
+		var channel = $("[data-twitchchannel-id=" + this.id + "][data-input-field='twitchUsername']").val();
+		var email   = $("[data-twitchchannel-id=" + this.id + "][data-input-field='email']").val();
+		var twitter = $("[data-twitchchannel-id=" + this.id + "][data-input-field='twitter']").val();
+		var notes   = $("[data-twitchchannel-id=" + this.id + "][data-input-field='notes']").val();
+
+		API.saveTwitchChannel(this, channel, email, twitter, notes);
+	};
+	TwitchChannel.prototype.saveWith = function(channel, nameOverride) {
+		//API.saveTwitchChannel(this, channel, nameOverride, "", "", "");
+	}
+	TwitchChannel.prototype.savePriority = function() {
+		var priority = $("[data-twitchchannel-id='" + this.id + "'][data-input-field='priority']").val();
+		API.setTwitchChannelPriority(this, priority, impresslist.config.user.game);
+	}
+	TwitchChannel.prototype.refreshEmails = function() {
+		// Extra (hidden) rows for each e-mail address the person has.
+		var emails = []
+		if (this.field('email').length > 0) {
+			emails.push({
+				type: "twitchchannel",
+				typeId: this.field("id"),
+				typeName: this.name + " (TwitchChannel)",
+				twitchchannel: this.field('id'),
+				name: this.name,
+				email: this.field('email')
+			});
+		}
+
+		var extraEmails = "";
+		for(var i = 0; i < emails.length; i++) {
+			extraEmails += "	<div data-type='twitchchannel' data-twitchchannel-id='" + this.field('id') + "' data-twitchchannel-extra-tablerow='true' style='padding:5px;'>";
+			extraEmails += "		<input \
+										data-type='twitchchannel' \
+										data-twitchchannel-id='" + this.field('id') + "' \
+										data-checkbox='true' \
+										data-twitchchannel-checkbox='true' \
+										data-mailout-name='" + emails[i]['name'] + " (TwitchChannel)' \
+										data-mailout-type='" + emails[i]['type'] + "' \
+										data-mailout-typeid='" + emails[i]['typeId'] + "' \
+										data-mailout-typename='" + emails[i]['typeName'] + "' \
+										data-mailout-email='" + emails[i]['email'] + "' \
+										type='checkbox' \
+										value='1'/>";
+			extraEmails += "		&nbsp; " + emails[i]['typeName'] + " - " + emails[i]['email'];
+			extraEmails += "	</div>";
+		}
+
+		$('div[data-twitchchannel-id="' + this.field('id') + '"][data-field="email-list"]').html(extraEmails);
+
+		var twitchchannel = this;
+		$("input[data-twitchchannel-id='" + this.field('id') + "'][data-checkbox='true']").click(function(e) {
+			impresslist.refreshMailoutRecipients();
+			twitchchannel.preventOpen();
+			e.stopPropagation();
+		});
+	};
+
+
+
 Youtuber = function(data) {
 	DBO.call(this, data);
 }
@@ -1104,6 +1490,9 @@ Youtuber = function(data) {
 		//$("[data-youtuber-id='" + this.id + "'][data-youtuber-tablerow='true']").remove();
 		this.removeTableRow();
 		this.close();
+	}
+	Youtuber.prototype.preventOpen = function() {
+		$('#modals').html("");
 	}
 	Youtuber.prototype.open = function() {
 		var html = "<div class='modal fade youtuber_modal' tabindex='-1' role='dialog'> \
@@ -1399,6 +1788,54 @@ PersonYoutubeChannel = function(data) {
 	}
 
 
+PersonTwitchChannel = function(data) {
+	DBO.call(this, data);
+}
+	PersonTwitchChannel.prototype = Object.create(DBO.prototype);
+	PersonTwitchChannel.prototype.constructor = PersonTwitchChannel;
+	PersonTwitchChannel.prototype.init = function(data) {
+		DBO.prototype.init.call(this, data);
+		this.id = parseInt(this.fields['id']);
+	}
+	PersonTwitchChannel.prototype.open = function() {
+		console.log('per tw open');
+		var obj = this;
+		var tw = impresslist.findTwitchChannelById(this.fields['twitchchannel']);
+		var html = "<div data-pertw-id='" + this.id + "' data-pertw-tablerow='true' class='panel panel-default'> \
+						<div class='panel-heading oa'> \
+							<h3 class='panel-title fl'>" + tw.name + "&nbsp;</h3> \
+						</div> \
+						<div class='panel-body'> \
+							<div class='row'> \
+								<div class='fr padx'> \
+									<button id='delete_personTwitchChannelId" + this.id + "' type='submit' class='btn btn-danger' data-pertw-id='" + this.id + "'>Remove</button> \
+								</div> \
+							</div> \
+						</div> \
+					</div>";
+		$('#person-twitchchannels').append(html);
+
+		$('#delete_personTwitchChannelId' + this.id).click(function() { API.removePersonTwitchChannel(obj); });
+
+		$("[data-pertw-id='" + this.id + "'] a").click(function(e) {
+			e.preventDefault();
+			$("#person_tabs [data-tab='person_messages']").click();
+		});
+	}
+
+	PersonTwitchChannel.prototype.update = function() {
+
+	}
+	PersonTwitchChannel.prototype.onAdded = function(fromInit) {
+		if (!fromInit) {
+			this.open();
+		}
+	};
+	PersonTwitchChannel.prototype.onRemoved = function() {
+		$("[data-pertw-id='" + this.id + "'][data-pertw-tablerow='true']").remove();
+	}
+
+
 
 SimpleMailout = function(data) {
 	DBO.call(this, data);
@@ -1518,6 +1955,17 @@ SimpleMailout = function(data) {
 			obj.read = false;
 			if (obj.type == 'youtuber') {
 				obj.youtuber_id = $(youTubersSelected[i]).attr('data-mailout-typeid');
+			}
+			recipients.push(obj);
+		}
+		var twitchChannelsSelected = $('input[data-type="twitchchannel"][data-checkbox="true"]:checked');
+		for(var i = 0; i < twitchChannelsSelected.length; i++) {
+			var obj = {	};
+			obj.type = $(twitchChannelsSelected[i]).attr('data-mailout-type');
+			obj.sent = false;
+			obj.read = false;
+			if (obj.type == 'twitchchannel') {
+				obj.twitchchannel_id = $(twitchChannelsSelected[i]).attr('data-mailout-typeid');
 			}
 			recipients.push(obj);
 		}
@@ -1649,9 +2097,15 @@ SimpleMailout = function(data) {
 					$(box).prop("checked", true);
 				}
 			} else if (this.recipientsData[i].type == "youtuber") {
-				var p = impresslist.findYouTuberById(this.recipientsData[i].youtuber_id);
+				var p = impresslist.findYoutuberById(this.recipientsData[i].youtuber_id);
 				if (p != null) {
 					var box = $('input[data-type="youtuber"][data-mailout-typeid="' + p.id + '"][data-checkbox="true"][data-mailout-type="youtuber"]');
+					$(box).prop("checked", true);
+				}
+			} else if (this.recipientsData[i].type == "twitchchannel") {
+				var p = impresslist.findTwitchChannelById(this.recipientsData[i].twitchchannel_id);
+				if (p != null) {
+					var box = $('input[data-type="twitchchannel"][data-mailout-typeid="' + p.id + '"][data-checkbox="true"][data-mailout-type="twitchchannel"]');
 					$(box).prop("checked", true);
 				}
 			}
@@ -1784,7 +2238,8 @@ Person = function(data) {
 		html += '		<ul id="person_tabs" class="nav nav-tabs" role="tablist"> \
 							<li role="presentation" class="active"><a role="tab" href="#" data-tab="person_profile" data-toggle="tab">Profile</a></li> \
 							<li role="presentation"><a role="tab" href="#" data-tab="person_publications" data-toggle="tab">Publications</a></li> \
-							<li role="presentation"><a role="tab" href="#" data-tab="person_youtubeChannels" data-toggle="tab">Youtube Channels</a></li> \
+							<li role="presentation"><a role="tab" href="#" data-tab="person_youtubeChannels" data-toggle="tab">Youtubes</a></li> \
+							<li role="presentation"><a role="tab" href="#" data-tab="person_twitchChannels" data-toggle="tab">Twitchs</a></li> \
 							<li role="presentation"><a role="tab" href="#" data-tab="person_messages" data-toggle="tab">Messages</a></li> \
 						</ul> \
 						<div class="tab-content">';
@@ -1900,6 +2355,27 @@ Person = function(data) {
 									</table>\
 								</div> \
 								<div id='person-youtubechannels'>";
+
+				html += "		</div>\
+							</div>";
+
+				// Twitch Channels panel
+				html += "	<div role='tabpanel' class='tab-pane pady' data-tab='person_twitchChannels'> \
+								<div class='form-group'>\
+									<label for='add-twitchchannel'>Add:&nbsp;</label> \
+									<input id='add-twitchchannel-search' type='text' class='form-control' placeholder='Search' /> \
+								</div>\
+								<div id='add-twitchchannel-results-container' style='display:none;'>\
+									<table class='table table-striped'>\
+										<thead>\
+											<th>Name</th> \
+											<th>Subscribers</th> \
+										</thead> \
+										<tbody id='add-twitchchannel-results'> \
+										</tbody> \
+									</table>\
+								</div> \
+								<div id='person-twitchchannels'>";
 
 				html += "		</div>\
 							</div>";
@@ -2091,11 +2567,56 @@ Person = function(data) {
 
 		});
 
+		// Add Twitch Channel binds
+		$("#add-twitchchannel-search").keyup(function() {
+			var searchfield = $(this);
+			var text = $(this).val().toLowerCase();
+			if (text.length == 0) {
+				$("#add-twitchchannel-results").html("");
+				$('#add-twitchchannel-results-container').hide();
+				return;
+			}
+			var html = "";
+			for(var i = 0; i < impresslist.twitchchannels.length; i++) {
+				var include = impresslist.twitchchannels[i].search(text);
+				if (include) {
+					html += "	<tr class='table-list' data-twitchchannel-id='" + impresslist.twitchchannels[i].id + "' data-add-twitchchannel-result='true' >\
+									<td>" + impresslist.twitchchannels[i].name + "</td> \
+									<td>" + impresslist.twitchchannels[i].field('subscribers') + "</td> \
+								</tr>";
+				}
+			}
+			if (html.length == 0) {
+				html += "	<tr>\
+								<td colspan='2'>No Results</td> \
+							</tr>";
+			}
+			$("#add-twitchchannel-results").html(html);
+			$('#add-twitchchannel-results-container').show();
+
+			$("[data-add-twitchchannel-result='true']").click(function() {
+				var ytId = $(this).attr("data-twitchchannel-id");
+				API.addPersonTwitchChannel(person, ytId);
+
+				searchfield.val("");
+				$("#add-twitchchannel-results").html("");
+				$('#add-twitchchannel-results-container').hide();
+			});
+
+		});
+
 		// Init youtube channels for this person.
 		for(var i = 0; i < impresslist.personYoutubeChannels.length; ++i) {
 			var peryt = impresslist.personYoutubeChannels[i];
 			if (peryt.field('person') == this.id) {
 				peryt.open();
+			}
+		}
+
+		for(var i = 0; i < impresslist.personTwitchChannels.length; ++i) {
+			var pertw = impresslist.personTwitchChannels[i];
+			if (pertw.field('person') == this.id) {
+				pertw.open();
 			}
 		}
 
@@ -2407,6 +2928,9 @@ Publication = function(data) {
 	Publication.prototype.onRemoved = function() {
 		this.removeTableRow();
 		this.close();
+	}
+	Publication.prototype.preventOpen = function() {
+		$('#modals').html("");
 	}
 	Publication.prototype.open = function() {
 
@@ -3479,7 +4003,9 @@ var impresslist = {
 	publications: [],
 	personPublications: [],
 	personYoutubeChannels: [],
+	personTwitchChannels: [],
 	youtubers: [],
+	twitchchannels: [],
 	emails: [],
 	users: [],
 	games: [],
@@ -3496,7 +4022,9 @@ var impresslist = {
 		publications: false,
 		personPublications: false,
 		personYoutubeChannels: false,
+		personTwitchChannels: false,
 		youtubeChannels: false,
+		twitchChannels: false,
 		emails: false,
 		users: false,
 		games: false,
@@ -3523,7 +4051,9 @@ var impresslist = {
 		API.listPublications();
 		API.listPersonPublications();
 		API.listPersonYoutubeChannels();
+		API.listPersonTwitchChannels();
 		API.listYoutubeChannels();
+		API.listTwitchChannels();
 		API.listEmails();
 		API.listSimpleMailouts();
 		API.listSocialTimeline();
@@ -3535,6 +4065,7 @@ var impresslist = {
 		$('#nav-add-person').click(API.addPerson);
 		$('#nav-add-publication').click(API.addPublication);
 		$('#nav-add-youtuber').click(API.addYoutuber);
+		$('#nav-add-twitchchannel').click(API.addTwitchChannel);
 		$('#nav-add-youtuber-search-batch').click(function() { YouTuberBatchModal.open(); });
 		$('#nav-add-coverage-publication').click(API.addPublicationCoverage);
 		$('#nav-add-coverage-youtuber').click(API.addYoutuberCoverage);
@@ -3944,6 +4475,9 @@ var impresslist = {
 		for(var i = 0; i < this.youtubers.length; i++) {
 			this.youtubers[i].refreshEmails();
 		}
+		for(var i = 0; i < this.twitchchannels.length; i++) {
+			this.twitchchannels[i].refreshEmails();
+		}
 		this.refreshMailoutRecipients();
 
 		var type = 'person'; //$(this).attr('data-type');
@@ -3955,6 +4489,10 @@ var impresslist = {
 			$(this).toggle();
 		});
 		type = 'youtuber'; //$(this).attr('data-type');
+		$('.checkbox-column[data-type="' + type+ '"]').each(function(){
+			$(this).toggle();
+		});
+		type = 'twitchchannel'; //$(this).attr('data-type');
 		$('.checkbox-column[data-type="' + type+ '"]').each(function(){
 			$(this).toggle();
 		});
@@ -3988,6 +4526,10 @@ var impresslist = {
 		for(var i = 0; i < impresslist.youtubers.length; i++) {
 			if (impresslist.youtubers[i].filter(text)) { countYoutubeChannelsVisible++; }
 		}
+		var countTwitchChannelsVisible = 0;
+		for(var i = 0; i < impresslist.twitchchannels.length; i++) {
+			if (impresslist.twitchchannels[i].filter(text)) { countTwitchChannelsVisible++; }
+		}
 
 		var countCoverageVisible = 0;
 		for(var i = 0; i < impresslist.coverage.length; i++) {
@@ -4001,17 +4543,20 @@ var impresslist = {
 		if (countPeopleVisible == 0) { $('#people-footer').show(); } else { $('#people-footer').hide(); }
 		if (countPublicationsVisible == 0) { $('#publications-footer').show(); } else { $('#publications-footer').hide(); }
 		if (countYoutubeChannelsVisible == 0) { $('#youtubers-footer').show(); } else { $('#youtubers-footer').hide(); }
+		if (countTwitchChannelsVisible == 0) { $('#twitchchannels-footer').show(); } else { $('#twitchchannels-footer').hide(); }
 		if (countCoverageVisible == 0) { $('#coverage-footer').show(); } else { $('#coverage-footer').hide(); }
 		if (countWatchedGamesVisible == 0) { $('#watchedgames-footer').show(); } else { $('#watchedgames-footer').hide(); }
 
 		if (impresslist.people.length > 0 && countPeopleVisible == 0) { $('#people-container').hide(); } else { $('#people-container').show(); }
 		if (impresslist.publications.length > 0 && countPublicationsVisible == 0) { $('#publications-container').hide(); } else { $('#publications-container').show(); }
 		if (impresslist.youtubers.length > 0 && countYoutubeChannelsVisible == 0) { $('#youtubers-container').hide(); } else { $('#youtubers-container').show(); }
+		if (impresslist.twitchchannels.length > 0 && countTwitchChannelsVisible == 0) { $('#twitchchannels-container').hide(); } else { $('#twitchchannels-container').show(); }
 		if (impresslist.coverage.length > 0 && countCoverageVisible == 0) { $('#coverage-container').hide(); } else { $('#coverage-container').show(); }
 
 		$('#people-count').html("(" + countPeopleVisible + ")");
 		$('#publication-count').html("(" + countPublicationsVisible + ")");
 		$('#youtuber-count').html("(" + countYoutubeChannelsVisible + ")");
+		$('#twitchchannel-count').html("(" + countTwitchChannelsVisible + ")");
 
 		if (text.length > 0) { $('#chat-container').hide(); } else { $('#chat-container').show(); }
 
@@ -4020,8 +4565,9 @@ var impresslist = {
 		var peopleSelected = $('input[data-type="person"][data-checkbox="true"]:checked');
 		var publicationsSelected = $('input[data-type="publication"][data-checkbox="true"]:checked');
 		var youtubersSelected = $('input[data-type="youtuber"][data-checkbox="true"]:checked');
+		var twitchchannelsSelected = $('input[data-type="twitchchannel"][data-checkbox="true"]:checked');
 
-		if (peopleSelected.length + publicationsSelected.length + youtubersSelected.length == 0) {
+		if (peopleSelected.length + publicationsSelected.length + youtubersSelected.length + twitchchannelsSelected.length == 0) {
 			$('#mailout-recipients-none').show();
 			$('#mailout-recipients').hide();
 			return;
@@ -4031,6 +4577,7 @@ var impresslist = {
 		for(var i = 0; i < peopleSelected.length; i++) { combined.push(peopleSelected[i]); };
 		for(var i = 0; i < publicationsSelected.length; i++) { combined.push(publicationsSelected[i]); };
 		for(var i = 0; i < youtubersSelected.length; i++) { combined.push(youtubersSelected[i]); };
+		for(var i = 0; i < twitchchannelsSelected.length; i++) { combined.push(twitchchannelsSelected[i]); };
 
 		var html = "";
 		for(var i = 0; i < combined.length; i++) {
@@ -4072,6 +4619,11 @@ var impresslist = {
 		obj.onAdded(fromInit);
 		if (!fromInit) { impresslist.refreshFilter(); }
 	},
+	addPersonTwitchChannel: function(obj, fromInit) {
+		this.personTwitchChannels.push(obj);
+		obj.onAdded(fromInit);
+		if (!fromInit) { impresslist.refreshFilter(); }
+	},
 	addEmail: function(obj, fromInit) {
 		this.emails.push(obj);
 		obj.onAdded();
@@ -4084,6 +4636,11 @@ var impresslist = {
 	},
 	addYoutuber: function(obj, fromInit) {
 		this.youtubers.push(obj);
+		obj.onAdded();
+		if (!fromInit) { impresslist.refreshFilter(); }
+	},
+	addTwitchChannel: function(obj, fromInit) {
+		this.twitchchannels.push(obj);
 		obj.onAdded();
 		if (!fromInit) { impresslist.refreshFilter(); }
 	},
@@ -4229,6 +4786,17 @@ var impresslist = {
 			}
 		}
 	},
+	removeTwitchChannel: function(obj) {
+		for(var i = 0, len = this.twitchchannels.length; i < len; ++i) {
+			if (this.twitchchannels[i].id == obj.id) {
+				console.log('twitchchannels removed: ' + obj.id);
+				obj.onRemoved();
+				this.twitchchannels.splice(i, 1);
+				impresslist.refreshFilter();
+				break;
+			}
+		}
+	},
 	removePersonPublication: function(obj) {
 		for(var i = 0, len = this.personPublications.length; i < len; ++i) {
 			if (this.personPublications[i].id == obj.id) {
@@ -4246,6 +4814,17 @@ var impresslist = {
 				console.log('person youtube channel removed: ' + obj.id);
 				obj.onRemoved();
 				this.personYoutubeChannels.splice(i, 1);
+				impresslist.refreshFilter();
+				break;
+			}
+		}
+	},
+	removePersonTwitchChannel: function(obj) {
+		for(var i = 0, len = this.personTwitchChannels.length; i < len; ++i) {
+			if (this.personTwitchChannels[i].id == obj.id) {
+				console.log('person twitch channel removed: ' + obj.id);
+				obj.onRemoved();
+				this.personTwitchChannels.splice(i, 1);
 				impresslist.refreshFilter();
 				break;
 			}
@@ -4331,6 +4910,18 @@ var impresslist = {
 		if (r != null) { return r; }
 
 		console.log("impresslist: could not findYoutuberById: " + id);
+		return null;
+	},
+	findTwitchChannelById: function(id) {
+		/*for(var i = 0; i < this.youtubers.length; ++i) {
+			if (this.youtubers[i].id == id) {
+				return this.youtubers[i];
+			}
+		}*/
+		var r = this.binarySearchById(this.twitchchannels, id);
+		if (r != null) { return r; }
+
+		console.log("impresslist: could not findTwitchChannelById: " + id);
 		return null;
 	},
 	findUserById: function(id) {

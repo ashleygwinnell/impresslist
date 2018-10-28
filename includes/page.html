@@ -68,6 +68,7 @@
 					<li role="presentation" class="active"><a href="#people-pill" aria-controls="people-pill" role="tab" data-toggle="pill">People</a></li>
 					<li role="presentation"><a href="#publications-pill" aria-controls="publications-pill" role="tab" data-toggle="pill">Publications</a></li>
 					<li role="presentation"><a href="#youtubers-pill" aria-controls="youtubers-pill" role="tab" data-toggle="pill">YouTubers</a></li>
+					<li role="presentation"><a href="#twitchchannels-pill" aria-controls="twitchchannels-pill" role="tab" data-toggle="pill">Twitch Streamers</a></li>
 					<li role="presentation"><a id='chat-pill-link' href="#chat-pill" aria-controls="chat-pill" role="tab" data-toggle="pill" style='display:none;'>Chat</a></li>
 				</ul><br/>
 
@@ -210,8 +211,52 @@
 								</table>
 							</div>
 						</div><br/>
+					</div>
 
+					<div role="tabpanel" class="tab-pane" id="twitchchannels-pill">
 
+						<!-- Twitch Channels  -->
+						<div id='twitchchannels-container'>
+							<div class="panel panel-default">
+				  				<div class="panel-heading oa">
+
+				  					<span
+				  						data-type='twitchchannel'
+				  						title='Select Twitch Channels'
+				  						class='nav-select-edit nav-table-topright-item glyphicon glyphicon-edit'
+				  						></span>
+
+				  					<span
+										data-type='twitchchannel'
+				  						title='Deselect All'
+				  						class='nav-deselect-all nav-table-topright-item glyphicon glyphicon-unchecked checkbox-column'></span>
+				  					<span
+				  						data-type='twitchchannel'
+				  						title='Select All'
+				  						class='nav-select-all nav-table-topright-item glyphicon glyphicon-check checkbox-column'
+				  						></span>
+
+				  					<span class='fl'>Twitch Streamers</span><span id='twitchchannel-count' class='fr'>(0)</span>
+				  				</div>
+								<table class='table table-striped sortable' >
+									<thead>
+										<tr>
+											<!-- <th data-defaultsort="asc">ID</th> -->
+											<th data-defaultsort="asc">Channel Name</th>
+											<th>Priority</th>
+											<th>Subscribers</th>
+											<th>Views</th>
+											<th>Twitter</th>
+											<th>Last Uploaded On</th>
+										</tr>
+									</thead>
+									<tbody id='twitchchannels'>
+
+									</tbody>
+									<tfoot id='twitchchannels-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+								</table>
+							</div>
+						</div><br/>
 					</div>
 
 					<div role="tabpanel" id='jobs-pill' class='tab-pane'>
@@ -828,13 +873,19 @@
 					<option value='person_email'>Person - Email</option>
 					<option value='person_twitter'>Person - Twitter</option>
 					<option value='person_notes'>Person - Notes</option>
-					<option value='person_unknown'>Person - Unlisted field</option>
+					<option value='person_unknown'>Person - Unlisted field (discard)</option>
 					<option value='publication_name'>Publication - Name</option>
 					<option value='publication_website'>Publication - Website</option>
 					<option value='publication_rssfeed'>Publication - RSS URL</option>
 					<option value='publication_twitter'>Publication - Twitter</option>
 					<option value='publication_notes'>Publication - Notes</option>
-					<option value='publication_unknown'>Publication - Unlisted field</option>
+					<option value='publication_unknown'>Publication - Unlisted field (discard)</option>
+					<option value='twitchchannel_name'>Twitch Channel - Name</option>
+					<option value='twitchchannel_url'>Twitch Channel - URL</option>
+					<option value='twitchchannel_twitter'>Twitch Channel - Twitter</option>
+					<option value='twitchchannel_email'>Twitch Channel - Email</option>
+					<option value='twitchchannel_notes'>Twitch Channel - Notes</option>
+					<option value='twitchchannel_unknown'>Twitch Channel - Unlisted field (discard)</option>
 				</select>
 
 				<div id='importtool-order' style='margin-bottom:10px;'>

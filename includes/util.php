@@ -426,6 +426,194 @@ function url_get_contents($url) {
 }
 
 // ----------------------------------------------------------------------------
+// Twitch
+// ----------------------------------------------------------------------------
+function twitch_apiCall($url) {
+	global $twitch_apiKey;
+	global $twitch_apiSecret;
+	//echo $url;
+
+	$ch = curl_init();
+	curl_setopt ($ch, CURLOPT_URL, $url);
+	curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, 5);
+	curl_setopt ($ch, CURLOPT_TIMEOUT_MS, 5000);
+	curl_setopt ($ch, CURLOPT_FAILONERROR, true);
+	curl_setopt ($ch, CURLOPT_VERBOSE, true);
+	curl_setopt ($ch, CURLOPT_FOLLOWLOCATION, true);
+	curl_setopt ($ch, CURLOPT_MAXREDIRS, 100);
+	curl_setopt ($ch, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+	    'Client-ID: ' . $twitch_apiKey
+	));
+	$contents = curl_exec($ch);
+	if (curl_errno($ch)) {
+		echo curl_error($ch);
+		echo "\n<br />";
+		$contents = null;
+	} else {
+		curl_close($ch);
+	}
+
+	if (!is_string($contents) || !strlen($contents)) {
+		$contents = null;
+		return $contents;
+	}
+	return json_decode($contents, JSON_ASSOC);
+}
+
+function twitch_getUsers($userIds, $requestEmails=true) {
+	if (!is_array($userIds)){
+		return twitch_apiCall("https://api.twitch.tv/helix/users?id=" . urlencode($userIds));
+	}
+	$url = "https://api.twitch.tv/helix/users?";
+	for($i = 0; $i < count($userIds); $i++) {
+		$url .= "id=" . urlencode($userIds[$i]);
+		if ($i < count($userIds) - 1) {
+			$url .= "&";
+		}
+	}
+	// if ($requestEmails) {
+	// 	$url .= "&scope=user:read:email";
+	// }
+	return twitch_apiCall($url);
+}
+function twitch_getUsersFromLogin($userLogins) {
+	if (!is_array($userLogins)){
+		return twitch_apiCall("https://api.twitch.tv/helix/users?login=" . urlencode($userLogins));
+	}
+	$url = "https://api.twitch.tv/helix/users?";
+	for($i = 0; $i < count($userLogins); $i++) {
+		$url .= "login=" . urlencode($userLogins[$i]);
+		if ($i < count($userLogins) - 1) {
+			$url .= "&";
+		}
+	}
+	return twitch_apiCall($url);
+}
+function twitch_countSubscribers($userId) {
+	$data = twitch_apiCall("https://api.twitch.tv/helix/users/follows?to_id=" . $userId);
+	if ($data) {
+		return $data['total'];
+	}
+	return 0;
+}
+function twitch_getStreamsForGame($gameId) {
+	return twitch_apiCall("https://api.twitch.tv/helix/streams?game_id=" . $gameId);
+}
+function twitch_getStreamsForUsers($userIds) {
+	if (!is_array($userIds)){
+		return twitch_apiCall("https://api.twitch.tv/helix/streams?user_id=" . urlencode($userIds));
+	}
+	$url = "https://api.twitch.tv/helix/streams?";
+	for($i = 0; $i < count($userIds); $i++) {
+		$url .= "user_id=" . urlencode($userIds[$i]);
+		if ($i < count($userIds) - 1) {
+			$url .= "&";
+		}
+	}
+	return twitch_apiCall($url);
+}
+function twitch_getStreamsMetadataForUsers($userIds) {
+	if (!is_array($userIds)){
+		return twitch_apiCall("https://api.twitch.tv/helix/streams/metadata?user_id=" . urlencode($userIds));
+	}
+	$url = "https://api.twitch.tv/helix/streams/metadata?";
+	for($i = 0; $i < count($userIds); $i++) {
+		$url .= "user_id=" . urlencode($userIds[$i]);
+		if ($i < count($userIds) - 1) {
+			$url .= "&";
+		}
+	}
+	return twitch_apiCall($url);
+}
+function twitch_findGamesByNames($names) {
+	if (!is_array($names)){
+		return twitch_apiCall("https://api.twitch.tv/helix/games?name=" . urlencode($names));
+	}
+
+	$url = "https://api.twitch.tv/helix/games?";
+	for($i = 0; $i < count($names); $i++) {
+		$url .= "name=" . urlencode($names[$i]);
+		if ($i < count($names) - 1) {
+			$url .= "&";
+		}
+	}
+	return twitch_apiCall($url);
+}
+function twitch_getVideosOfGame($gameId) {
+	return twitch_apiCall("https://api.twitch.tv/helix/videos?game_id=" . $gameId);
+}
+function twitch_getVideosForUser($userIds) {
+	//if (!is_array($userIds)){
+		return twitch_apiCall("https://api.twitch.tv/helix/videos?user_id=" . urlencode($userIds));
+	// }
+	// $url = "https://api.twitch.tv/helix/videos?";
+	// for($i = 0; $i < count($userIds); $i++) {
+	// 	$url .= "user_id=" . urlencode($userIds[$i]);
+	// 	if ($i < count($userIds) - 1) {
+	// 		$url .= "&";
+	// 	}
+	// }
+	// return twitch_apiCall($url);
+}
+function twitch_getClipsOfGame($gameId) {
+	return twitch_apiCall("https://api.twitch.tv/helix/clips?game_id=" . $gameId);
+}
+function twitch_getClipsForUser($userId) {
+	return twitch_apiCall("https://api.twitch.tv/helix/clips?broadcaster_id=" . $userId);
+}
+
+function db_try_add_twitch_channel($twitchId, $twitchDescription, $twitchBroadcasterType, $twitchProfileImage, $twitchOfflineImage, $twitchUsername, $displayname, $email, $viewCount, $subCount) {
+	global $db;
+
+	$stmt = $db->prepare("INSERT INTO twitchchannel (`id`, `twitchId`, `twitchDescription`, `twitchBroadcasterType`, `twitchProfileImageUrl`, `twitchOfflineImageUrl`, `twitchUsername`,  `name`, `email`, priorities, subscribers, `views`, twitter, twitter_followers, twitter_updatedon, notes, lang, lastpostedon, lastpostedon_updatedon, removed, lastscrapedon)
+											VALUES ( NULL, :twitchId, :twitchDescription, :twitchBroadcasterType, :twitchProfileImage, :twitchOfflineImage, :twitchUsername, :name,  :email, :priorities, :subscribers, 			 :views,  '', 		0, 					0,      		'',  	'', 	0,  		0, 						0, 			0
+						); ");
+	$stmt->bindValue(":twitchId", $twitchId, Database::VARTYPE_INTEGER);
+	$stmt->bindValue(":twitchDescription", $twitchDescription, Database::VARTYPE_STRING);
+	$stmt->bindValue(":twitchBroadcasterType", $twitchBroadcasterType, Database::VARTYPE_STRING);
+	$stmt->bindValue(":twitchProfileImage", $twitchProfileImage, Database::VARTYPE_STRING);
+	$stmt->bindValue(":twitchOfflineImage", $twitchOfflineImage, Database::VARTYPE_STRING);
+	$stmt->bindValue(":twitchUsername", $twitchUsername, Database::VARTYPE_STRING);
+	$stmt->bindValue(":name", $displayname, Database::VARTYPE_STRING);
+	$stmt->bindValue(":email", $email, Database::VARTYPE_STRING);
+	$stmt->bindValue(":priorities", db_defaultPrioritiesString($db), Database::VARTYPE_STRING);
+	$stmt->bindValue(":views", $viewCount, Database::VARTYPE_INTEGER);
+	$stmt->bindValue(":subscribers", $subCount, Database::VARTYPE_INTEGER);
+	$r = $stmt->execute();
+	if (!$r) {
+		die();
+	}
+	return $r;
+}
+
+function db_try_add_twitch_channel_from_user_result($user) {
+	global $db;
+
+	$results = $db->query("SELECT * FROM twitchchannel WHERE twitchId = '" . $user['id'] . "';");
+	if (count($results) > 0) {
+		return false;
+	}
+
+	$subs = twitch_countSubscribers($user['id']);
+	db_try_add_twitch_channel(
+		$user['id'],
+		$user['description'],
+		$user['broadcaster_type'],
+		$user['profile_image_url'],
+		$user['offline_image_url'],
+		$user['login'],
+		$user['display_name'],
+		"",
+		$user['view_count'],
+		$subs
+	);
+	return true;
+
+}
+
+
+// ----------------------------------------------------------------------------
 // Youtube
 // ----------------------------------------------------------------------------
 function youtube_getInformation($channel) {
@@ -632,7 +820,6 @@ function email_new_youtube_coverage($youtuberName, $url, $time) {
 	}
 
 	return true;
-
 }
 
 

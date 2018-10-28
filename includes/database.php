@@ -49,6 +49,13 @@
 		$people = $db->query("SELECT * " . $lastcontacted . " FROM person_youtuber WHERE id = '" . $personYoutubeChannelId . "' LIMIT 1;");
 		return $people[0];
 	}
+	function db_singlepersontwitchchannel($db, $personTwitchChannelId) {
+		$lastcontacted = ", strftime('%s', lastcontacted) as lastcontacted_timestamp ";
+		if ($db->type == Database::TYPE_MYSQL) { $lastcontacted = ""; }
+
+		$people = $db->query("SELECT * " . $lastcontacted . " FROM person_twitchchannel WHERE id = '" . $personTwitchChannelId . "' LIMIT 1;");
+		return $people[0];
+	}
 	function db_singlepublication($db, $publicationId) {
 		if (!is_numeric($publicationId)) { return false; }
 		$publications = $db->query("SELECT * FROM publication WHERE id = '" . $publicationId . "' LIMIT 1;");
@@ -58,6 +65,16 @@
 		if (!is_numeric($youtuberId)) { return false; }
 		$youtubeChannels = $db->query("SELECT * FROM youtuber WHERE id = '" . $youtuberId . "' LIMIT 1;");
 		return $youtubeChannels[0];
+	}
+	function db_singletwitchchannel($db, $twitchChannelId) {
+		if (!is_numeric($twitchChannelId)) { return false; }
+		$twitchChannels = $db->query("SELECT * FROM twitchchannel WHERE id = '" . $twitchChannelId . "' LIMIT 1;");
+		return $twitchChannels[0];
+	}
+	function db_singletwitchchannelbyusername($db, $twitchUsername) {
+		if (!is_numeric($twitchChannelId)) { return false; }
+		$twitchChannels = $db->query("SELECT * FROM twitchchannel WHERE twitchUsername = '" . $twitchUsername . "' LIMIT 1;");
+		return $twitchChannels[0];
 	}
 	function db_singlemailoutsimple($db, $mailoutId) {
 		if (!is_numeric($mailoutId)) { return false; }
@@ -266,7 +283,9 @@
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
 					name VARCHAR(255),
 					iconurl VARCHAR(255) NOT NULL,
-					keywords TEXT NOT NULL
+					keywords TEXT NOT NULL,
+					twitchId INTEGER DEFAULT {$defaultNull},
+					twitchLastScraped INTEGER DEFAULT {$defaultNull}
 				) {$sqlEngineAndCharset} ;";
 		$db->exec($sql);
 
@@ -363,6 +382,13 @@
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
 					person INTEGER NOT NULL,
 					youtuber INTEGER NOT NULL
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		$sql = "CREATE TABLE IF NOT EXISTS person_twitchchannel (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					person INTEGER NOT NULL,
+					twitchchannel INTEGER NOT NULL
 				) {$sqlEngineAndCharset} ;";
 		$db->exec($sql);
 
@@ -504,6 +530,50 @@
 					removed INTEGER NOT NULL DEFAULT 0
 				) {$sqlEngineAndCharset} ;";
 		$db->exec($sql);
+
+		// Twitch channel
+		$sql = "CREATE TABLE IF NOT EXISTS twitchchannel (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					twitchId VARCHAR(255) NOT NULL,
+					twitchDescription TEXT NOT NULL,
+					twitchBroadcasterType VARCHAR(30) NOT NULL,
+					twitchProfileImageUrl VARCHAR(255) NOT NULL,
+					twitchOfflineImageUrl VARCHAR(255) NOT NULL,
+					twitchUsername VARCHAR(255) NOT NULL,
+					name VARCHAR(255) NOT NULL,
+					email VARCHAR(255) NOT NULL DEFAULT '',
+					priorities VARCHAR(255) NOT NULL,
+					subscribers TEXT NOT NULL {$blobTextDefaultToZero},
+					views TEXT NOT NULL {$blobTextDefaultToZero},
+					twitter VARCHAR(255) NOT NULL DEFAULT '',
+					twitter_followers INTEGER NOT NULL DEFAULT 0,
+					twitter_updatedon INTEGER NOT NULL DEFAULT 0,
+					notes TEXT NOT NULL,
+					lang VARCHAR(30) NOT NULL,
+					lastpostedon INTEGER NOT NULL,
+					lastpostedon_updatedon INTEGER NOT NULL DEFAULT 0,
+					removed INTEGER NOT NULL DEFAULT 0,
+					lastscrapedon INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		$sql = "CREATE TABLE IF NOT EXISTS twitchchannel_coverage (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					twitchchannel INTEGER DEFAULT {$defaultNull},
+					twitchVideoId VARCHAR(255) DEFAULT {$defaultNull},
+					twitchClipId VARCHAR(255) DEFAULT {$defaultNull},
+					twitchChannelId INTEGER DEFAULT {$defaultNull},
+					game INTEGER DEFAULT {$defaultNull},
+					url VARCHAR(255) NOT NULL,
+					title VARCHAR(255) NOT NULL,
+					description TEXT NOT NULL,
+					thumbnail TEXT NOT NULL,
+					utime INTEGER NOT NULL DEFAULT 0,
+					thanked INTEGER NOT NULL DEFAULT 0,
+					removed INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
 
 		// Settings
 		$db->exec("INSERT IGNORE INTO settings VALUES ('company_name', 'Company Name'); ");

@@ -334,6 +334,31 @@ API.listPersonYoutubeChannels = function(fromInit) {
 			API.errorMessage("Could not list Person Youtube Channels.");
 		});
 }
+API.listPersonTwitchChannels = function(fromInit) {
+	if (typeof fromInit == 'undefined') { fromInit = true; }
+
+	var url = "api.php?endpoint=/person-twitchchannel/list/";
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			for(var i = 0; i < json.personTwitchChannels.length; ++i) {
+				var channel = new PersonTwitchChannel(json.personTwitchChannels[i]);
+				impresslist.addPersonTwitchChannel(channel, fromInit);
+			}
+			if (fromInit) { impresslist.refreshFilter(); }
+		})
+		.fail(function() {
+			API.errorMessage("Could not list Person Youtube Channels.");
+		});
+}
 API.listYoutubeChannels = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
@@ -354,15 +379,41 @@ API.listYoutubeChannels = function(fromInit) {
 				var youtuber = new Youtuber(json.youtubechannels[i]);
 				impresslist.addYoutuber(youtuber, fromInit);
 			}
+			impresslist.loading.set('youtubeChannels', false);
+		})
+		.fail(function() {
+			API.errorMessage("Could not list Youtubers.");
+		});
+}
+API.listTwitchChannels = function(fromInit) {
+	if (typeof fromInit == 'undefined') { fromInit = true; }
+
+	impresslist.loading.set('twitchChannels', true);
+	var url = "api.php?endpoint=/twitchchannel/list/";
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			for(var i = 0; i < json.twitchchannels.length; ++i) {
+				var channel = new TwitchChannel(json.twitchchannels[i]);
+				impresslist.addTwitchChannel(channel, fromInit);
+			}
 			if (fromInit) {
 				impresslist.refreshFilter();
 				API.listCoverage(fromInit);
 				API.listWatchedGames(fromInit);
 			}
-			impresslist.loading.set('youtubeChannels', false);
+			impresslist.loading.set('twitchChannels', false);
 		})
 		.fail(function() {
-			API.errorMessage("Could not list Youtubers.");
+			API.errorMessage("Could not list Twitch Channels.");
 		});
 }
 API.listEmails = function(fromInit) {
@@ -843,6 +894,55 @@ API.removePersonYoutubeChannel = function(personYoutuberObj) {
 			API.errorMessage("Could not removed Person Youtube Channel.");
 		});
 }
+API.addPersonTwitchChannel = function(personObj, twitchChannelId) {
+	var url = "api.php?endpoint=/person/add-twitchchannel/" +
+				"&person=" + encodeURIComponent(personObj.id) +
+				"&twitchchannel=" + encodeURIComponent(twitchChannelId);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Person Twitch Channel added.");
+			console.log(json);
+
+			impresslist.addPersonTwitchChannel(new PersonTwitchChannel(json.personTwitchChannel), false);
+		})
+		.fail(function() {
+			API.errorMessage("Could not add Person - Twitch Channel.");
+		});
+}
+API.removePersonTwitchChannel = function(personTwitchObj) {
+	var url = "api.php?endpoint=/person/remove-twitchchannel/" +
+				"&personTwitchChannel=" + encodeURIComponent(personTwitchObj.id);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Person Twitch Channel removed.");
+			console.log(json);
+
+			impresslist.removePersonTwitchChannel(personTwitchObj);
+		})
+		.fail(function() {
+			API.errorMessage("Could not removed Person Twitch Channel.");
+		});
+}
 API.savePersonPublication = function(personPublicationObj, email) {
 	var url = "api.php?endpoint=/person/save-publication/" +
 				"&personPublication=" + encodeURIComponent(personPublicationObj.id) +
@@ -1027,6 +1127,83 @@ API.saveYoutuberCoverage = function(coverage, youtuber, person, title, url, time
 }
 API.removeYoutuberCoverage = function(coverage) {
 	var url = "api.php?endpoint=/coverage/youtuber/remove/&id=" + encodeURIComponent(coverage.id);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Coverage removed.");
+			console.log(json);
+			impresslist.removeCoverage(coverage);
+		})
+		.fail(function() {
+			API.errorMessage("Could not remove Coverage.");
+		});
+}
+API.addTwitchChannelCoverage = function() {
+	var url = "api.php?endpoint=/coverage/twitchchannel/add/";
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Coverage added.");
+			console.log(json);
+
+			var coverage = new Coverage(json.coverage);
+			impresslist.addCoverage(coverage, false);
+		})
+		.fail(function() {
+			API.errorMessage("Could not add Coverage.");
+		});
+}
+API.saveTwitchChannelCoverage = function(coverage, twitchchannel, person, title, url, timestamp, thanked) {
+	var url = "api.php?endpoint=/coverage/twitchchannel/save/" +
+						"&id=" + encodeURIComponent(coverage.id) +
+						"&twitchchannel=" + encodeURIComponent(twitchchannel) +
+						"&person=" + encodeURIComponent(person) +
+						"&title=" + encodeURIComponent(title) +
+						"&url=" + encodeURIComponent(url) +
+						"&timestamp=" + encodeURIComponent(timestamp) +
+						"&thanked=" + encodeURIComponent(thanked);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Coverage saved.");
+			console.log(json);
+
+			coverage.init(json.coverage);
+			coverage.update();
+		})
+		.fail(function() {
+			API.errorMessage("Could not add Coverage.");
+		});
+}
+API.removeTwitchChannelCoverage = function(coverage) {
+	var url = "api.php?endpoint=/coverage/twitchchannel/remove/&id=" + encodeURIComponent(coverage.id);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1390,6 +1567,117 @@ API.removeYoutuber = function(youtuber) {
 		})
 		.fail(function() {
 			API.errorMessage("Could not remove Youtuber.");
+		});
+}
+API.addTwitchChannel = function(openImmediately, successCallback, failCallback) {
+	openImmediately = (typeof openImmediately == 'undefined')?true:openImmediately;
+	var name = "Blank";
+	var url = "api.php?endpoint=/twitchchannel/add/&channel=twitch";
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				if (failCallback) failCallback();
+				return;
+			}
+			API.successMessage("Twitch Channel added.");
+			console.log(json);
+
+			var twitchchannel = new TwitchChannel(json.twitchchannel);
+			impresslist.addTwitchChannel(twitchchannel, false);
+			if (openImmediately) {
+				$(twitchchannel.openSelector()).click();
+			}
+			if (successCallback) {
+				successCallback(twitchchannel);
+			}
+		})
+		.fail(function() {
+			API.errorMessage("Could not add Twitch Channel.");
+			if (failCallback) failCallback();
+		});
+}
+API.setTwitchChannelPriority = function(twitchchannel, priority, gameId) {
+	var url = "api.php?endpoint=/twitchchannel/set-priority/" +
+					"&id=" + encodeURIComponent(twitchchannel.id) +
+					"&priority=" + encodeURIComponent(priority) +
+					"&game=" + encodeURIComponent(gameId);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			console.log(json.twitchchannel);
+			API.successMessage("Twitch Channel priority set.");
+			twitchchannel.init(json.twitchchannel);
+			twitchchannel.update();
+		})
+		.fail(function() {
+			API.errorMessage("Could not set priority on Twitch Channel.");
+		});
+}
+API.saveTwitchChannel = function(twitchchannel, channel, email, twitter, notes) {
+
+	var url = "api.php?endpoint=/twitchchannel/save/" +
+					"&id=" + encodeURIComponent(twitchchannel.id) +
+					"&channel=" + encodeURIComponent(channel) +
+					"&email=" + encodeURIComponent(email) +
+					"&twitter=" + encodeURIComponent(twitter) +
+					"&notes=" + encodeURIComponent(notes);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			console.log(json);
+
+			API.successMessage("Twitch Channel saved.");
+			twitchchannel.init(json.twitchchannel);
+			twitchchannel.update();
+		})
+		.fail(function() {
+			API.errorMessage("Could not save Twitch Channel.");
+		});
+}
+API.removeTwitchChannel = function(twitchchannel) {
+	var url = "api.php?endpoint=/twitchchannel/remove/&id=" + encodeURIComponent(twitchchannel.id);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Twitch Channel removed.");
+			impresslist.removeTwitchChannel(twitchchannel);
+		})
+		.fail(function() {
+			API.errorMessage("Could not remove Twitch Channel.");
 		});
 }
 API.userChangeIMAPSettings = function(user, smtpServer, imapServer, imapPassword) {

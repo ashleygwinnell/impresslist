@@ -90,6 +90,16 @@ X-Mailer: impresslist/" . $impresslist_version;
 				}
 				$use_surnames = "";
 			}
+			else if ($recipients[$j]['type'] == "twitchchannel")
+			{
+				$twitchchannel = db_singletwitchchannel($db, $recipients[$j]['twitchchannel_id']);
+				$person_email = $twitchchannel['email'];
+				$use_firstname = $twitchchannel['name'];
+				if (strlen($use_firstname) == 0 && strlen($twitchchannel['twitchUsername']) > 0) {
+					$use_firstname = $twitchchannel['twitchUsername'];
+				}
+				$use_surnames = "";
+			}
 			else {
 				echo "Skipping e-mail line: " . json_encode($recipients[$j]);
 				continue;
