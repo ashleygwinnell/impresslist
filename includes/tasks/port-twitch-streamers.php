@@ -42,7 +42,13 @@ function findTwitchName($strings = array()) {
 }
 
 function try_add_from_twitch_name($twitchName) {
+	global $db;
 	if (strlen($twitchName) > 0) {
+
+		$result = $db->query("SELECT * FROM twitchchannel WHERE twitchUsername = '" . $twitchName . "' LIMIT 1;");
+		if ($result && count($result) == 1) {
+			return false; // already exists
+		}
 
 		$users = twitch_getUsersFromLogin($twitchName);
 		if ($users['data'] && count($users['data']) == 1) {
@@ -86,7 +92,7 @@ for($i = 0; $i < count($people); $i++) {
 		$db->query("UPDATE twitchchannel SET
 						twitter = '" . $people[$i]['twitter'] . "',
 						twitter_followers = '" . $people[$i]['twitter_followers'] . "',
-						twitter_updatedon = '" . $people[$i]['twitter_updatedon'] . "'
+						twitter_updatedon = '" . $people[$i]['twitter_updatedon'] . "',
 						email = '" . $people[$i]['email'] . "'
 						WHERE id = '" . $id . "';");
 

@@ -2127,6 +2127,7 @@ if (!isset($_GET['endpoint'])) {
 							 	// }
 							 	$stmt->execute();
 							 	$countImports++;
+							 	sleep(1);
 
 							}
 							$result->message = "Imported " . $countImports . " items. Skipped " . $countSkips . " items (" . implode(",", $skips) . ").";

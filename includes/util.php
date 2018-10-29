@@ -852,7 +852,13 @@ function mail_attachment($filename, $path, $mailto, $from_mail, $from_name, $rep
     if (mail($mailto, $subject, "", $header)) {
         echo "mail send ... OK"; // or use booleans here
     } else {
-        echo "mail send ... ERROR!";
+        echo "mail send ... ERROR!<br/>";
+        //if ($impresslist_verbose) {
+        	//echo "<b>Headers:</b><br/>" . $header  . "<br/><br/>";
+        	echo "<b>Mailto:</b><br/>" . $mailto  . "<br/><br/>";
+        	echo "<b>Subject:</b><br/>" . $subject  . "<br/><br/>";
+        	print_r(error_get_last());
+        //}
     }
 }
 

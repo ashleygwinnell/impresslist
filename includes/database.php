@@ -72,7 +72,7 @@
 		return $twitchChannels[0];
 	}
 	function db_singletwitchchannelbyusername($db, $twitchUsername) {
-		if (!is_numeric($twitchChannelId)) { return false; }
+		if (!is_string($twitchUsername)) { return false; }
 		$twitchChannels = $db->query("SELECT * FROM twitchchannel WHERE twitchUsername = '" . $twitchUsername . "' LIMIT 1;");
 		return $twitchChannels[0];
 	}
