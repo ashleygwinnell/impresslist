@@ -210,7 +210,7 @@ for($i = 0; $i < count($streamers); $i++) {
 	}
 
 	$db->exec("UPDATE twitchchannel SET lastscrapedon = " . time() . ", lastpostedon_updatedon = " . time() . ", subscribers = '" . $subs . "', views = '" . $views . "', lastpostedon = " . $lastUploadedOn . " WHERE id = " . $streamer['id'] . " ;");
-	sleep(2);
+	sleep(10);
 }
 //print_r($ids);
 

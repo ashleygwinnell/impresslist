@@ -21,7 +21,7 @@
 			$extrasString = ', '.$extrasString;
 		}
 
-		$q = "SELECT user.id, forename, surname, email, color, emailGmailIndex, emailIMAPServer, emailSMTPServer, currentGame, lastactivity, count(email.id) as num_emails, admin, email.removed $extrasString FROM user LEFT JOIN email on email.user_id = user.id where user.removed = 0 and user.id = " . $userId. " group by user.id ;";
+		$q = "SELECT user.id, forename, surname, email, color, emailGmailIndex, emailIMAPServer, emailSMTPServer, currentGame, lastactivity, count(email.id) as num_emails, admin, user.removed $extrasString FROM user LEFT JOIN email on email.user_id = user.id where user.removed = 0 and user.id = " . $userId. " group by user.id ;";
 		$results = $db->query($q);
 
 		//echo $q;
@@ -358,6 +358,7 @@
 					twitter_updatedon INTEGER NOT NULL DEFAULT 0,
 					notes TEXT NOT NULL,
 					lang VARCHAR(30) NOT NULL,
+					country VARCHAR(2) NOT NULL DEFAULT '',
 					lastcontacted INTEGER NOT NULL,
 					lastcontactedby INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0,
@@ -407,6 +408,7 @@
 					twitter_updatedon INTEGER NOT NULL DEFAULT 0,
 					notes TEXT NOT NULL,
 					lang VARCHAR(30) NOT NULL,
+					country VARCHAR(2) NOT NULL DEFAULT '',
 					lastpostedon INTEGER NOT NULL,
 					lastpostedon_updatedon INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0,
@@ -508,6 +510,7 @@
 					twitter_updatedon INTEGER NOT NULL DEFAULT 0,
 					notes TEXT NOT NULL,
 					lang VARCHAR(30) NOT NULL,
+					country VARCHAR(2) NOT NULL DEFAULT '',
 					lastpostedon INTEGER NOT NULL,
 					lastpostedon_updatedon INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0,

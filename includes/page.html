@@ -10,12 +10,21 @@
 	        	impresslist.config.system.email = "<?php echo $impresslist_emailAddress; ?>";
 	        	impresslist.config.system.backups.lastmanual = <?php echo $settings['manual_backup_lastbackedupon']; ?>;
 	        	impresslist.config.system.twitter = <?php echo $settings['twitter_configuration']; ?>;
-        		impresslist.config.user.id = <?php echo $user_id; ?>;
+	        	impresslist.config.user.id = <?php echo $user_id; ?>;
         		impresslist.config.user.game = <?php echo $user_currentGame; ?>;
       			impresslist.config.user.gmail = <?php echo $user_gmailIndex; ?>;
       			impresslist.config.user.admin = <?php echo $user_admin; ?>;
       			impresslist.config.user.imapServer = "<?php echo $user_imapServer; ?>";
       			impresslist.config.user.smtpServer = "<?php echo $user_smtpServer; ?>";
+      			impresslist.config.misc.countries = {};
+
+      			<?php
+      				$countries = listcountries();
+      				foreach($countries as $name => $code) {
+      					echo "impresslist.config.misc.countries[\"" . $code . "\"] = \"" . $name. "\";\n";
+      				}
+
+      			?>
 
       			<?php for($i = 0; $i < $num_users; $i++): ?>
 	        		impresslist.addUser(new User(<?php echo json_encode($users[$i]); ?>), true);
@@ -50,6 +59,7 @@
 				<div class='filters' style='float:left;text-align:left;'>
 					<div class='filter-item'><b>Logged in as:</b> <span id='current-user-name'></span></div>
 					<div class='filter-item'><b>Current Project:</b> <span id='current-project-name'></span></div>
+					<br/><div class='filter-item'><b>Full Search:</b> &nbsp;<input id='search-option-full' type='checkbox'/></div>
 				</div>
 				<div class='filters'>
 					<div class='filter-item'><b>Filters:</b></div>

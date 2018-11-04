@@ -71,6 +71,13 @@ function api_checkRequiredGETFieldsWithTypes($fields, &$result) {
 					$result = api_error($fields[$i]['name'] . " is not a valid alphanumeric (with spaces) string. -- " . $temp);
 					return true;
 				}
+			} else if ($type == 'country') {
+				$temp = $_GET[$fields[$i]['name']];
+				$countries = array_values(listcountries());
+				if (!in_array(strtoupper($temp), $countries)) {
+					$result = api_error($fields[$i]['name'] . " / " . $temp . " is not a valid country code.");
+					return true;
+				}
 			} else if ($type == 'platform') {
 				$temp = $_GET[$fields[$i]['name']];
 				if (!util_isValidPlatformForProjectKeys($temp)) {
@@ -2102,6 +2109,7 @@ if (!isset($_GET['endpoint'])) {
 																		);");
 
 								$twitchUser = twitch_getUsersFromLogin($thisUsername);
+								// TOOD: check rate-limiting
 								if (!$twitchUser || !$twitchUser['data'] || !$twitchUser['data'][0]) {
 									$skips[] = $thisUsername;
 									$countSkips++;
@@ -2971,6 +2979,7 @@ if (!isset($_GET['endpoint'])) {
 				//array('name' => 'surnames', 'type' => 'alphanumericspaces'),
 				array('name' => 'email', 'type' => 'email'),
 				array('name' => 'notes', 'type' => 'textarea'),
+				array('name' => 'country', 'type' => 'country'),
 				array('name' => 'twitter', 'type' => 'alphanumericunderscores'),
 				array('name' => 'outofdate', 'type' => 'boolean')
 			);
@@ -2987,7 +2996,7 @@ if (!isset($_GET['endpoint'])) {
 				$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
 				$outofdate = ($_GET['outofdate'] == "true")?1:0;
 
-				$stmt = $db->prepare(" UPDATE person SET firstname = :firstname, surnames = :surnames, email = :email, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes, outofdate = :outofdate WHERE id = :id ");
+				$stmt = $db->prepare(" UPDATE person SET firstname = :firstname, surnames = :surnames, email = :email, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes, country = :country, outofdate = :outofdate WHERE id = :id ");
 				$stmt->bindValue(":firstname", $_GET['firstname'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":surnames", $surname, Database::VARTYPE_STRING);
 				$stmt->bindValue(":email", strtolower(trim($_GET['email'])), Database::VARTYPE_STRING);
@@ -2996,6 +3005,7 @@ if (!isset($_GET['endpoint'])) {
 					$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
 				}
 				$stmt->bindValue(":notes", strip_tags(stripslashes($_GET['notes'])), Database::VARTYPE_STRING);
+				$stmt->bindValue(":country", $_GET['country'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":outofdate", $outofdate, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
 				$rs = $stmt->execute();
@@ -3369,7 +3379,8 @@ if (!isset($_GET['endpoint'])) {
 				array('name' => 'url', 'type' => 'url'),
 				array('name' => 'rssfeedurl', 'type' => 'url'),
 				array('name' => 'twitter', 'type' => 'alphanumericunderscores'),
-				array('name' => 'notes', 'type' => 'textarea')
+				array('name' => 'notes', 'type' => 'textarea'),
+				array('name' => 'country', 'type' => 'country')
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
@@ -3378,7 +3389,7 @@ if (!isset($_GET['endpoint'])) {
 				if ($twitter_followers == "") { $twitter_followers = 0; }
 				$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
 
-				$stmt = $db->prepare(" UPDATE publication SET name = :name, url = :url, email = :email, rssfeedurl = :rssfeedurl, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes WHERE id = :id ");
+				$stmt = $db->prepare(" UPDATE publication SET name = :name, url = :url, email = :email, rssfeedurl = :rssfeedurl, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes, country = :country WHERE id = :id ");
 				$stmt->bindValue(":name", $_GET['name'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":url", $_GET['url'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":email", strtolower(trim($_GET['email'])), Database::VARTYPE_STRING);
@@ -3388,6 +3399,7 @@ if (!isset($_GET['endpoint'])) {
 					$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
 				}
 				$stmt->bindValue(":notes", strip_tags(stripslashes($_GET['notes'])), Database::VARTYPE_STRING);
+				$stmt->bindValue(":country", $_GET['country'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
 				$rs = $stmt->execute();
 
@@ -3486,7 +3498,8 @@ if (!isset($_GET['endpoint'])) {
 				array('name' => 'channel', 'type' => 'textarea'),
 				array('name' => 'email', 'type' => 'email'),
 				array('name' => 'twitter', 'type' => 'alphanumericunderscores'),
-				array('name' => 'notes', 'type' => 'textarea')
+				array('name' => 'notes', 'type' => 'textarea'),
+				array('name' => 'country', 'type' => 'country')
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
@@ -3516,7 +3529,8 @@ if (!isset($_GET['endpoint'])) {
 												lastpostedon = :lastpostedon,
 												twitter = :twitter,
 												" . $twitter_followers_sql . "
-												notes = :notes
+												notes = :notes,
+												country = :country
 											WHERE
 												id = :id;
 										");
@@ -3550,6 +3564,7 @@ if (!isset($_GET['endpoint'])) {
 
 
 					$stmt->bindValue(":notes", strip_tags(stripslashes($_GET['notes'])), Database::VARTYPE_STRING);
+					$stmt->bindValue(":country", $_GET['country'], Database::VARTYPE_STRING);
 
 					$rs = $stmt->execute();
 

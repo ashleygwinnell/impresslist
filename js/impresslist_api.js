@@ -1275,7 +1275,7 @@ API.setPersonAssignment = function(person, user, gameId) {
 			API.errorMessage("Could not set user-assignment on Person.");
 		});
 }
-API.savePerson = function(person, firstname, surnames, email, twitter, notes, outofdate) {
+API.savePerson = function(person, firstname, surnames, email, twitter, notes, country, outofdate) {
 
 	var url = "api.php?endpoint=/person/save/" +
 					"&id=" + encodeURIComponent(person.id) +
@@ -1284,6 +1284,7 @@ API.savePerson = function(person, firstname, surnames, email, twitter, notes, ou
 					"&email=" + encodeURIComponent(email) +
 					"&twitter=" + encodeURIComponent(twitter) +
 					"&notes=" + encodeURIComponent(notes) +
+					"&country=" + encodeURIComponent(country) +
 					"&outofdate=" + encodeURIComponent(outofdate);
 	console.log(url);
 	$.ajax( url )
@@ -1379,7 +1380,7 @@ API.setPublicationPriority = function(publication, priority, gameId) {
 			API.errorMessage("Could not set priority on Publication.");
 		});
 }
-API.savePublication = function(publication, name, url, email, rssfeedurl, twitter, notes) {
+API.savePublication = function(publication, name, url, email, rssfeedurl, twitter, notes, country) {
 
 	var url = "api.php?endpoint=/publication/save/" +
 					"&id=" + encodeURIComponent(publication.id) +
@@ -1388,7 +1389,8 @@ API.savePublication = function(publication, name, url, email, rssfeedurl, twitte
 					"&email=" + encodeURIComponent(email) +
 					"&rssfeedurl=" + encodeURIComponent(rssfeedurl) +
 					"&twitter=" + encodeURIComponent(twitter) +
-					"&notes=" + encodeURIComponent(notes);
+					"&notes=" + encodeURIComponent(notes) +
+					"&country=" + encodeURIComponent(country);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1517,7 +1519,7 @@ API.setYoutuberPriority = function(youtuber, priority, gameId) {
 			API.errorMessage("Could not set priority on Youtuber.");
 		});
 }
-API.saveYoutuber = function(youtuber, channel, nameOverride, email, twitter, notes) {
+API.saveYoutuber = function(youtuber, channel, nameOverride, email, twitter, notes, country) {
 
 	var url = "api.php?endpoint=/youtuber/save/" +
 					"&id=" + encodeURIComponent(youtuber.id) +
@@ -1525,7 +1527,8 @@ API.saveYoutuber = function(youtuber, channel, nameOverride, email, twitter, not
 					"&name=" + encodeURIComponent(nameOverride) +
 					"&email=" + encodeURIComponent(email) +
 					"&twitter=" + encodeURIComponent(twitter) +
-					"&notes=" + encodeURIComponent(notes);
+					"&notes=" + encodeURIComponent(notes) +
+					"&country=" + encodeURIComponent(country);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {

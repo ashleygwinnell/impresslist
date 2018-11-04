@@ -43,6 +43,17 @@ DBO = function(data) {
 		}
 		return ret;
 	}
+	DBO.prototype.countrySelectHtml = function(type){
+		var html = "<label for='country'>Country:</label>";
+		var country = this.field('country');
+		html += "	<select data-" + type + "-id='" + this.id + "' data-input-field='country' class='form-control'>";
+		for(var countryCode in impresslist.config.misc.countries) {
+
+			html += "	<option value='" + countryCode + "' " + ((countryCode==country)?"selected='true'":"") + ">" + impresslist.config.misc.countries[countryCode] + "</option>";
+		}
+		html += "	</select>";
+		return html;
+	}
 
 	DBO.prototype.onAdded = function() {
 
@@ -1371,8 +1382,10 @@ TwitchChannel = function(data) {
 		ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
-		ret = this.fields['description'].toLowerCase().indexOf(text) != -1;
-		if (ret) { return ret; }
+		if ($('#search-option-full').is(':checked')) {
+			ret = this.fields['description'].toLowerCase().indexOf(text) != -1;
+			if (ret) { return ret; }
+		}
 
 		ret = this.fields['twitter'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
@@ -1507,11 +1520,11 @@ Youtuber = function(data) {
 												<label for='url'>Channel Name:&nbsp; </label> \
 												<input data-youtuber-id='" + this.id + "' data-input-field='channel' class='form-control' type='text' value='" + this.field('channel') + "' />\
 											</div>\
-											<div class='form-group col-md-8'>\
+											<div class='form-group col-md-5'>\
 												<label for='url'>Name (Override):&nbsp; </label> \
 												<input data-youtuber-id='" + this.id + "' data-input-field='name' class='form-control' type='text' value='" + this.field('name_override') + "' />\
 											</div>\
-											<div class='form-group col-md-4'>\
+											<div class='form-group col-md-3'>\
 												<label for='url'>Priority:&nbsp; </label>"
 													var priority = this.priority();
 													html += "	<select data-youtuber-id='" + this.id + "' data-input-field='priority' class='form-control'>\
@@ -1521,6 +1534,9 @@ Youtuber = function(data) {
 																	<option value='0' " + ((priority==0)?"selected='true'":"") + ">N/A</option>\
 																</select>";
 			html += "						</div>\
+											<div class='form-group col-md-4'>\
+												" + this.countrySelectHtml('youtuber') + "\
+											</div>\
 										</div>\
 										<div class='form-group'>\
 											<label for='email'>Email:&nbsp; </label> \
@@ -1610,8 +1626,10 @@ Youtuber = function(data) {
 		ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
-		ret = this.fields['description'].toLowerCase().indexOf(text) != -1;
-		if (ret) { return ret; }
+		if ($('#search-option-full').is(':checked')) {
+			ret = this.fields['description'].toLowerCase().indexOf(text) != -1;
+			if (ret) { return ret; }
+		}
 
 		ret = this.fields['twitter'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
@@ -1624,11 +1642,12 @@ Youtuber = function(data) {
 		var email   = $("[data-youtuber-id=" + this.id + "][data-input-field='email']").val();
 		var twitter = $("[data-youtuber-id=" + this.id + "][data-input-field='twitter']").val();
 		var notes   = $("[data-youtuber-id=" + this.id + "][data-input-field='notes']").val();
+		var country = $("[data-youtuber-id='" + this.id + "'][data-input-field='country']").val();
 
-		API.saveYoutuber(this, channel, nameOverride, email, twitter, notes);
+		API.saveYoutuber(this, channel, nameOverride, email, twitter, notes, country);
 	};
 	Youtuber.prototype.saveWith = function(channel, nameOverride) {
-		API.saveYoutuber(this, channel, nameOverride, "", "", "");
+		API.saveYoutuber(this, channel, nameOverride, "", "", "", "");
 	}
 	Youtuber.prototype.savePriority = function() {
 		var priority = $("[data-youtuber-id='" + this.id + "'][data-input-field='priority']").val();
@@ -2166,9 +2185,10 @@ Person = function(data) {
 		var email = $("[data-person-id=" + this.id + "][data-input-field='email']").val();
 		var twitter = $("[data-person-id=" + this.id + "][data-input-field='twitter']").val();
 		var notes = $("[data-person-id=" + this.id + "][data-input-field='notes']").val();
+		var country = $("[data-person-id='" + this.id + "'][data-input-field='country']").val();
 		var outofdate = $("[data-person-id=" + this.id + "][data-input-field='outofdate']").is(':checked');
 
-		API.savePerson(this, firstname, surnames, email, twitter, notes, outofdate);
+		API.savePerson(this, firstname, surnames, email, twitter, notes, country, outofdate);
 	}
 	Person.prototype.savePriority = function() {
 		var priority = $("[data-person-id='" + this.id + "'][data-input-field='priority']").val();
@@ -2302,6 +2322,9 @@ Person = function(data) {
 															<option value='pt' " + ((language=='pt')?"selected='true'":"") + ">Portuguese</option>\
 														</select>";
 				html += "				</div>\
+											<div class='form-group col-md-3'>\
+												" + this.countrySelectHtml('person') + "\
+											</div>\
 									</div>\
 									<div class='form-group'>\
 										<label class='checkbox-inline'><input data-person-id='" + this.id + "' data-input-field='outofdate' type='checkbox' " + (((this.field('outofdate')==1)?"checked":"")) + "><strong>Out of date?</strong></label>\
@@ -2942,11 +2965,11 @@ Publication = function(data) {
 			html += " 				<h3 data-publication-id='" + this.id + "' data-field='name'>" + this.field('name') + "</h3> ";
 			html += "				<form role='form' class='oa' onsubmit='return false;'>	\
 										<div class='row'>\
-											<div class='form-group  col-md-8'>\
+											<div class='form-group  col-md-6'>\
 												<label for='name'>Name:&nbsp; </label> \
 												<input data-publication-id='" + this.id + "' data-input-field='name' class='form-control' type='text' value='" + this.field('name') + "' /> \
 											</div>\
-											<div class='form-group col-md-4'>\
+											<div class='form-group col-md-3'>\
 												<label for='email'>Priority:</label>";
 												var priority = this.priority();
 												html += "	<select data-publication-id='" + this.id + "' data-input-field='priority' class='form-control'>\
@@ -2956,6 +2979,9 @@ Publication = function(data) {
 																<option value='0' " + ((priority==0)?"selected='true'":"") + ">N/A</option>\
 															</select>";
 			html += "						</div>\
+											<div class='form-group col-md-3'>\
+												" + this.countrySelectHtml('publication') + "\
+											</div>\
 										</div>\
 										<div class='form-group'>\
 											<label for='url'>URL:&nbsp; </label> \
@@ -3008,8 +3034,9 @@ Publication = function(data) {
 		var rssfeedurl = $("[data-publication-id=" + this.id + "][data-input-field='rssfeedurl']").val();
 		var twitter = $("[data-publication-id=" + this.id + "][data-input-field='twitter']").val();
 		var notes = $("[data-publication-id=" + this.id + "][data-input-field='notes']").val();
+		var country = $("[data-publication-id=" + this.id + "][data-input-field='country']").val();
 
-		API.savePublication(this, name, url, email, rssfeedurl, twitter, notes);
+		API.savePublication(this, name, url, email, rssfeedurl, twitter, notes, country);
 	}
 	Publication.prototype.savePriority = function() {
 		var priority = $("[data-publication-id='" + this.id + "'][data-input-field='priority']").val();
@@ -3997,6 +4024,9 @@ var impresslist = {
 			admin: false,
 			imapServer: '',
 			smtpServer: ''
+		},
+		misc: {
+			countries: []
 		}
 	},
 	people: [],
