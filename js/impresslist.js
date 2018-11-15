@@ -1935,7 +1935,14 @@ SimpleMailout = function(data) {
 		this.close();
 	}
 	SimpleMailout.prototype.save = function(callback) {
-		if (typeof callback == 'undefined') { callback = function() {}; }
+		if (typeof callback == 'undefined') {
+			callback = function(data) {
+				console.log('saved');
+				if (data.checks.length > 0) {
+					API.infoMessage(data.checks.join('<br/>\n'));;
+				}
+			};
+		}
 		var name = $('#mailout-name').val();
 		var subject = $('#mailout-subject').val();
 		var markdown = $('#mailout-content').val();
@@ -4281,9 +4288,10 @@ var impresslist = {
 				$('#keys-remove-submit').click(function(){
 					var submitGame = impresslist.config.user.game;
 					var platform = $('#keys-remove-platform').val();
+					var subplatform = $('#keys-remove-subplatform').val();
 					var amount = $('#keys-remove-amount').val();
 
-					API.popKeys(submitGame, platform, amount, function(data) {
+					API.popKeys(submitGame, platform, subplatform, amount, function(data) {
 
 						// show removed keys
 						var html = "";
@@ -4302,26 +4310,33 @@ var impresslist = {
 			}
 
 
-			API.listKeys(impresslist.config.user.game, 'steam', true, function(data) {
+			API.listKeys(impresslist.config.user.game, 'steam', '', true, function(data) {
 				$('#steam_keys_assigned_count').html(data.count);
 			});
-			API.listKeys(impresslist.config.user.game, 'steam', false, function(data) {
+			API.listKeys(impresslist.config.user.game, 'steam', '', false, function(data) {
 				$('#steam_keys_available_count').html(data.count);
 				if (data.count > 0) {
 					addremovekeysform();
 				}
 			});
 
-			API.listKeys(impresslist.config.user.game, 'switch', true, function(data) {
-				$('#switch_keys_assigned_count').html(data.count);
-			});
-			API.listKeys(impresslist.config.user.game, 'switch', false, function(data) {
-				$('#switch_keys_available_count').html(data.count);
+			var switchRegions = ['us', 'eu', 'au', 'jp'];
+			for(var i = 0; i < switchRegions.length; i++) {
+				var region = switchRegions[i];
+				var dothis = function(region){
+					API.listKeys(impresslist.config.user.game, 'switch', region, true, function(data) {
+						$('#switch_' + region + '_keys_assigned_count').html(data.count);
+					});
+					API.listKeys(impresslist.config.user.game, 'switch', region, false, function(data) {
+						$('#switch_' + region + '_keys_available_count').html(data.count);
+						if (data.count > 0) {
+							addremovekeysform();
+						}
+					});
+				};
+				dothis(region);
+			}
 
-				if (data.count > 0) {
-					addremovekeysform();
-				}
-			});
 
 
 
@@ -4344,6 +4359,7 @@ var impresslist = {
 			var keys_setFormEnabled = function(boo) {
 				boo = !boo;
 				$('#keys-add-platform').attr("disabled", boo);
+				$('#keys-add-subplatform').attr("disabled", boo);
 				$('#keys-add-textfield').attr("disabled", boo);
 				$('#keys-radio-expiry-never').attr("disabled", boo);
 				$('#keys-radio-expiry-time').attr("disabled", boo);
@@ -4361,6 +4377,8 @@ var impresslist = {
 				return;
 			}
 
+			var submitSubplatform = $('#keys-add-subplatform').val();
+
 			var whichtime = $('input[name="keys-expiry-radio"]:checked').val();
 			if (whichtime == undefined) {
 				API.errorMessage("Please select an expiry for these keys.");
@@ -4372,9 +4390,10 @@ var impresslist = {
 				var date = new Date($('#keys-timepicker').data("DateTimePicker").date());
 				expiresOn = Math.floor(date.getTime() / 1000);
 			}
-			API.addKeys(submitList, submitGame, submitPlatform, expiresOn, function(d) {
+			API.addKeys(submitList, submitGame, submitPlatform, submitSubplatform, expiresOn, function(d) {
 				keys_setFormEnabled(true);
 				$('#keys-add-platform').val('---');
+				$('#keys-add-subplatform').val('---');
 				$('#keys-add-textfield').val('');
 				$('#nav-keys').click();
 			}, function(){

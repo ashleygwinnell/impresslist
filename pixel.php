@@ -23,6 +23,14 @@ if (isset($_GET['type']) && isset($_GET['id']) && isset($_GET['recipient']))
 			$stmt->bindValue(":email", $recipient, Database::VARTYPE_STRING);
 			$peoplePublications = $stmt->query();
 
+			$stmt = $db->prepare("SELECT * FROM publication WHERE email = :email; ");
+			$stmt->bindValue(":email", $recipient, Database::VARTYPE_STRING);
+			$publications = $stmt->query();
+
+			$stmt = $db->prepare("SELECT * FROM youtuber WHERE email = :email; ");
+			$stmt->bindValue(":email", $recipient, Database::VARTYPE_STRING);
+			$youtubers = $stmt->query();
+
 			$mailout = db_singlemailoutsimple($db, $id);
 
 			if ($mailout != null) {
@@ -47,6 +55,28 @@ if (isset($_GET['type']) && isset($_GET['id']) && isset($_GET['recipient']))
 						for($j = 0; $j < count($peoplePublications); $j++)
 						{
 							if ($peoplePublications[$j]['id'] == $recipients[$i]['personPublication_id']) {
+								$recipients[$i]['read'] = true;
+								$updated = true;
+								break;
+							}
+						}
+					}
+					else if ($recipients[$i]['type'] == "publication")
+					{
+						for($j = 0; $j < count($publications); $j++)
+						{
+							if ($publications[$j]['id'] == $recipients[$i]['publication_id']) {
+								$recipients[$i]['read'] = true;
+								$updated = true;
+								break;
+							}
+						}
+					}
+					else if ($recipients[$i]['type'] == "youtuber")
+					{
+						for($j = 0; $j < count($youtubers); $j++)
+						{
+							if ($youtubers[$j]['id'] == $recipients[$i]['youtuber_id']) {
 								$recipients[$i]['read'] = true;
 								$updated = true;
 								break;

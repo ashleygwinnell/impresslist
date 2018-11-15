@@ -74,13 +74,23 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 			$rs3arr = $stmt3->query();
 			$count_recipients_2 = count($rs3arr);
 
+			$stmt4 = $db->prepare("SELECT * FROM publication WHERE email = :email AND removed = 0; ");
+			$stmt4->bindValue(":email", $to, Database::VARTYPE_STRING);
+			$rs4arr = $stmt4->query();
+			$count_recipients_3 = count($rs4arr);
+
+			$stmt5 = $db->prepare("SELECT * FROM youtuber WHERE email = :email AND removed = 0; ");
+			$stmt5->bindValue(":email", $to, Database::VARTYPE_STRING);
+			$rs5arr = $stmt5->query();
+			$count_recipients_4 = count($rs5arr);
+
 			// TODO: check email accounts on publications
 			// TODO: check email accounts on youtubers
 
-			if ($count_recipients_1 > 1 || $count_recipients_2 > 1) {
+			if ($count_recipients_1 > 1 || $count_recipients_2 > 1 || $count_recipients_3 > 1 || $count_recipients_4 > 1) {
 				echo "THIS EMAIL ADDRESS IS IN THE DATABASE FOR TWO PEOPLE. CANNOT ADD EMAIL.<br/>";
 				continue;
-			} else if ($count_recipients_1 == 0 && $count_recipients_2 == 0) {
+			} else if ($count_recipients_1 == 0 && $count_recipients_2 == 0 && $count_recipients_3 == 0 && $count_recipients_4 == 0) {
 				echo "ADD RECIPIENT TO DATABASE<br/>";
 				$stmt4 = $db->prepare("INSERT INTO person (id, 	firstname,  surnames, email,  priorities,  twitter,  twitter_followers,  notes,  lastcontacted, lastcontactedby, removed)
 												  VALUES (NULL, :firstname, :surnames, :email, :priorities, :twitter, :twitter_followers, :notes, :lastcontacted, :lastcontactedby, :removed);");
@@ -103,7 +113,9 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 			}
 
-			if (($count_recipients_1 == 1 && $count_recipients_2 == 0) || ($count_recipients_1 == 0 && $count_recipients_2 == 1))
+			if (
+				(($count_recipients_1 == 1 && $count_recipients_2 == 0) || ($count_recipients_1 == 0 && $count_recipients_2 == 1)) && $count_recipients_3 == 0 && $count_recipients_4 == 0
+			)
 			{
 				// we have this recipient, so just just the email!
 				echo "RECIPIENT EXISTS. ADD JUST THE EMAIL.<br/>";

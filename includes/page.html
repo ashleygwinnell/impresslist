@@ -386,16 +386,22 @@
 				<p>Available: <span id='steam_keys_available_count'>loading...</span></p>
 
 				<p><b>Nintendo Switch:</b></p>
-				<p>Assigned: <span id='switch_keys_assigned_count'>loading...</span></p>
-				<p>Available: <span id='switch_keys_available_count'>loading...</span></p>
+				<p>Assigned EU: <span id='switch_eu_keys_assigned_count'>loading...</span></p>
+				<p>Available EU: <span id='switch_eu_keys_available_count'>loading...</span></p>
+				<p>Assigned US: <span id='switch_us_keys_assigned_count'>loading...</span></p>
+				<p>Available US: <span id='switch_us_keys_available_count'>loading...</span></p>
+				<p>Assigned AU: <span id='switch_au_keys_assigned_count'>loading...</span></p>
+				<p>Available AU: <span id='switch_au_keys_available_count'>loading...</span></p>
+				<p>Assigned JP: <span id='switch_jp_keys_assigned_count'>loading...</span></p>
+				<p>Available JP: <span id='switch_jp_keys_available_count'>loading...</span></p>
 
 				<hr/>
 				<p><b>Add Keys</b></p>
 				<div class='row'>
-					<div class='col-sm-2'>
+					<div class='col-sm-3'>
 						<p><b>Platform:</b></p>
 					</div>
-					<div class='col-sm-10'>
+					<div class='col-sm-9'>
 						<select id='keys-add-platform' class='form-control'>
 							<option value='---'>---</option>
 							<option value='steam'>Steam</option>
@@ -410,19 +416,36 @@
 						</select>
 					</div>
 				</div>
+				<div class='row' style='margin-top:7px;'>
+					<div class='col-sm-3'>
+						<p><b>Subplatform / Region:</b></p>
+					</div>
+					<div class='col-sm-9'>
+						<select id='keys-add-subplatform' class='form-control'>
+							<option value='---'>---</option>
+							<?php
+								$regions = util_listNintendoRegions();
+								foreach($regions as $code => $name) {
+									echo "<option value='{$code}'>{$name}</option>\n";
+								}
+							?>
+
+						</select>
+					</div>
+				</div>
 				<div class='row'>
-					<div class='col-sm-2'>
+					<div class='col-sm-3'>
 						<p><b>Keys:</b></p>
 					</div>
-					<div class='col-sm-10'>
+					<div class='col-sm-9'>
 						<textarea id='keys-add-textfield' class='form-control' style='margin-top:10px;min-height:100px; overflow:scroll;' placeholder="Enter one key per line..."></textarea>
 					</div>
 				</div>
 				<div class='row'>
-					<div class='col-sm-2'>
+					<div class='col-sm-3'>
 						<p><b>Expiry:</b></p>
 					</div>
-					<div class='col-sm-10' style='margin-top:7px;'>
+					<div class='col-sm-9' style='margin-top:7px;'>
 						<p>
 							<label class='radio-inline'><input id='keys-radio-expiry-never' type='radio' name='keys-expiry-radio' value='never' checked/>Never</label>
 							<label class='radio-inline'><input id='keys-radio-expiry-time' type='radio' name='keys-expiry-radio' value='time'/>Time</label>
@@ -461,6 +484,23 @@
 								<!-- <option value='xboxone'>Xbox One</option> -->
 								<!-- <option value='ps4'>PS4</option> -->
 								<!-- <option value='wiiu'>Wii U</option> -->
+							</select>
+						</div>
+					</div>
+					<div class='row' style='margin-top:7px;'>
+						<div class='col-sm-2'>
+							<p><b>Subplatform / Region:</b></p>
+						</div>
+						<div class='col-sm-10'>
+							<select id='keys-remove-subplatform' class='form-control'>
+								<option value='---'>---</option>
+								<?php
+									$regions = util_listNintendoRegions();
+									foreach($regions as $code => $name) {
+										echo "<option value='{$code}'>{$name}</option>\n";
+									}
+								?>
+
 							</select>
 						</div>
 					</div>

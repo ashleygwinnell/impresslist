@@ -86,9 +86,9 @@
 		$rs = $db->query("SELECT * FROM game WHERE id = '" . $gameId . "' LIMIT 1;");
 		return $rs[0];
 	}
-	function db_singleavailablekeyforgame($db, $gameid, $platform) {
+	function db_singleavailablekeyforgame($db, $gameid, $platform, $subplatform) {
 		if (!is_numeric($gameid)) { return false; }
-		$rs = $db->query("SELECT * FROM game_key WHERE game = '" . $gameid . "' AND platform = '" . $platform . "' AND assigned = 0 AND removed = 0 ORDER BY id ASC;");
+		$rs = $db->query("SELECT * FROM game_key WHERE game = '" . $gameid . "' AND platform = '" . $platform . "' AND subplatform = '" . $subplatform . "' AND assigned = 0 AND removed = 0 ORDER BY id ASC;");
 		return $rs[0];
 	}
 	function db_singleOAuthTwitter($db, $twitterAccId) {
@@ -131,11 +131,12 @@
 		$rs = $db->query("SELECT * FROM socialqueue WHERE id = " . $id . " LIMIT 1;");
 		return $rs[0];
 	}
-	function db_keysassignedtotype($db, $gameid, $platform, $type, $typeid) {
+	function db_keysassignedtotype($db, $gameid, $platform, $subplatform, $type, $typeid) {
 		$stmt = $db->prepare("SELECT *
 								FROM game_key
 								WHERE game = :game
 									AND platform = :platform
+									AND subplatform = :subplatform
 									AND assigned = :assigned
 									AND assignedToType = :assignedToType
 									AND assignedToTypeId = :assignedToTypeId
@@ -143,6 +144,7 @@
 								");
 		$stmt->bindValue(":game", $gameid, Database::VARTYPE_INTEGER);
 		$stmt->bindValue(":platform", $platform, Database::VARTYPE_STRING);
+		$stmt->bindValue(":subplatform", $subplatform, Database::VARTYPE_STRING);
 		$stmt->bindValue(":assigned", 1, Database::VARTYPE_INTEGER);
 		$stmt->bindValue(":assignedToType", $type, Database::VARTYPE_STRING);
 		$stmt->bindValue(":assignedToTypeId", $typeid, Database::VARTYPE_INTEGER);
@@ -514,7 +516,9 @@
 					lastpostedon INTEGER NOT NULL,
 					lastpostedon_updatedon INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0,
-					lastscrapedon INTEGER NOT NULL DEFAULT 0
+					lastscrapedon INTEGER NOT NULL DEFAULT 0,
+					lastcontacted INTEGER NOT NULL DEFAULT 0,
+					lastcontactedby INTEGER NOT NULL DEFAULT 0
 				) {$sqlEngineAndCharset} ;";
 		$db->exec($sql);
 

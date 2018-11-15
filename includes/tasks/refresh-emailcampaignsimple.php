@@ -7,6 +7,8 @@ $require_login = false;
 $require_config = true;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
+$impresslist_verbose = true;
+
 $queue = $db->query("SELECT * FROM emailcampaignsimple WHERE ready = 1 AND sent = 0 AND removed = 0 AND `timestamp` <= " . time() . " ORDER BY `timestamp` LIMIT 10;");
 //print_r($queue);
 
@@ -16,7 +18,7 @@ for ($i = 0; $i < count($queue); $i++)
 {
 	$campaign = $queue[$i];
 	$recipients = json_decode($campaign['recipients'], true);
-	$user = db_singleuser($db, $campaign['user']);
+	$user = db_singleuser($db, $campaign['user'], ['emailIMAPPassword', 'emailIMAPPasswordSalt', 'emailIMAPPasswordIV']);
 
 	util_setIV($user['emailIMAPPasswordIV']);
 	$userPassword = util_decrypt($user['emailIMAPPassword'], $user['emailIMAPPasswordSalt']);
@@ -48,6 +50,9 @@ X-Mailer: impresslist/" . $impresslist_version;
 	//print_r($campaign);
 	//print_r($recipients);
 
+	$done_emails = [];
+	// TODO: check duplicates.
+
 	$all_sent = true;
 	for($j = 0; $j < count($recipients); $j++)
 	{
@@ -55,58 +60,66 @@ X-Mailer: impresslist/" . $impresslist_version;
 		{
 			$all_sent = false;
 			$person = null;
-			$person_email = "";
+			$recipient_email = "";
 			$use_firstname = "";
 			$use_surnames = "";
+			$use_country = "";
 			if ($recipients[$j]['type'] == "person")
 			{
 				$person = db_singleperson($db, $recipients[$j]['person_id']);
-				$person_email = $person['email'];
+				$recipient_email = $person['email'];
 				$use_firstname = $person['firstname'];
 				$use_surnames = $person['surnames'];
+				$use_country = $person['country'];
 			}
 			else if ($recipients[$j]['type'] == "personPublication")
 			{
 				$perpub = db_singlepersonpublication($db, $recipients[$j]['personPublication_id']);
 				$person = db_singleperson($db, $perpub['person']);
-				$person_email = $perpub['email'];
+				$recipient_email = $perpub['email'];
 				$use_firstname = $person['firstname'];
 				$use_surnames = $person['surnames'];
+				$use_country = $person['country'];
 			}
 			else if ($recipients[$j]['type'] == "publication")
 			{
 				$pub = db_singlepublication($db, $recipients[$j]['publication_id']);
-				$person_email = $pub['email'];
+				$recipient_email = $pub['email'];
 				$use_firstname = $pub['name'];
 				$use_surnames = "";
+				$use_country = $pub['country'];
 			}
 			else if ($recipients[$j]['type'] == "youtuber")
 			{
-				$youtuber = db_singleyoutuber($db, $recipients[$j]['youtuber_id']);
-				$person_email = $youtuber['email'];
+				$youtuber = db_singleyoutubechannel($db, $recipients[$j]['youtuber_id']);
+				$recipient_email = $youtuber['email'];
 				$use_firstname = $youtuber['name'];
 				if (strlen($use_firstname) == 0 && strlen($youtuber['name_override']) > 0) {
 					$use_firstname = $youtuber['name_override'];
 				}
 				$use_surnames = "";
+				$use_country = $youtuber['country'];
 			}
 			else if ($recipients[$j]['type'] == "twitchchannel")
 			{
 				$twitchchannel = db_singletwitchchannel($db, $recipients[$j]['twitchchannel_id']);
-				$person_email = $twitchchannel['email'];
+				$recipient_email = $twitchchannel['email'];
 				$use_firstname = $twitchchannel['name'];
 				if (strlen($use_firstname) == 0 && strlen($twitchchannel['twitchUsername']) > 0) {
 					$use_firstname = $twitchchannel['twitchUsername'];
 				}
 				$use_surnames = "";
+				$use_country = ""; // error in all twitch mailouts.
 			}
 			else {
 				echo "Skipping e-mail line: " . json_encode($recipients[$j]);
 				continue;
 			}
+			$recipient_type = $recipients[$j]['type'];
+			$recipient_typeId = $recipients[$j][$recipients[$j]['type'].'_id'];
 
 			echo "<hr/>";
-			echo "Sending e-mail <i>" . $campaign['subject'] . "</i> to " . $use_firstname . " " . $use_surnames . " (" . $person_email . "). <br/>\n";
+			echo "Sending e-mail <i>" . $campaign['subject'] . "</i> to " . $use_firstname . " " . $use_surnames . " (" . $recipient_email . "). <br/>\n";
 
 			// templates
 			$markdown = $campaign['markdown'];
@@ -126,27 +139,31 @@ X-Mailer: impresslist/" . $impresslist_version;
 				"switch" => ''
 			];
 
-			$assign_platform_keys_if_tagged = function($platform, $platformName) use ($markdown,
+			$assign_platform_keys_if_tagged = function($platform, $subplatform, $platformName) use ($db,
+																						&$user,
+																						&$markdown,
 																						&$assignsSingleKeys_id,
 																						&$assignsSingleKeys_code,
-																						&$assignsSingleKeys) {
+																						&$assignsSingleKeys,
+																						$recipient_type,
+																						$recipient_typeId) {
 
-				$assignsSingleKeys[$platform] = (strpos($markdown, "{{".$platform."_key}}") !== false);
-				if ($$assignsSingleKeys[$platform]) {
+				$assignsSingleKeys[$platform] = (strpos($markdown, "{{".$platform."_key}}") !== FALSE);
+				if ($assignsSingleKeys[$platform]) {
 					echo "Replacing {{".$platform."_key}} in email.<br/>\n";
-					$availableKey = db_singleavailablekeyforgame($db, $user['currentGame'], $platform);
+					$availableKey = db_singleavailablekeyforgame($db, $user['currentGame'], $platform, $subplatform);
 					$assignsSingleKeys_id[$platform] = $availableKey['id'];
 					$assignsSingleKeys_code[$platform] = $availableKey['keystring'];
 					$markdown = str_replace("{{".$platform."_key}}", $assignsSingleKeys_code[$platform], $markdown);
 				}
 				else if (strpos($markdown, "{{".$platform."_keys}}") !== false) {
 					echo "Replacing {{".$platform."_keys}} (plural) in email.<br/>\n";
-					$keysForContact = db_keysassignedtotype($db, $user['currentGame'], $platform, 'person', $person['id']);
+					$keysForContact = db_keysassignedtotype($db, $user['currentGame'], $platform, $subplatform, $recipient_type, $recipient_typeId);
 					//print_r($keysForContact);
 
 					if (count($keysForContact) == 0) {
 						echo "Assigning new key<br/>\n";
-						$availableKey = db_singleavailablekeyforgame($db, $user['currentGame'], $platform);
+						$availableKey = db_singleavailablekeyforgame($db, $user['currentGame'], $platform, $subplatform);
 						//echo "key: " . $availableKey;
 						print_r($availableKey);
 
@@ -172,8 +189,14 @@ X-Mailer: impresslist/" . $impresslist_version;
 
 			};
 
-			$assign_platform_keys_if_tagged("steam", "Steam");
-			$assign_platform_keys_if_tagged("switch", "Nintendo Switch");
+			$switchCodeSubplatform = util_findNintendoRegionForCountry($use_country);
+			if ($switchCodeSubplatform == '') {
+				echo "Invalid country/region for " . $recipients[$j]['type'] . ": " .$use_firstname;
+				die();
+			}
+
+			$assign_platform_keys_if_tagged("steam", "", "Steam");
+			$assign_platform_keys_if_tagged("switch", $switchCodeSubplatform, "Nintendo Switch");
 
 
 			$html_contents = $Parsedown->text($markdown);
@@ -185,7 +208,7 @@ X-Mailer: impresslist/" . $impresslist_version;
 										<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 										<meta http-equiv="Content-Language" content="en-us">
 									</head>
-									<body>' . $html_contents . '<img src="' . $urlroot . '/pixel.php?type=simple-mailout&id=' . $campaign['id'] . '&recipient=' . $person_email . '"/></body>
+									<body>' . $html_contents . '<img src="' . $urlroot . '/pixel.php?type=simple-mailout&id=' . $campaign['id'] . '&recipient=' . $recipient_email . '"/></body>
 								</html>';
 
 			// Try to send the email with the user's IMAP connection,
@@ -203,7 +226,7 @@ X-Mailer: impresslist/" . $impresslist_version;
 			$mail->Password = $userPassword;
 
 			$mail->setFrom($user['email'], $user['forename'] . " " . $user['surname']);
-			$mail->addAddress($person_email, $use_firstname . " " . $use_surnames);
+			$mail->addAddress($recipient_email, $use_firstname . " " . $use_surnames);
 			//$mail->addBCC( $impresslist_emailAddress ); // We add this manually.
 
 			$mail->IsHTML(true);
@@ -234,36 +257,84 @@ X-Mailer: impresslist/" . $impresslist_version;
 				$stmt->bindValue(":id", $campaign['id'], Database::VARTYPE_INTEGER);
 				$stmt->execute();
 
+				echo "hey";echo "<br/>";echo "<br/>";
+
+				print_r($user);
+				echo "<br/>";echo "<br/>";
+
+				print_r($person);
+				echo "<br/>";echo "<br/>";
+
+				print_r($assignsSingleKeys);
+				echo "<br/>";echo "<br/>";
+				print_r($assignsSingleKeys_id);
+				echo "<br/>";echo "<br/>";
+				print_r($assignsSingleKeys_code);
+				echo "<br/>";echo "<br/>";
+
 				// Add this email to the general list of e-mails between people.
-				$stmt = $db->prepare("INSERT INTO email (id, 	user_id, 	person_id, 	utime, 	from_email,  to_email, 	subject,  contents, unmatchedrecipient   )
-													VALUES  (NULL, :user_id, 	:person_id, :utime, :from_email, :to_email, :subject, :contents, :unmatchedrecipient );");
+				$stmt = $db->prepare("INSERT INTO email (id, 	user_id, 	person_id, 	publication_id, youtuber_id, game_id, utime, 	from_email,  to_email, 	subject,  contents, unmatchedrecipient, removed   )
+													VALUES  (NULL, :user_id, 	:person_id, :publication_id, :youtuber_id, :game_id, :utime, :from_email, :to_email, :subject, :contents, :unmatchedrecipient, 0 );");
 				$stmt->bindValue(":user_id", $user['id'], Database::VARTYPE_INTEGER);
-				$stmt->bindValue(":person_id", $person['id'], Database::VARTYPE_INTEGER);
+
+				if ($recipients[$j]['type'] == "person") {
+					$stmt->bindValue(":person_id", $person['id'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":publication_id", 0, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":youtuber_id", 0, Database::VARTYPE_INTEGER);
+				}
+				else if ($recipients[$j]['type'] == "personPublication") {
+					$stmt->bindValue(":person_id", $person['id'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":publication_id", $perpub['publication'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":youtuber_id", 0, Database::VARTYPE_INTEGER);
+				}
+				else if ($recipients[$j]['type'] == "publication") {
+					$stmt->bindValue(":person_id", 0, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":publication_id", $pub['id'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":youtuber_id", 0, Database::VARTYPE_INTEGER);
+				}
+				else if ($recipients[$j]['type'] == "youtuber") {
+					$stmt->bindValue(":person_id", 0, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":publication_id", 0, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":youtuber_id", $youtuber['id'], Database::VARTYPE_INTEGER);
+				}
+				$stmt->bindValue(":game_id", $user['currentGame'], Database::VARTYPE_INTEGER);
+
 				$stmt->bindValue(":utime", time(), Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":from_email", $user['email'], Database::VARTYPE_STRING);
-				$stmt->bindValue(":to_email", $person_email, Database::VARTYPE_STRING);
+				$stmt->bindValue(":to_email", $recipient_email, Database::VARTYPE_STRING);
 				$stmt->bindValue(":subject", $campaign['subject'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":contents", $html_message, Database::VARTYPE_STRING);
 				$stmt->bindValue(":unmatchedrecipient", 0, Database::VARTYPE_INTEGER);
-				$stmt->execute();
+				$rs = $stmt->execute();
+				if (!$rs) {
+					// ...
+				}
 
-				$stmt = $db->prepare("UPDATE person SET lastcontacted = :lastcontacted, lastcontactedby = :lastcontactedby WHERE id = :id; ");
-				$stmt->bindValue(":id", $person['id'], Database::VARTYPE_INTEGER);
-				$stmt->bindValue(":lastcontacted", time(), Database::VARTYPE_INTEGER);
-				$stmt->bindValue(":lastcontactedby", $user['id'], Database::VARTYPE_INTEGER);
-				$stmt->execute();
-
-				if ($recipients[$j]['type'] == "personPublication")  {
-					$stmt = $db->prepare("UPDATE person_publication SET lastcontacted = :lastcontacted, lastcontactedby = :lastcontactedby WHERE person = :person_id AND publication = :pulication_id ");
+				if ($recipients[$j]['type'] == "person" || $recipients[$j]['type'] == "personPublication") {
+					$stmt = $db->prepare("UPDATE person SET lastcontacted = :lastcontacted, lastcontactedby = :lastcontactedby WHERE id = :id; ");
+					$stmt->bindValue(":id", $person['id'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":lastcontacted", time(), Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":lastcontactedby", $user['id'], Database::VARTYPE_INTEGER);
+					$stmt->execute();
+				}
+				if ($recipients[$j]['type'] == "personPublication") {
+					$stmt = $db->prepare("UPDATE person_publication SET lastcontacted = :lastcontacted, lastcontactedby = :lastcontactedby WHERE person = :person_id AND publication = :publication_id ");
 					$stmt->bindValue(":person_id", $person['id'], Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":publication_id", $perpub['publication'], Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":lastcontacted", time(), Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":lastcontactedby", $user['id'], Database::VARTYPE_INTEGER);
 					$stmt->execute();
 				}
+				else if ($recipients[$j]['type'] == "youtuber") {
+					$stmt = $db->prepare("UPDATE youtuber SET lastcontacted = :lastcontacted, lastcontactedby = :lastcontactedby WHERE id = :id; ");
+					$stmt->bindValue(":id", $youtuber['id'], Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":lastcontacted", time(), Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":lastcontactedby", $user['id'], Database::VARTYPE_INTEGER);
+					$stmt->execute();
+				}
 
 				// Assign the steam/switch key/s
-				$addTheKeyForTheRecipient = function($personId, $fromUserId, $platform) {
+				$addTheKeyForTheRecipient = function($typeId, $fromUserId, $platform) use ($db, $recipients, $j, $assignsSingleKeys_id) {
 					$stmt = $db->prepare("UPDATE game_key
 											SET assigned = :assigned,
 												assignedToType = :assignedToType,
@@ -273,18 +344,19 @@ X-Mailer: impresslist/" . $impresslist_version;
 											WHERE id = :id ");
 					$stmt->bindValue(":id", $assignsSingleKeys_id[$platform], Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":assigned", 1, Database::VARTYPE_INTEGER);
-					$stmt->bindValue(":assignedToType", 'person', Database::VARTYPE_STRING);
-					$stmt->bindValue(":assignedToTypeId", $personId, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":assignedToType", $recipients[$j]['type'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":assignedToTypeId", $typeId, Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":assignedByUser", $fromUserId, Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":assignedByUserTimestamp", time(), Database::VARTYPE_INTEGER);
 					$stmt->execute();
-				}
+				};
 
 				if ($assignsSingleKeys['steam']) {
-					$addTheKeyForTheRecipient( $person['id'], $user['id'], 'steam' );
+					$addTheKeyForTheRecipient( $recipient_typeId, $user['id'], 'steam' );
 				}
 				if ($assignsSingleKeys['switch']) {
-					$addTheKeyForTheRecipient( $person['id'], $user['id'], 'switch' );
+					echo "adding key for recipient " . $recipient_typeId . ' - ' . $user['id'] . ' switch';
+					$addTheKeyForTheRecipient( $recipient_typeId, $user['id'], 'switch' );
 				}
 			}
 		}

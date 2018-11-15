@@ -74,7 +74,7 @@ function api_checkRequiredGETFieldsWithTypes($fields, &$result) {
 			} else if ($type == 'country') {
 				$temp = $_GET[$fields[$i]['name']];
 				$countries = array_values(listcountries());
-				if (!in_array(strtoupper($temp), $countries)) {
+				if (!in_array(strtolower($temp), $countries)) {
 					$result = api_error($fields[$i]['name'] . " / " . $temp . " is not a valid country code.");
 					return true;
 				}
@@ -1744,12 +1744,71 @@ if (!isset($_GET['endpoint'])) {
 						// TODO:
 						// Validate all people, personPublications, etc.
 						// [{"type":"person","person_id":333,"sent":true,"read":false},{"type":"personPublication","personPublication_id":221,"sent":true,"read":false}]
-						for($j = 0; $j < count($json); $j++) {
-							if ($json[$j]['type'] == "person") {
 
-							} else if ($json[$j]['type'] == "personPublication") {
+
+						// Validate all countries.
+						// Validate there are enough codes based on region.
+						$errs = [];
+						if (strpos($_GET['markdown'], "{{switch_keys}}") !== FALSE ||
+							strpos($_GET['markdown'], "{{switch_key}}") !== FALSE
+							) {
+
+							$regions = array_keys(util_listNintendoRegions());
+							$keysForRegions = [];
+							for ($i = 0; $i < count($regions); $i++) {
+								$keysArray = $db->query("SELECT * FROM game_key WHERE game = '" . $user_currentGame . "' AND platform = 'switch' AND subplatform = '" . $regions[$i] . "' AND assigned = 0;");
+								$countKeys = count($keysArray);
+
+								$keysForRegions[$regions[$i]] = $countKeys;
+								$keysForRegionsNeeded[$regions[$i]] = 0;
+							}
+
+							for($j = 0; $j < count($json); $j++) {
+								$type = $json[$j]['type'];
+								$typeId = $json[$j][$json[$j]['type'].'_id'];
+								$typeObj = null;
+								if ($type == "person") {
+									$typeObj = db_singleperson($db, $typeId);
+								}
+								else if ($type == "personPublication") {
+									$typeObj = db_singlepersonpublication($db, $typeId);
+
+									$typeObj2 = db_singleperson($db, $typeObj['person']);
+									if ($typeObj2['country'] == '') {
+										$typeObj3 = db_singlepublication($db, $typeObj['publication']);
+										if ($typeObj3['country'] == '') {
+
+										} else {
+											$typeObj = $typeObj3;
+										}
+									} else {
+										$typeObj = $typeObj2;
+									}
+								}
+								else if ($type == "publication") {
+									$typeObj = db_singlepublication($db, $typeId);
+								}
+								else if ($type == "youtuber") {
+									$typeObj = db_singleyoutubechannel($db, $typeId);
+								}
+								if (!$typeObj) {
+									$errs[] = "Invalid " . $type . " - " . $typeId;
+								}
+								$c = util_findNintendoRegionForCountry($typeObj['country']);
+								if ($c == '') {
+									$errs[] = "Invalid Switch Key country/region for " . $type. " " . $typeId . " " . util_getFullNameForObject($typeObj) . ". (".$typeObj['country']." = " . $c . ")";
+								} else {
+									$keysForRegionsNeeded[$c]++;
+									if ($keysForRegionsNeeded[$c] >= $keysForRegions[$c] + 1) {
+										$errs[] = "Too many recipients for " . strtoupper($c) . " region keys. Needed {$keysForRegionsNeeded[$c]}, found {$keysForRegions[$c]}.<Br/>";
+									}
+								}
+
+
 
 							}
+
+
 						}
 
 						$stmt = $db->prepare("UPDATE emailcampaignsimple
@@ -1779,6 +1838,7 @@ if (!isset($_GET['endpoint'])) {
 						$result = new stdClass();
 						$result->success = true;
 						$result->mailout = db_singlemailoutsimple($db, $_GET['id'] );
+						$result->checks = $errs;
 					}
 				}
 			}
@@ -1797,6 +1857,8 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
+				$user = db_singleuser($db, $_SESSION['user'], ['emailIMAPPassword', 'emailIMAPPasswordSalt', 'emailIMAPPasswordIV']);
+
 				// check smtp settings.
 				if ($user['emailSMTPServer'] != '' &&
 					$user['emailIMAPServer'] != '' &&
@@ -1813,7 +1875,9 @@ if (!isset($_GET['endpoint'])) {
 
 					$doSend = true;
 
-					$assertEnoughKeys = function($platform) use ($mailout, &$doSend, &$result) {
+					// TODO: check recipients against keys with subplatform included.
+
+					$assertEnoughKeys = function($platform, $subplatform) use ($db, $mailout, &$doSend, &$result) {
 						$recipientsArray = json_decode($mailout['recipients'], true);
 						$countRecipients = count($recipientsArray);
 						// TODO: game_id should probably be part of the mailout data?!
@@ -1822,28 +1886,29 @@ if (!isset($_GET['endpoint'])) {
 											WHERE
 												game = '" . $user_currentGame . "' AND
 												platform = '" . $platform . " AND
+												subplatform = '" . $subplatform . " AND
 												assigned = 0;");
 						$countKeys = count($keysArray);
 
 						if ($countKeys < $countRecipients) {
 							$doSend = false;
 							$numNewKeysNeeded = $countRecipients - $countKeys;
-							$result = api_error("There are not enough ".$platform." keys in the system to allocate to this mailout. {$numNewKeysNeeded} more needed.");
+							$result = api_error("There are not enough ".$platform."/" . $subplatform . " keys in the system to allocate to this mailout. {$numNewKeysNeeded} more needed.");
 						}
 						return false;
 					};
 
-					$assertEnoughKeysCountExisting = function($platform) use ($mailout, &$doSend, &$result) {
+					$assertEnoughKeysCountExisting = function($platform, $subplatform) use ($db, $mailout, &$doSend, &$result) {
 						$recipientsArray = json_decode($mailout['recipients'], true);
 						$newKeysNeeded = 0;
 						for ($i = 0; $i < count($recipientsArray); $i++) {
 							$contact = $recipientsArray[$i];
-							if ($contact['type'] == "person") {
-								$keysForContact = db_keysassignedtotype($db, $user_currentGame, 'steam', 'person', $contact['person_id']);
-								if (count($keysForContact) == 0) {
-									$newKeysNeeded++;
-								}
+
+							$keysForContact = db_keysassignedtotype($db, $user_currentGame, $platform, $subplatform, $contact['type'], $contact[$contact['type'].'_id']);
+							if (count($keysForContact) == 0) {
+								$newKeysNeeded++;
 							}
+
 						}
 
 						$keysArray = $db->query("SELECT *
@@ -1851,6 +1916,7 @@ if (!isset($_GET['endpoint'])) {
 											WHERE
 												game = '" . $user_currentGame . "' AND
 												platform = '" . $platform . "' AND
+												subplatform = '" . $subplatform . "' AND
 												assigned = 0;");
 						$countKeys = count($keysArray);
 						if ($countKeys < $newKeysNeeded) {
@@ -1863,18 +1929,18 @@ if (!isset($_GET['endpoint'])) {
 					if (strpos($markdown, "{{steam_key}}") !== false) {
 						$assertEnoughKeys("steam");
 					}
-					if (strpos($markdown, "{{switch_key}}") !== false) {
-						$assertEnoughKeys("switch");
-					}
+					// if (strpos($markdown, "{{switch_key}}") !== false) {
+					// 	$assertEnoughKeys("switch");
+					// }
 
 					if (strpos($markdown, "{{steam_keys}}") !== false)
 					{
 						$assertEnoughKeysCountExisting("steam");
 					}
-					if (strpos($markdown, "{{switch_keys}}") !== false)
-					{
-						$assertEnoughKeysCountExisting("switch");
-					}
+					// if (strpos($markdown, "{{switch_keys}}") !== false)
+					// {
+					// 	$assertEnoughKeysCountExisting("switch");
+					// }
 
 					if ($doSend) {
 						$stmt = $db->prepare(" UPDATE emailcampaignsimple SET ready = 1 WHERE id = :id ;");
@@ -2745,6 +2811,9 @@ if (!isset($_GET['endpoint'])) {
 			//} else if ($_GET['assigned'] != "true" && $_GET['assigned'] != "false") {
 			//	$result = api_error("Invalid 'assigned' value.");
 			//	$dolist = false;
+			} else if (!util_isValidSubplatform($_GET['platform'], $_GET['subplatform'])) {
+				$result = api_error("Invalid 'subplatform' value.");
+				$dolist = false;
 			} else if (!util_isInteger($_GET['game'])) {
 				$result = api_error("Invalid 'game' value.");
 				$dolist = false;
@@ -2770,7 +2839,9 @@ if (!isset($_GET['endpoint'])) {
 				$keys = $db->query("SELECT * FROM game_key
 									WHERE
 										game = '" . $user_currentGame . "' AND
-										platform = '" . $_GET['platform'] . "' AND removed = 0
+										platform = '" . $_GET['platform'] . "' AND
+										subplatform = '" . $_GET['subplatform'] . "' AND
+										removed = 0
 										{$assignedSQL}
 									;");
 				$result = new stdClass();
@@ -2807,6 +2878,10 @@ if (!isset($_GET['endpoint'])) {
 			}
 
 			if ($dopop) { // make sure Game is valid.
+				if (!util_isValidSubplatform($_GET['platform'], $_GET['subplatform'])) {
+					$result = api_error("Invalid 'subplatform' value.");
+					$dopop = false;
+				}
 				if (!isset($_GET['amount'])) {
 					$result = api_error("Invalid 'amount' value.");
 					$dopop = false;
@@ -2822,12 +2897,14 @@ if (!isset($_GET['endpoint'])) {
 				$stmt = $db->prepare("SELECT * FROM game_key
 										WHERE game = :game
 											AND platform = :platform
+											AND subplatform = :subplatform
 											AND assignedToTypeId = :assignedToTypeId
 											AND removed = :removed
 										LIMIT :amount
 									;");
 				$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":platform", $_GET['platform'], Database::VARTYPE_STRING);
+				$stmt->bindValue(":subplatform", $_GET['subplatform'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":assignedToTypeId", 0, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":amount", $_GET['amount'], Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
@@ -2843,11 +2920,13 @@ if (!isset($_GET['endpoint'])) {
 				}
 
 				if (count($keyIds) < $_GET['amount']) {
-					$result = api_error("Amount (" . $_GET['amount']. ") was less than the numbebr of keys found so none could be removed.");
+					$result = api_error("Amount (" . $_GET['amount']. ") was more than the number of keys found (" . count($keys) . ") so none could be removed.");
 				} else {
 
-					$stmt = $db->prepare("UPDATE game_key SET removed = :removed, removedByUser = :removedByUser, removedByUserTimestamp = :removedByUserTimestamp WHERE id in ( :id ) ;");
-					$stmt->bindValue(":id", implode($keyIds, ','), Database::VARTYPE_STRING);
+					//print_r($keyIds);
+					//echo implode(',', $keyIds);
+
+					$stmt = $db->prepare("UPDATE game_key SET removed = :removed, removedByUser = :removedByUser, removedByUserTimestamp = :removedByUserTimestamp WHERE id in ( " . implode(',' ,$keyIds) . " ) ;");
 					$stmt->bindValue(":removed", 1, Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":removedByUser", $_SESSION['user'], Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":removedByUserTimestamp", $time, Database::VARTYPE_INTEGER);
@@ -2876,6 +2955,7 @@ if (!isset($_GET['endpoint'])) {
 				array('name' => 'keys', 'type' => 'alphanumerichyphensnewlines'),
 				array('name' => 'game', 'type' => 'integer'),
 				array('name' => 'platform', 'type' => 'platform'),
+				array('name' => 'subplatform', 'type' => 'alphanumerics'),
 				array('name' => 'expiresOn', 'type' => 'integer')
 			);
 
@@ -2900,29 +2980,38 @@ if (!isset($_GET['endpoint'])) {
 						}
 					}
 
-					if (!$anyInvalidKeys) {
-						// if we get here then the keys are all good!
-						// TODO: should we check for duplicates..?
-						for($j = 0; $j < count($keysArray); $j++) {
-							$stmt = $db->prepare("INSERT INTO game_key (id, game, platform, keystring, assigned, assignedToType, assignedToTypeId, assignedByUser, assignedByUserTimestamp, createdOn, expiresOn, removed)
-													  			VALUES (NULL, :game, :platform, :keystring, :assigned, :assignedToType, :assignedToTypeId, :assignedByUser, :assignedByUserTimestamp, :createdOn, :expiresOn, :removed ); ");
-							$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
-							$stmt->bindValue(":platform", $_GET['platform'], Database::VARTYPE_STRING);
-							$stmt->bindValue(":keystring", $keysArray[$j], Database::VARTYPE_STRING);
-							$stmt->bindValue(":assigned", 0, Database::VARTYPE_INTEGER);
-							$stmt->bindValue(":assignedToType", '', Database::VARTYPE_STRING);
-							$stmt->bindValue(":assignedToTypeId", 0, Database::VARTYPE_INTEGER);
-							$stmt->bindValue(":assignedByUser", 0, Database::VARTYPE_INTEGER);
-							$stmt->bindValue(":assignedByUserTimestamp", 0, Database::VARTYPE_INTEGER);
-							$stmt->bindValue(":createdOn", time(), Database::VARTYPE_INTEGER);
-							$stmt->bindValue(":expiresOn", $_GET['expiresOn'], Database::VARTYPE_INTEGER);
-							$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
-							$stmt->execute();
-						}
 
-						$result = new stdClass();
-						$result->success = true;
-						$result->keys = $keysArray;
+
+					if (!$anyInvalidKeys) {
+
+						if (!util_isValidSubplatform($_GET['platform'], $_GET['subplatform'])) {
+							$result = api_error("Invalid 'subplatform' value.");
+						} else {
+
+							// if we get here then the keys are all good!
+							// TODO: should we check for duplicates..?
+							for($j = 0; $j < count($keysArray); $j++) {
+								$stmt = $db->prepare("INSERT INTO game_key (id, game, platform, subplatform, keystring, assigned, assignedToType, assignedToTypeId, assignedByUser, assignedByUserTimestamp, createdOn, expiresOn, removed)
+														  			VALUES (NULL, :game, :platform, :subplatform, :keystring, :assigned, :assignedToType, :assignedToTypeId, :assignedByUser, :assignedByUserTimestamp, :createdOn, :expiresOn, :removed ); ");
+								$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
+								$stmt->bindValue(":platform", $_GET['platform'], Database::VARTYPE_STRING);
+								$stmt->bindValue(":subplatform", $_GET['subplatform'], Database::VARTYPE_STRING);
+								$stmt->bindValue(":keystring", $keysArray[$j], Database::VARTYPE_STRING);
+								$stmt->bindValue(":assigned", 0, Database::VARTYPE_INTEGER);
+								$stmt->bindValue(":assignedToType", '', Database::VARTYPE_STRING);
+								$stmt->bindValue(":assignedToTypeId", 0, Database::VARTYPE_INTEGER);
+								$stmt->bindValue(":assignedByUser", 0, Database::VARTYPE_INTEGER);
+								$stmt->bindValue(":assignedByUserTimestamp", 0, Database::VARTYPE_INTEGER);
+								$stmt->bindValue(":createdOn", time(), Database::VARTYPE_INTEGER);
+								$stmt->bindValue(":expiresOn", $_GET['expiresOn'], Database::VARTYPE_INTEGER);
+								$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
+								$stmt->execute();
+							}
+
+							$result = new stdClass();
+							$result->success = true;
+							$result->keys = $keysArray;
+						}
 					} else {
 
 					}
@@ -3526,7 +3615,6 @@ if (!isset($_GET['endpoint'])) {
 												iconurl = :iconurl,
 												subscribers = :subscribers,
 												views = :views,
-												lastpostedon = :lastpostedon,
 												twitter = :twitter,
 												" . $twitter_followers_sql . "
 												notes = :notes,
@@ -3554,7 +3642,7 @@ if (!isset($_GET['endpoint'])) {
 					$stmt->bindValue(":iconurl", $ytIconUrl, Database::VARTYPE_STRING);
 					$stmt->bindValue(":subscribers", "" . $youtuber['subscribers'], Database::VARTYPE_STRING);
 					$stmt->bindValue(":views", "" . $youtuber['views'], Database::VARTYPE_STRING);
-					$stmt->bindValue(":lastpostedon", $youtuber['lastpostedon'], Database::VARTYPE_INTEGER);
+					//$stmt->bindValue(":lastpostedon", $youtuber['lastpostedon'], Database::VARTYPE_INTEGER);
 
 					$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);
 

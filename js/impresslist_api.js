@@ -552,10 +552,11 @@ API.removeWatchedGame = function(watchedgame, successCallback, failCallback) {
 		});
 }
 
-API.listKeys = function(game, platform, assigned, callbackfunction) {
+API.listKeys = function(game, platform, subplatform, assigned, callbackfunction) {
 	var url = "api.php?endpoint=/keys/list/" +
 				"&game=" + encodeURIComponent(game) +
 				"&platform=" + encodeURIComponent(platform) +
+				"&subplatform=" + encodeURIComponent(subplatform) +
 				"&assigned=" + encodeURIComponent(assigned);
 	console.log(url);
 
@@ -572,11 +573,12 @@ API.listKeys = function(game, platform, assigned, callbackfunction) {
 			API.errorMessage("Could not list keys.");
 		});
 }
-API.addKeys = function(keys, game, platform, expiresOn, callbackfunction, failCallback) {
+API.addKeys = function(keys, game, platform, subplatform, expiresOn, callbackfunction, failCallback) {
 	var url = "api.php?endpoint=/keys/add/" +
 					"&keys=" + encodeURIComponent(keys) +
 					"&game=" + encodeURIComponent(game) +
 					"&platform=" + encodeURIComponent(platform) +
+					"&subplatform=" + encodeURIComponent(subplatform) +
 					"&expiresOn=" + encodeURIComponent(expiresOn);
 	console.log(url);
 
@@ -605,10 +607,11 @@ API.addKeys = function(keys, game, platform, expiresOn, callbackfunction, failCa
 			API.errorMessage("Could not add Keys.");
 		});
 }
-API.popKeys = function(game, platform, amount, successCallback) {
+API.popKeys = function(game, platform, subplatform, amount, successCallback) {
 	var url = "api.php?endpoint=/keys/pop/" +
 					"&game=" + encodeURIComponent(game) +
 					"&platform=" + encodeURIComponent(platform) +
+					"&subplatform=" + encodeURIComponent(subplatform) +
 					"&amount=" + encodeURIComponent(amount);
 	console.log(url);
 
@@ -684,7 +687,7 @@ API.addSimpleMailout = function() {
 			API.errorMessage("Could not add Simple Mailout.");
 		});
 }
-API.saveSimpleMailout = function(obj, name, subject, recipients, markdown, timestamp, callbackfunction) {
+API.saveSimpleMailout = function(obj, name, subject, recipients, markdown, timestamp, successCallback, errorCallback) {
 
 	var url = "api.php?endpoint=/mailout/simple/save/" +
 					"&id=" + encodeURIComponent(obj.id) +
@@ -704,17 +707,19 @@ API.saveSimpleMailout = function(obj, name, subject, recipients, markdown, times
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') {
 				API.errorMessage(result);
+				if (errorCallback) errorCallback(json);
 				return;
 			}
 			var json = JSON.parse(result);
 			if (!json.success) {
 				API.errorMessage(json.message);
+				if (errorCallback) errorCallback(json);
 				return;
 			}
 			API.successMessage("Simple Mailout saved.");
 			obj.init(json.mailout);
 			obj.update();
-			callbackfunction();
+			if (successCallback) successCallback(json);
 		})
 		.fail(function() {
 			API.errorMessage("Could not save Simple Mailout.");
@@ -2109,6 +2114,9 @@ API.request = function(endpoint, data, successCallback, failCallback) {
 
 API.successMessage = function(message) {
 	$.bootstrapGrowl(message, { type: 'success',  offset: {from: 'top', amount: 70}, align:'center', delay: 2000});
+}
+API.infoMessage = function(message) {
+	$.bootstrapGrowl(message, { type: 'info',  offset: {from: 'top', amount: 70}, align:'center', delay: 5000});
 }
 API.errorMessage = function(message) {
 	$.bootstrapGrowl(message, { type: 'danger',  offset: {from: 'top', amount: 70}, align:'center', delay: 10000});

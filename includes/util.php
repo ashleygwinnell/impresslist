@@ -70,10 +70,26 @@ function util_isValidPlatformForProjectKeys($platform) {
 	}
 	return false;
 }
+function util_isValidSubplatform($platform, $subplatform) {
+	if ($platform == "switch") {
+		if (in_array($subplatform, array_keys(util_listNintendoRegions()))) {
+			return true;
+		}
+		return false;
+	}
+	return true;
+}
 function util_isValidKeyFormat($platform, $key, &$result) {
 	if ($platform == "steam") {
 		if (strlen($key) != 17) {
 			$result = api_error("Steam keys must be in format XXXXX-XXXXX-XXXXX, and one per each line.");
+			return false;
+		}
+		return true;
+	}
+	else if ($platform == "switch") {
+		if (strlen($key) != 16) {
+			$result = api_error("Switch keys must be 16 characters long and one per each line.");
 			return false;
 		}
 		return true;
@@ -100,6 +116,20 @@ function util_containsKeywords($haystack, $keywordsRaw) {
 		}
 	}
 	return false;
+}
+function util_getFirstNameForObject($typeObj) {
+	if ($typeobj['firstname'] && strlen($typeobj['firstname']) > 0) return $typeobj['firstname'];
+	if ($typeobj['name_override'] && strlen($typeobj['name_override']) > 0) return $typeobj['name_override'];
+	if ($typeobj['name'] && strlen($typeobj['name']) > 0) return $typeobj['name'];
+	if ($typeobj['email']  && strlen($typeobj['email']) > 0) return $typeobj['email'];
+	return "Unknown";
+}
+function util_getFullNameForObject($typeObj) {
+	if ($typeobj['firstname'] && strlen($typeobj['firstname']) > 0) return $typeobj['firstname'] . " " . $typeobj['surnames'];;
+	if ($typeobj['name_override'] && strlen($typeobj['name_override']) > 0) return $typeobj['name_override'];
+	if ($typeobj['name'] && strlen($typeobj['name']) > 0) return $typeobj['name'];
+	if ($typeobj['email']  && strlen($typeobj['email']) > 0) return $typeobj['email'];
+	return "Unknown";
 }
 
 /** Takes into account decimal points and negative values... **/
@@ -1218,7 +1248,7 @@ function util_findNintendoRegionForCountry($country) {
 	$countries = listcountries();
 	$nintendoRegions = array_keys(util_listNintendoRegions());
 
-	$americas = array( "us", "um", "mx", "br", "ar", "cl", "ca", "ve");
+	$americas = array( "us", "um", "mx", "br", "ar", "cl", "ca", "ve", "pe");
 	$europe = array("gb", "fr", "it", "de", "pl","pt","es","si","sk","se", "ch", "za","ad","at","bg","hr","cy","cz","dk","ee","fi","gi","gr","gg","hu","is","ie","im","je","lv","li","lt","lu","mk","mt","nl","no", "ua", "ru", "ro");
 	$ausnz = array( "au", "nz" );
 
