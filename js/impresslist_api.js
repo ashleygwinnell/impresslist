@@ -552,6 +552,35 @@ API.removeWatchedGame = function(watchedgame, successCallback, failCallback) {
 		});
 }
 
+API.assignedKeys = function(type, typeId, successCallback, errorCallback) {
+	var url = "api.php?endpoint=/keys/assigned/" +
+				"&type=" + encodeURIComponent(type) +
+				"&type_id=" + encodeURIComponent(typeId);
+	console.log(url);
+
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				if (errorCallback) errorCallback();
+				return;
+			}
+
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				if (errorCallback) errorCallback();
+				return;
+			}
+
+			if (successCallback) successCallback(json);
+		})
+		.fail(function() {
+			API.errorMessage("Could not list assigned keys.");
+			if (errorCallback) errorCallback();
+		});
+}
+
 API.listKeys = function(game, platform, subplatform, assigned, callbackfunction) {
 	var url = "api.php?endpoint=/keys/list/" +
 				"&game=" + encodeURIComponent(game) +
@@ -685,6 +714,35 @@ API.addSimpleMailout = function() {
 		})
 		.fail(function() {
 			API.errorMessage("Could not add Simple Mailout.");
+		});
+}
+API.duplicateSimpleMailout = function(obj, successCallback, errorCallback) {
+	var url = "api.php?endpoint=/mailout/simple/duplicate/" +
+					"&id=" + encodeURIComponent(obj.id);
+	console.log(url);
+
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				if (errorCallback) errorCallback();
+				return;
+			}
+			API.successMessage("Simple Mailout duplicated.");
+			console.log(json);
+
+			var simpleMailout = new SimpleMailout(json.mailout);
+			impresslist.addSimpleMailout(simpleMailout, false);
+			if (successCallback) successCallback(simpleMailout);
+		})
+		.fail(function() {
+			API.errorMessage("Could not duplicate Simple Mailout.");
+			if (errorCallback) errorCallback();
 		});
 }
 API.saveSimpleMailout = function(obj, name, subject, recipients, markdown, timestamp, successCallback, errorCallback) {

@@ -212,6 +212,7 @@ if (!isset($_GET['endpoint'])) {
 		// Mailouts
 		"/mailout/simple/list/",
 		"/mailout/simple/add/",
+		"/mailout/simple/duplicate/",
 		"/mailout/simple/save/",
 		"/mailout/simple/send/",
 		"/mailout/simple/cancel/",
@@ -221,6 +222,8 @@ if (!isset($_GET['endpoint'])) {
 		"/keys/list/",
 		"/keys/add/",
 		"/keys/pop/",
+		"/keys/assigned/",
+		"/keys/assign/",
 
 		// Coverage management
 		"/coverage/",
@@ -286,8 +289,19 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = false;
 			include_once('init.php');
 
-			$var = twitter_countFollowers("forcehabit");
-			print_r($var);
+			//$var = twitter_countFollowers("forcehabit");
+			//print_r($var);
+
+			//$acc = db_singleOAuthTwitterByHandle($db, "ashleygwinnell");
+			$acc = db_singleOAuthTwitterByHandle($db, "forcehabit");
+
+			//print_r($acc);
+
+			// Send direct message!
+			//$recipientId = twitter_getUserId("ashleygwinnell");
+			//$tweet = twitter_sendDirectMessage($acc['oauth_key'], $acc['oauth_secret'], $recipientId, "Hello world. This is a Direct Message."); // https://twitter.com/forcehabit/status/1063384350111277056
+			//print_r($tweet);
+
 
 			//$acc = db_singleOAuthTwitterByHandle($db, "ashleygwinnell");
 			//$tweet = twitter_postStatus($acc['oauth_key'], $acc['oauth_secret'], "This is another test of the Twitter API. Boop.");
@@ -1714,6 +1728,48 @@ if (!isset($_GET['endpoint'])) {
 			$result->mailout = db_singlemailoutsimple( $db, $mailoutId );
 			// [{"type":"person","person_id":333,"sent":true,"read":false},{"type":"personPublication","personPublication_id":221,"sent":true,"read":false}]
 		}
+		else if ($endpoint == "/mailout/simple/duplicate/")
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+
+				$mailout = db_singlemailoutsimple($db, $_GET['id'] );
+				$recipients = json_decode($mailout['recipients'], true);
+				for($i = 0; $i < count($recipients); $i++) {
+					$recipients[$i]['sent'] = false;
+					$recipients[$i]['read'] = false;
+				}
+
+				$stmt = $db->prepare("INSERT INTO emailcampaignsimple (id, name, subject, recipients, markdown, `timestamp`, user, ready, sent, removed)
+														VALUES ( NULL, :name, :subject, :recipients, :markdown, :ts, :user, :ready, :sent, :removed);
+								");
+				$stmt->bindValue(":game_id", 	$user_currentGame, 					Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":name", 		$mailout['name'] . ' Duplicate', 	Database::VARTYPE_STRING);
+				$stmt->bindValue(":subject", 	$mailout['subject'] . ' Duplicate', Database::VARTYPE_STRING);
+				$stmt->bindValue(":recipients", json_encode($recipients),			Database::VARTYPE_STRING);
+				$stmt->bindValue(":markdown", 	$mailout['markdown'], 				Database::VARTYPE_STRING);
+				$stmt->bindValue(":ts", 		0, 									Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":user", 		$user_id, 							Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":ready", 		0, 									Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":sent", 		0, 									Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":removed", 	0, 									Database::VARTYPE_INTEGER);
+				$stmt->execute();
+
+				$mailoutId = $db->lastInsertRowID();
+
+				$result = new stdClass();
+				$result->success = true;
+				$result->mailout = db_singlemailoutsimple($db, $mailoutId );
+				$result->checks = $errs;
+
+			}
+		}
 		else if ($endpoint == "/mailout/simple/save/")
 		{
 			$require_login = true;
@@ -1843,6 +1899,23 @@ if (!isset($_GET['endpoint'])) {
 				}
 			}
 
+
+		}
+		else if ($endpoint == "/twitter-message/") {
+			$require_login = true;
+			include_once("init.php");
+
+			$type = $_GET['type'];
+			$type_id = $_GET['type_id'];
+
+			$from_twitter = $_GET['from'];
+			$to_twitter = $_GET['to'];
+			$message  = $_GET['message'];
+
+			$acc = db_singleOAuthTwitterByHandle($db, $from_twitter);
+			$to_twitter_id = twitter_getUserId($to_twitter);
+			$data = twitter_sendDirectMessage($acc['oauth_key'], $acc['oauth_secret'], $to_twitter_id, $message);
+			//$data->event->id
 
 		}
 		else if ($endpoint == "/mailout/simple/send/")
@@ -2851,6 +2924,45 @@ if (!isset($_GET['endpoint'])) {
 			} else if (!$dolist && !$result){
 				$result = api_error("Unknown error. Invalid value.");
 			}
+		}
+		else if ($endpoint == "/keys/assigned/") {
+
+			$require_login = true;
+			include_once("init.php");
+
+			$type = $_GET['type'];
+			$typeId = $_GET['type_id'];
+			if (!util_isImpressPersonType($type)) {
+				$result = api_error("Invalid 'type' value.");
+			}
+			else if (!is_numeric($typeId)) {
+				$result = api_error("Invalid 'type_id' value.");
+			}
+			else {
+
+				//$gameId = $user_currentGame;
+				//game = :game
+											//AND
+
+				$stmt = $db->prepare("SELECT * FROM game_key
+										WHERE assignedToType = :assignedToType
+											AND assignedToTypeId = :assignedToTypeId
+											AND removed = :removed
+									;");
+				//$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":assignedToType", $type, Database::VARTYPE_STRING);
+				$stmt->bindValue(":assignedToTypeId", $typeId, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
+				$keys = $stmt->query();
+
+				$result = new stdClass();
+				$result->success = true;
+				$result->keys = $keys;
+				$result->count = count($keys);
+			}
+		}
+		else if ($endpoint == "/keys/assign/") {
+
 		}
 		else if ($endpoint == "/keys/pop/")
 		{

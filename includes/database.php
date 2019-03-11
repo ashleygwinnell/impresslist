@@ -581,6 +581,19 @@
 				) {$sqlEngineAndCharset} ;";
 		$db->exec($sql);
 
+		$sql = "CREATE TABLE IF NOT EXISTS twitter_directmessage (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					dm_id VARCHAR(50) NOT NULL,
+					from_twitter_id VARCHAR(50) NOT NULL,
+					from_twitter_username VARCHAR(50) NOT NULL,
+					to_twitter_id VARCHAR(50) NOT NULL,
+					to_twitter_username VARCHAR(50) NOT NULL,
+					message_raw TEXT NOT NULL,
+					message TEXT NOT NULL,
+					createdon INTEGER NOT NULL
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
 
 		// Settings
 		$db->exec("INSERT IGNORE INTO settings VALUES ('company_name', 'Company Name'); ");

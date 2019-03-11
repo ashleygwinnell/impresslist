@@ -1868,7 +1868,12 @@ SimpleMailout = function(data) {
 		// Todo: Calculate and cache this server-side or something.
 		this.numRecipients = 0;
 		this.numOpens = 0;
-		this.recipientsData = JSON.parse(data.recipients);
+		if (data.recipients.substr(0, 1) != '[') {
+			this.recipientsData = [];
+		} else {
+			this.recipientsData = JSON.parse(data.recipients);
+		}
+
 		for(var i = 0; i < this.recipientsData.length; i++) {
 			if (this.recipientsData[i].read) {
 				this.numOpens++;
@@ -1933,6 +1938,12 @@ SimpleMailout = function(data) {
 	SimpleMailout.prototype.cancelsend = function() {
 		API.cancelSimpleMailout(this);
 		this.close();
+	}
+	SimpleMailout.prototype.duplicate = function() {
+		var th = this;
+		API.duplicateSimpleMailout(this, function(){
+			th.close();
+		});
 	}
 	SimpleMailout.prototype.save = function(callback) {
 		if (typeof callback == 'undefined') {
@@ -2040,6 +2051,7 @@ SimpleMailout = function(data) {
 		$('.mailout-readflags').hide();
 
 		$('#mailout-writepage-save').show();
+		$('#mailout-writepage-duplicate').show();
 		$('#mailout-writepage-remove').show();
 		if (this.field("ready") == 0) {
 			$('#mailout-writepage-send').show();
@@ -2069,6 +2081,10 @@ SimpleMailout = function(data) {
 		$('#mailout-writepage-save').unbind("click");
 		$('#mailout-writepage-save').click(function() {
 			mailout.save();
+		});
+		$('#mailout-writepage-duplicate').unbind("click");
+		$('#mailout-writepage-duplicate').click(function() {
+			mailout.duplicate();
 		});
 		$('#mailout-writepage-send').unbind("click");
 		$('#mailout-writepage-send').click(function() {
@@ -2136,6 +2152,7 @@ SimpleMailout = function(data) {
 				}
 			}
 			$(box).attr("mailout-read", this.recipientsData[i].read);
+			$(box).attr("mailout-reminded-twitter-dm", (this.recipientsData[i].remind && this.recipientsData[i].remind.twitterdm)?true:false);
 		}
 		impresslist.refreshMailoutRecipients();
 
@@ -2268,6 +2285,7 @@ Person = function(data) {
 							<li role="presentation"><a role="tab" href="#" data-tab="person_youtubeChannels" data-toggle="tab">Youtubes</a></li> \
 							<li role="presentation"><a role="tab" href="#" data-tab="person_twitchChannels" data-toggle="tab">Twitchs</a></li> \
 							<li role="presentation"><a role="tab" href="#" data-tab="person_messages" data-toggle="tab">Messages</a></li> \
+							<li role="presentation"><a role="tab" href="#" data-tab="person_keys" data-toggle="tab">Keys</a></li> \
 						</ul> \
 						<div class="tab-content">';
 
@@ -2410,7 +2428,41 @@ Person = function(data) {
 				html += "		</div>\
 							</div>";
 
- 				var messages = [];
+				// Keys panel
+				html += "	<div role='tabpanel' class='tab-pane pady' data-tab='person_keys'> \
+								<div class='form-group'>\
+									<label for='add-keys'>Add:&nbsp;</label> \
+									<input id='add-keys-search' type='text' class='form-control' placeholder='Search' /> \
+								</div>\
+								<div id='add-keys-results-container' style='display:none;'>\
+									<table class='table table-striped'>\
+										<thead>\
+											<th>Key</th> \
+											<th>Platform</th> \
+											<th>Subplatform</th> \
+										</thead> \
+										<tbody id='add-keys-results'> \
+										</tbody> \
+									</table>\
+								</div> \
+								<div id='person-keys'> \
+									<div class='pady'><b>All Keys</b></div> \
+									<table class='table table-striped sortable'> \
+										<thead> \
+											<th>Game</th> \
+											<th>Key</th> \
+											<th>Platform</th> \
+											<th>Subplatform</th> \
+											<th>Assigned On</th> \
+											<th>&nbsp;</th> \
+										</thead> \
+										<tbody id='person-keys-list'>\
+										</tbody>\
+									</table> \
+								</div>\
+							</div>";
+
+				var messages = [];
  				for(var i = 0; i < impresslist.emails.length; ++i) {
  					if (impresslist.emails[i].field('person_id') == this.id) {
  						messages.push( impresslist.emails[i] );
@@ -2511,6 +2563,49 @@ Person = function(data) {
 		$('#person-email-default').click(function(e) {
 			e.preventDefault();
 			window.open(emailGmailLink);
+		});
+
+		// Find/add keys
+		$("#person_tabs [data-tab='person_keys']").click(function(){
+			API.assignedKeys("person", person.id, function(d) {
+				var html = "";
+				for(var i = 0; i < d.keys.length; i++) {
+
+					var obj = d.keys[i];
+						// <div data-key-id='" + obj.id + "' data-key-tablerow='true' class='panel panel-default'> \
+						// 			<div class='row oa'> \
+						// 				<b>" + obj.keystring + "</b>\
+						// 				<div class='fl padx'> \
+						// 					<label for='submit'>&nbsp;</label><br/> \
+						//
+						// 				</div> \
+						// 			</div> \
+						// 		</div>";
+
+
+					var dateformat = new Date(obj.assignedByUserTimestamp * 1000);
+					var dateformatStr = dateformat.toUTCString(); // toISOString
+
+					html += "	<tr data-key-id='" + obj.id + "'> \
+									<td>" + impresslist.findGameById(obj.game).name + "</td> \
+									<td>" + obj.keystring + "</td> \
+									<td>" + obj.platform + "</td> \
+									<td>" + obj.subplatform + "</td> \
+									<td>" + dateformatStr + "</td> \
+									<td>\
+										<button id='unassign_key_" + this.id + "' type='submit' class='btn btn-danger' data-key-id='" + obj.id + "'>X</button> \
+									</td> \
+								</tr>";
+				}
+				if (d.keys.length == 0) {
+					html += "	<tr> \
+									<td colspan='6'>No Keys</td> \
+								</tr>";
+				}
+				$('#person-keys-list').html(html);
+			}, function(e) {
+
+			});
 		});
 
 		// Add publication binds
@@ -4632,17 +4727,56 @@ var impresslist = {
 		for(var i = 0; i < combined.length; i++) {
 
 			var readBool = $(combined[i]).attr('mailout-read');
+			var remindedTwitterDM = $(combined[i]).attr('mailout-reminded-twitter-dm') == "true";
 			var personName = $(combined[i]).attr('data-mailout-name');
+			var personType = $(combined[i]).attr('data-mailout-type');
+			var personTypeId = $(combined[i]).attr('data-mailout-typeid');
 			var personTypeName = $(combined[i]).attr('data-mailout-typename');
 			html += "<tr>"
 			html += "	<td data-value='" + personName + "'>" + personName + "</td>";
 			html += "	<td data-value='" + personTypeName + "'>" + personTypeName + "</td>";
 			html += "	<td class='mailout-readflags mailout-read-" + readBool + "' data-value='" + readBool + "'>" + readBool + "</td>";
+			html += "	<td class='mailout-readflags'>";
+			if (remindedTwitterDM) {
+				html += "	• DM : <a href='javascript:;'>done!</a>";
+			} else {
+				html += "	• <a id='mailout-recipient-remind-twitter-dm-" + personType + "-" + personTypeId + "' href='javascript:;'>DM</a>";
+			}
+			html += "	</td>";
 			// " + $(peopleSelected[i]).attr('data-mailout-email') + "
 			html += "</tr>";
 		}
 
 		$('#mailout-recipients-tbody').html(html);
+
+		for(var i = 0; i < combined.length; i++) {
+			var personType = $(combined[i]).attr('data-mailout-type');
+			var personTypeId = $(combined[i]).attr('data-mailout-typeid');
+			var openFunc = function(personType, personTypeId) {
+				$("#mailout-recipient-remind-twitter-dm-" + personType + "-" + personTypeId).click(function(){
+
+					var obj = null;
+					if (personType == "person") {
+						obj = impresslist.findPersonById(personTypeId);
+					}
+					else if (personType == "publication") {
+						obj = impresslist.findPublicationById(personTypeId);
+					}
+					else if (personType == "personPublication") {
+						personId = impresslist.findPersonPublicationById(personTypeId).person.id;
+						obj = impresslist.findPersonById(personId);
+					}
+					else if (personType == "youtuber") {
+						obj = impresslist.findYoutuberById(personTypeId);
+					}
+					else if (personType == "twitchchannel") {
+						obj = impresslist.findTwitchChannelById(personTypeId);
+					}
+					//TwitterDM.open();
+				});
+			}
+			openFunc(personType, personTypeId);
+		}
 
 		$('#mailout-recipients').show();
 		$('#mailout-recipients-none').hide();

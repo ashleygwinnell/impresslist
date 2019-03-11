@@ -161,6 +161,11 @@ function isNumeric($number, $name = "Field", $length = -1)
 	return true;
 }
 
+
+function util_isImpressPersonType($type) {
+	return ($type == 'person' || $type == 'publication' || $type == 'personPublication' || $type == 'youtuber' || $type == 'twitchchannel');
+}
+
 function util_isEmail($emailAddress) {
 	//if (!preg_match("/([a-z0-9])([-a-z0-9._])+([a-z0-9])\@([a-z0-9])([-a-z0-9_])+([a-z0-9])(\.([a-z0-9])([-a-z0-9_-])([a-z0-9])+)*/i", $emailAddress)) {
 	//	return false;
@@ -347,11 +352,45 @@ function twitter_countFollowers($username)
 	//echo json_encode($twitter_content);
 	return $twitter_content->followers_count;
 }
+function twitter_getUserId($username)
+{
+	global $twitter_oauthToken;
+	global $twitter_oauthSecret;
+	if (strlen($username) == 0) { return 0; }
+
+	$twitter_connection = twitter_getConnectionWithAccessToken($twitter_oauthToken, $twitter_oauthSecret);
+	$twitter_content = $twitter_connection->get("users/show", ['screen_name' => $username ]);
+	if (isset($twitter_content->errors)) {
+		//print_r($twitter_content);
+		return 0;
+	}
+	//echo json_encode($twitter_content);
+	return $twitter_content->id;
+}
 
 function twitter_getUserInfoById($oauthtoken, $oauthsecret, $id) {
 	$url = "users/show";
 	$twitter_connection = twitter_getConnectionWithAccessToken($oauthtoken, $oauthsecret);
 	return $twitter_connection->get($url, array("user_id" => $id));
+}
+function twitter_sendDirectMessage($oauthtoken, $oauthsecret, $recipientUserId, $message) {
+	$url = "direct_messages/events/new";
+	$data = array(
+		"event" => array(
+			"type" => "message_create",
+			"message_create" => array(
+				"target" => array(
+					"recipient_id" => "" . $recipientUserId
+				),
+				"message_data" => array(
+					"text" => $message
+				)
+			)
+		)
+	);
+	//print_r($data);
+	$twitter_connection = twitter_getConnectionWithAccessToken($oauthtoken, $oauthsecret);
+	return $twitter_connection->post($url, $data, true);
 }
 
 function twitter_postStatus($oauthtoken, $oauthsecret, $status) {
