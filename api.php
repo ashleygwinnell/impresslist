@@ -3956,8 +3956,8 @@ if (!isset($_GET['endpoint'])) {
 					$result->message = 'Name and icon must be set.';
 				} else {
 
-					$stmt = $db->prepare(" INSERT INTO game (id, name, keywords, iconurl)
-													VALUES (NULL, :name, :iconurl) ");
+					$stmt = $db->prepare(" INSERT INTO game (id, name, keywords, iconurl, twitchId, twitchLastScraped)
+													VALUES (NULL, :name, '', :iconurl, 0, 0) ");
 					$stmt->bindValue(":name", 		$data['name'], 		Database::VARTYPE_STRING);
 					$stmt->bindValue(":keywords", 	"", 		Database::VARTYPE_STRING);
 					$stmt->bindValue(":iconurl", 	$data['iconurl'], 	Database::VARTYPE_STRING);
