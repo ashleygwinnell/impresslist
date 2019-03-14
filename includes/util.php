@@ -118,17 +118,18 @@ function util_containsKeywords($haystack, $keywordsRaw) {
 	return false;
 }
 function util_getFirstNameForObject($typeObj) {
-	if ($typeobj['firstname'] && strlen($typeobj['firstname']) > 0) return $typeobj['firstname'];
-	if ($typeobj['name_override'] && strlen($typeobj['name_override']) > 0) return $typeobj['name_override'];
-	if ($typeobj['name'] && strlen($typeobj['name']) > 0) return $typeobj['name'];
-	if ($typeobj['email']  && strlen($typeobj['email']) > 0) return $typeobj['email'];
+	if ($typeObj['firstname'] && strlen($typeObj['firstname']) > 0) return $typeObj['firstname'];
+	if ($typeObj['name_override'] && strlen($typeObj['name_override']) > 0) return $typeObj['name_override'];
+	if ($typeObj['name'] && strlen($typeObj['name']) > 0) return $typeObj['name'];
+	if ($typeObj['email']  && strlen($typeObj['email']) > 0) return $typeObj['email'];
 	return "Unknown";
 }
 function util_getFullNameForObject($typeObj) {
-	if ($typeobj['firstname'] && strlen($typeobj['firstname']) > 0) return $typeobj['firstname'] . " " . $typeobj['surnames'];;
-	if ($typeobj['name_override'] && strlen($typeobj['name_override']) > 0) return $typeobj['name_override'];
-	if ($typeobj['name'] && strlen($typeobj['name']) > 0) return $typeobj['name'];
-	if ($typeobj['email']  && strlen($typeobj['email']) > 0) return $typeobj['email'];
+	if ($typeObj['firstname'] && strlen($typeObj['firstname']) > 0) return $typeObj['firstname'] . " " . $typeObj['surnames'];;
+	if ($typeObj['name_override'] && strlen($typeObj['name_override']) > 0) return $typeObj['name_override'];
+	if ($typeObj['twitchUsername'] && strlen($typeObj['twitchUsername']) > 0) return $typeObj['twitchUsername'];
+	if ($typeObj['name'] && strlen($typeObj['name']) > 0) return $typeObj['name'];
+	if ($typeObj['email']  && strlen($typeObj['email']) > 0) return $typeObj['email'];
 	return "Unknown";
 }
 
@@ -931,7 +932,42 @@ function mail_attachment($filename, $path, $mailto, $from_mail, $from_name, $rep
     }
 }
 
+function discord_webhook($data, $decode = false) {
+	global $discord_enabled;
+	global $discord_webhookId;
+	global $discord_webhookToken;
+	$discord_webhookUrl = "https://discordapp.com/api/webhooks/{$discord_webhookId}/{$discord_webhookToken}";
 
+	if (!$discord_enabled) { return ""; }
+
+	$fields;
+	if ($decode) {
+		$fields = array("payload_json" => urlencode(json_encode($data)));
+	} else {
+		$fields = $data;
+	}
+	foreach($fields as $key => $value) {
+		$fields_string .= $key . '=' . $value . '&';
+	}
+	rtrim($fields_string, '&');
+
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL, $discord_webhookUrl);
+	curl_setopt($ch, CURLOPT_POST, count($fields));
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $fields_string);
+	//curl_setopt($ch, CURLOPT_MUTE, 1);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+
+	$result = curl_exec($ch);
+	return $result;
+}
+function discord_coverageAlert($fromName, $coverageTitle, $url) {
+	$data = array(
+		"content" => "*{$fromName}* - {$coverageTitle}: \n{$url}";
+	);
+	return discord_webhook($data);
+}
 
 function slack_incomingWebhook($data) {
 	global $slack_enabled;
@@ -1305,6 +1341,15 @@ function util_findNintendoRegionForCountry($country) {
 	}
 	// Unknown
 	return '';
+}
+
+function urlformat($str) {
+	$str = strtolower($str);
+	$str = str_replace(" ", "-", $str);
+	$str = str_replace("&amp;", "and", $str);
+	$str = str_replace("&", "and", $str);
+	$str = str_replace(array("[", "]", "!", '"', "'", ".", ",", ":", "(", ")"), "", $str);
+	return $str;
 }
 
 ?>

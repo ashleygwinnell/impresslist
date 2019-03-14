@@ -40,7 +40,7 @@ module.exports = function(grunt) {
 				},
 				src: '.',
 				dest: ftphostdata['path'],
-				exclusions: [".ftphost", ".ftppass", ".gitignore", "bower.json", "composer.json", "composer.lock", "gruntfile.js", "LICENSE", "package.json", "README.md",
+				exclusions: [".DS_Store", ".bowerrc", ".ftphost", ".ftppass", ".gitignore", "bower.json", "composer.json", "composer.lock", "gruntfile.js", "LICENSE", "package.json", "README.md",
 							 ".git", "node_modules", "vendor", "js/vendor"],
 				forceVerbose: true
 			},
@@ -52,7 +52,7 @@ module.exports = function(grunt) {
 				},
 				src: '.',
 				dest: ftphostdata['path'],
-				exclusions: [".ftphost", ".ftppass", ".gitignore", "bower.json", "composer.json", "composer.lock", "gruntfile.js", "LICENSE", "package.json", "README.md",
+				exclusions: [".DS_Store", ".bowerrc", ".ftphost", ".ftppass", ".gitignore", "bower.json", "composer.json", "composer.lock", "gruntfile.js", "LICENSE", "package.json", "README.md",
 							 ".git", "node_modules"],
 				forceVerbose: true
 			}

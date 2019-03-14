@@ -284,6 +284,7 @@
 		$sql = "CREATE TABLE IF NOT EXISTS game (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
 					name VARCHAR(255),
+					nameuniq VARCHAR(255),
 					iconurl VARCHAR(255) NOT NULL,
 					keywords TEXT NOT NULL,
 					twitchId INTEGER DEFAULT {$defaultNull},
@@ -298,7 +299,7 @@
 					platform VARCHAR(16) NOT NULL,
 					keystring VARCHAR(255) NOT NULL,
 					assigned INTEGER NOT NULL DEFAULT 0,
-					assignedToType VARCHAR(16) NOT NULL,
+					assignedToType VARCHAR(20) NOT NULL,
 					assignedToTypeId INTEGER NOT NULL,
 					assignedByUser INTEGER NOT NULL,
 					assignedByUserTimestamp INTEGER NOT NULL,

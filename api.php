@@ -1801,23 +1801,42 @@ if (!isset($_GET['endpoint'])) {
 						// Validate all people, personPublications, etc.
 						// [{"type":"person","person_id":333,"sent":true,"read":false},{"type":"personPublication","personPublication_id":221,"sent":true,"read":false}]
 
-
+						$games = $db->query("SELECT * FROM game;");
+						// Validate for all games... bah
 						// Validate all countries.
 						// Validate there are enough codes based on region.
+						// Validate, check duplicate email addresses.
 						$errs = [];
+						//$emailsInUse = [];
+
+						$checkGames = [];
 						if (strpos($_GET['markdown'], "{{switch_keys}}") !== FALSE ||
 							strpos($_GET['markdown'], "{{switch_key}}") !== FALSE
 							) {
+							$checkGames[] = $user_currentGame;
+						}
+						for($k = 0; $k < count($games); $k++) {
+							if (strpos($_GET['markdown'], "{{switch_keys:" . $games[$k]['nameuniq'] . "}}") !== FALSE ||
+								strpos($_GET['markdown'], "{{switch_key:" . $games[$k]['nameuniq'] . "}}") !== FALSE
+								) {
+								$checkGames[] = $games[$k]['id'];
+							}
+						}
 
+						for($k = 0; $k < count($checkGames); $k++) {
+							$emailsInUse = [];
+
+							$curGameId = $checkGames[$k];
 							$regions = array_keys(util_listNintendoRegions());
 							$keysForRegions = [];
 							for ($i = 0; $i < count($regions); $i++) {
-								$keysArray = $db->query("SELECT * FROM game_key WHERE game = '" . $user_currentGame . "' AND platform = 'switch' AND subplatform = '" . $regions[$i] . "' AND assigned = 0;");
+								$keysArray = $db->query("SELECT * FROM game_key WHERE game = '" . $curGameId . "' AND platform = 'switch' AND subplatform = '" . $regions[$i] . "' AND assigned = 0;");
 								$countKeys = count($keysArray);
 
 								$keysForRegions[$regions[$i]] = $countKeys;
 								$keysForRegionsNeeded[$regions[$i]] = 0;
 							}
+							//$errs[] = "checked game: " . $curGameId;
 
 							for($j = 0; $j < count($json); $j++) {
 								$type = $json[$j]['type'];
@@ -1831,14 +1850,15 @@ if (!isset($_GET['endpoint'])) {
 
 									$typeObj2 = db_singleperson($db, $typeObj['person']);
 									if ($typeObj2['country'] == '') {
-										$typeObj3 = db_singlepublication($db, $typeObj['publication']);
-										if ($typeObj3['country'] == '') {
-
-										} else {
-											$typeObj = $typeObj3;
-										}
+										// $typeObj3 = db_singlepublication($db, $typeObj['publication']);
+										// if ($typeObj3['country'] == '') {
+										// 	$typeObj['country'] = "";
+										// } else {
+										// 	$typeObj['country'] = $typeObj3['country'];
+										// }
+										$typeObj['country'] = "";
 									} else {
-										$typeObj = $typeObj2;
+										$typeObj['country'] = $typeObj2['country'];
 									}
 								}
 								else if ($type == "publication") {
@@ -1850,22 +1870,36 @@ if (!isset($_GET['endpoint'])) {
 								if (!$typeObj) {
 									$errs[] = "Invalid " . $type . " - " . $typeId;
 								}
+
 								$c = util_findNintendoRegionForCountry($typeObj['country']);
 								if ($c == '') {
 									$errs[] = "Invalid Switch Key country/region for " . $type. " " . $typeId . " " . util_getFullNameForObject($typeObj) . ". (".$typeObj['country']." = " . $c . ")";
 								} else {
-									$keysForRegionsNeeded[$c]++;
-									if ($keysForRegionsNeeded[$c] >= $keysForRegions[$c] + 1) {
-										$errs[] = "Too many recipients for " . strtoupper($c) . " region keys. Needed {$keysForRegionsNeeded[$c]}, found {$keysForRegions[$c]}.<Br/>";
+									// key is assigned to this type of thing
+									$keysArray = $db->query("SELECT * FROM game_key WHERE game = '" . $curGameId . "' AND platform = 'switch' AND assigned = 1 AND assignedToType = '" . $type . "' AND assignedToTypeId = '" . $typeId . "' AND removed = 0;");
+									//print($keysArray);
+									if (count($keysArray) >= 1) {
+										// we have a key for this person for this game.
 									}
+									// must use new key.
+									else {
+										$keysForRegionsNeeded[$c]++;
+										if ($keysForRegionsNeeded[$c] >= $keysForRegions[$c] + 1) {
+											$errs[] = "Recipient ". util_getFullNameForObject($typeObj) . " will be left out as not enough keys for region " . strtoupper($c) . " and project '" . $curGameId . "'. Needed {$keysForRegionsNeeded[$c]}, found {$keysForRegions[$c]}.<Br/>";
+										}
+									}
+
 								}
 
-
-
+								if (strlen($typeObj['email']) > 0) {
+									if (in_array($typeObj['email'], $emailsInUse)) {
+										$errs[] = "Duplicate email address for {$type} {$typeId}: " . util_getFullNameForObject($typeObj) .  " = " . $typeObj['email'];
+									}
+									$emailsInUse[] = $typeObj['email'];
+								}
 							}
-
-
 						}
+						//$errs[] = implode(",", $emailsInUse);
 
 						$stmt = $db->prepare("UPDATE emailcampaignsimple
 										SET
@@ -2954,6 +2988,20 @@ if (!isset($_GET['endpoint'])) {
 				$stmt->bindValue(":assignedToTypeId", $typeId, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
 				$keys = $stmt->query();
+
+				if ($type == "person") {
+					$stmt = $db->prepare("SELECT * FROM game_key
+											JOIN person_publication ON game_key.assignedToTypeId = person_publication.id
+											WHERE assignedToType = 'personPublication'
+												AND person_publication.person = :assignedToTypeId
+												AND removed = :removed
+										;");
+					//$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":assignedToTypeId", $typeId, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
+					$keys2 = $stmt->query();
+					$keys = array_merge($keys, $keys2);
+				}
 
 				$result = new stdClass();
 				$result->success = true;
@@ -4068,9 +4116,12 @@ if (!isset($_GET['endpoint'])) {
 					$result->message = 'Name and icon must be set.';
 				} else {
 
-					$stmt = $db->prepare(" INSERT INTO game (id, name, keywords, iconurl, twitchId, twitchLastScraped)
-													VALUES (NULL, :name, '', :iconurl, 0, 0) ");
+					$stmt = $db->prepare(" INSERT INTO game (id, name, nameuniq, keywords, iconurl, twitchId, twitchLastScraped)
+													VALUES (NULL, :name, :nameuniq, '', :iconurl, 0, 0) ");
+
+					$uniqname = urlformat($data['name']);
 					$stmt->bindValue(":name", 		$data['name'], 		Database::VARTYPE_STRING);
+					$stmt->bindValue(":nameuniq", 	$uniqname, 		Database::VARTYPE_STRING);
 					$stmt->bindValue(":keywords", 	"", 		Database::VARTYPE_STRING);
 					$stmt->bindValue(":iconurl", 	$data['iconurl'], 	Database::VARTYPE_STRING);
 					$rs = $stmt->execute();

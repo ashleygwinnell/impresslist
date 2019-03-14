@@ -1,5 +1,23 @@
 <?php
 
+$impresslist_company_name = "Company Name";
+$impresslist_company_addressLine = "Company Name, 12 Address Line, City, Country.";
+$impresslist_company_emailAddress = "hello@companyname.com";
+$impresslist_company_twitter = "http://twitter.com/companyname";
+$impresslist_company_facebook = "http://facebook.com/companyname";
+
+$slack_enabled = false;
+$slack_apiUrl = "";
+
+$discord_enabled = false;
+$discord_webhookId = "";
+$discord_webhookToken = "";
+
+$youtube_apiKey = "";
+
+$twitch_apiKey = "";
+$twitch_apiSecret = "";
+
 $impresslist_emailIMAPHost = "{email_host}";
 $impresslist_emailAddress = "{email_address}";
 $impresslist_emailPassword = "{email_password}";

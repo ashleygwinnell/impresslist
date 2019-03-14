@@ -55,8 +55,11 @@ function tryAddYoutubeCoverage($youtuberId, $youtuberName, $gameId, $watchedGame
 		$stmt->bindValue(":utime", $time, Database::VARTYPE_INTEGER);
 		$stmt->execute();
 
-		@email_new_youtube_coverage($youtuberName, $url, $time);
-		@slack_coverageAlert($youtuberName, $title, $url);
+		if ($watchedGameId == 0) {
+			@email_new_youtube_coverage($youtuberName, $url, $time);
+			@slack_coverageAlert($youtuberName, $title, $url);
+			@discord_coverageAlert($youtuberName, $title, $url);
+		}
 
 	} else {
 		echo $existingCoverage[0]['url'] . "<br/>\n";

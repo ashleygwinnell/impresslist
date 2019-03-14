@@ -52,6 +52,7 @@ function tryAddTwitchCoverage($myChannelId, $twitchChannelId, $twitchChannelName
 
 		@email_new_coverage($twitchChannelName, $url, $time);
 		@slack_coverageAlert($twitchChannelName, $title, $url);
+		@discord_coverageAlert($twitchChannelName, $title, $url);
 
 	} else {
 		echo $existingCoverage[0]['url'] . "<br/>\n";

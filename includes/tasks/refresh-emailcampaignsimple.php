@@ -14,6 +14,8 @@ $queue = $db->query("SELECT * FROM emailcampaignsimple WHERE ready = 1 AND sent 
 
 $Parsedown = new Parsedown();
 
+$games = $db->query("SELECT * FROM game;");
+
 for ($i = 0; $i < count($queue); $i++)
 {
 	$campaign = $queue[$i];
@@ -139,7 +141,7 @@ X-Mailer: impresslist/" . $impresslist_version;
 				"switch" => ''
 			];
 
-			$assign_platform_keys_if_tagged = function($platform, $subplatform, $platformName) use ($db,
+			$assign_platform_keys_if_tagged = function($gameId, $gameName, $gameTagSuffix, $platform, $subplatform, $platformName) use ($db,
 																						&$user,
 																						&$markdown,
 																						&$assignsSingleKeys_id,
@@ -148,22 +150,26 @@ X-Mailer: impresslist/" . $impresslist_version;
 																						$recipient_type,
 																						$recipient_typeId) {
 
-				$assignsSingleKeys[$platform] = (strpos($markdown, "{{".$platform."_key}}") !== FALSE);
+				$gamenamesuffix = (strlen($gameTagSuffix) > 0)
+					? " (" . $gameName . ")"
+					: "";
+
+				$assignsSingleKeys[$platform] = (strpos($markdown, "{{".$platform."_key" . $gameTagSuffix . "}}") !== FALSE);
 				if ($assignsSingleKeys[$platform]) {
-					echo "Replacing {{".$platform."_key}} in email.<br/>\n";
-					$availableKey = db_singleavailablekeyforgame($db, $user['currentGame'], $platform, $subplatform);
+					echo "Replacing {{".$platform."_key" . $gameTagSuffix . "}} in email.<br/>\n";
+					$availableKey = db_singleavailablekeyforgame($db, $gameId, $platform, $subplatform);
 					$assignsSingleKeys_id[$platform] = $availableKey['id'];
 					$assignsSingleKeys_code[$platform] = $availableKey['keystring'];
-					$markdown = str_replace("{{".$platform."_key}}", $assignsSingleKeys_code[$platform], $markdown);
+					$markdown = str_replace("{{".$platform."_key" . $gameTagSuffix . "}}", $assignsSingleKeys_code[$platform], $markdown);
 				}
-				else if (strpos($markdown, "{{".$platform."_keys}}") !== false) {
-					echo "Replacing {{".$platform."_keys}} (plural) in email.<br/>\n";
-					$keysForContact = db_keysassignedtotype($db, $user['currentGame'], $platform, $subplatform, $recipient_type, $recipient_typeId);
+				else if (strpos($markdown, "{{".$platform."_keys" . $gameTagSuffix . "}}") !== false) {
+					echo "Replacing {{".$platform."_keys" . $gameTagSuffix . "}} (plural) in email.<br/>\n";
+					$keysForContact = db_keysassignedtotype($db, $gameId, $platform, $subplatform, $recipient_type, $recipient_typeId);
 					//print_r($keysForContact);
 
 					if (count($keysForContact) == 0) {
 						echo "Assigning new key<br/>\n";
-						$availableKey = db_singleavailablekeyforgame($db, $user['currentGame'], $platform, $subplatform);
+						$availableKey = db_singleavailablekeyforgame($db, $gameId, $platform, $subplatform);
 						//echo "key: " . $availableKey;
 						print_r($availableKey);
 
@@ -171,19 +177,19 @@ X-Mailer: impresslist/" . $impresslist_version;
 						$assignsSingleKeys_id[$platform] = $availableKey['id'];
 						$assignsSingleKeys_code[$platform] = $availableKey['keystring'];
 
-						$keys_md = "**".$platformName." Key:**\n\n";
+						$keys_md = "**".$platformName." Key" . $gamenamesuffix . ":**\n\n";
 						$keys_md .= "* " . $assignsSingleKeys_code[$platform]. "\n\n";
-						$markdown = str_replace("{{".$platform."_keys}}", $keys_md, $markdown);
+						$markdown = str_replace("{{".$platform."_keys" . $gameTagSuffix . "}}", $keys_md, $markdown);
 					} else {
 						$plural = count($keysForContact) >= 2;
-						$keys_md = "**".$platformName." Key" . (($plural)?"s":"") . ":**\n\n";
+						$keys_md = "**".$platformName." Key" . (($plural)?"s":"") . "" . $gamenamesuffix . ":**\n\n";
 						for($k = 0; $k < count($keysForContact); $k++) {
 							$datetimestring = date("jS F Y", $keysForContact[$k]['assignedByUserTimestamp']);
 							$keys_md .= "* " . $keysForContact[$k]['keystring'] . " *(Sent on " . $datetimestring . ")*\n";
 						}
 						$keys_md .= "\n";
 
-						$markdown = str_replace("{{".$platform."_keys}}", $keys_md, $markdown);
+						$markdown = str_replace("{{".$platform."_keys" . $gameTagSuffix . "}}", $keys_md, $markdown);
 					}
 				}
 
@@ -195,8 +201,16 @@ X-Mailer: impresslist/" . $impresslist_version;
 				die();
 			}
 
-			$assign_platform_keys_if_tagged("steam", "", "Steam");
-			$assign_platform_keys_if_tagged("switch", $switchCodeSubplatform, "Nintendo Switch");
+			$assign_platform_keys_if_tagged($user['currentGame'], "", "", "steam", "", "Steam");
+			$assign_platform_keys_if_tagged($user['currentGame'], "", "", "switch", $switchCodeSubplatform, "Nintendo Switch");
+
+			for($k = 0; $k < count($games); $k++) {
+				$thisgame_id = $games[$k]['id'];
+				$thisgame_suffix = ":" . $games[$k]['nameuniq'];
+				$thisgame_name = $games[$k]['name'];
+				$assign_platform_keys_if_tagged($thisgame_id, $thisgame_name, $thisgame_suffix,  "steam", "", "Steam");
+				$assign_platform_keys_if_tagged($thisgame_id, $thisgame_name, $thisgame_suffix, "switch", $switchCodeSubplatform, "Nintendo Switch");
+			}
 
 
 			$html_contents = $Parsedown->text($markdown);

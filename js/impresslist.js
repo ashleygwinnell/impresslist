@@ -1711,27 +1711,31 @@ PersonPublication = function(data) {
 		console.log('per pub open');
 		var obj = this;
 		var pub = impresslist.findPublicationById(this.fields['publication']);
-		var html = "<div data-perpub-id='" + this.id + "' data-perpub-tablerow='true' class='panel panel-default'> \
-						<div class='panel-heading oa'> \
-							<h3 class='panel-title fl'>" + pub.name + "&nbsp;</h3><span class='fr'>Last Contacted: <a data-perpub-id='" + this.id + "' href=''>" + impresslist.util.relativetime_contact(this.fields['lastcontacted']) + "</a></span> \
-						</div> \
-						<div class='panel-body'> \
-							<div class='row'> \
-								<div class='form-group col-sm-8'> \
-									<label for='email'>Email:</label> \
-									<input data-perpub-id='" + this.id + "' data-input-field='email' type='text' class='form-control' value='" + this.fields['email'] + "' style='width:100%;'/> \
-								</div>\
-								<div class='fl padx'> \
-									<label for='submit'>&nbsp;</label><br/> \
-									<button id='save_personPublicationId" + this.id + "' type='submit' class='btn btn-primary' data-perpub-id='" + this.id + "'>Save</button> \
-								</div> \
-								<div class='fl padx'> \
-									<label for='submit'>&nbsp;</label><br/> \
-									<button id='delete_personPublicationId" + this.id + "' type='submit' class='btn btn-danger' data-perpub-id='" + this.id + "'>Remove</button> \
+
+		var html = "";
+		if (pub) {
+			html += "<div data-perpub-id='" + this.id + "' data-perpub-tablerow='true' class='panel panel-default'> \
+							<div class='panel-heading oa'> \
+								<h3 class='panel-title fl'>" + pub.name + "&nbsp;</h3><span class='fr'>Last Contacted: <a data-perpub-id='" + this.id + "' href=''>" + impresslist.util.relativetime_contact(this.fields['lastcontacted']) + "</a></span> \
+							</div> \
+							<div class='panel-body'> \
+								<div class='row'> \
+									<div class='form-group col-sm-8'> \
+										<label for='email'>Email:</label> \
+										<input data-perpub-id='" + this.id + "' data-input-field='email' type='text' class='form-control' value='" + this.fields['email'] + "' style='width:100%;'/> \
+									</div>\
+									<div class='fl padx'> \
+										<label for='submit'>&nbsp;</label><br/> \
+										<button id='save_personPublicationId" + this.id + "' type='submit' class='btn btn-primary' data-perpub-id='" + this.id + "'>Save</button> \
+									</div> \
+									<div class='fl padx'> \
+										<label for='submit'>&nbsp;</label><br/> \
+										<button id='delete_personPublicationId" + this.id + "' type='submit' class='btn btn-danger' data-perpub-id='" + this.id + "'>Remove</button> \
+									</div> \
 								</div> \
 							</div> \
-						</div> \
-					</div>";
+						</div>";
+		}
 		$('#person-publications').append(html);
 
 		$('#save_personPublicationId' + this.id).click(function() { obj.save(); });
@@ -2257,8 +2261,11 @@ Person = function(data) {
 								var emails = [];
 								emails.push( {"type": "Personal", "email": this.field('email')} );
 								for(var i = 0; i < impresslist.personPublications.length; ++i) {
-									if (impresslist.personPublications[i].field('person') ==  this.id) {
-										emails.push( {"type": impresslist.findPublicationById(impresslist.personPublications[i].field('publication')).field('name'), "email": impresslist.personPublications[i].field('email')} );
+									if (impresslist.personPublications[i].field('person') == this.id) {
+										var pub = impresslist.findPublicationById(impresslist.personPublications[i].field('publication'));
+										if (pub) {
+											emails.push( {"type": pub.field('name'), "email": impresslist.personPublications[i].field('email')} );
+										}
 									}
 								}
 
@@ -2567,6 +2574,7 @@ Person = function(data) {
 
 		// Find/add keys
 		$("#person_tabs [data-tab='person_keys']").click(function(){
+
 			API.assignedKeys("person", person.id, function(d) {
 				var html = "";
 				for(var i = 0; i < d.keys.length; i++) {
@@ -2847,10 +2855,13 @@ Person = function(data) {
 		for(var i = 0; i < impresslist.personPublications.length; ++i) {
 			if (impresslist.personPublications[i].field('person') == this.id) {
 				if (impresslist.personPublications[i].field('email').length > 0) {
+
+					var publication = impresslist.findPublicationById( impresslist.personPublications[i].field('publication'));
+					if (!publication) { continue; }
 					emails.push({
 						type: "personPublication",
 						typeId: impresslist.personPublications[i].field("id"),
-						typeName: impresslist.findPublicationById( impresslist.personPublications[i].field('publication')).field("name"),
+						typeName: publication.field("name"),
 						personPublication: impresslist.personPublications[i].field('id'),
 						name: this.fullname(),
 						email: impresslist.personPublications[i].field('email')
@@ -3013,6 +3024,7 @@ Person = function(data) {
 		for(var i = 0; i < len; ++i) {
 			if (impresslist.personPublications[i].fields['person'] == this.id) {
 				var pub = impresslist.findPublicationById( impresslist.personPublications[i].fields['publication'] );
+				if (!pub) { return false; }
 				ret = pub.search(text);
 				if (ret) { return ret; }
 			}
@@ -3023,6 +3035,7 @@ Person = function(data) {
 		for(var i = 0; i < len; ++i) {
 			if (impresslist.personYoutubeChannels[i].fields['person'] == this.id) {
 				var pub = impresslist.findYoutuberById( impresslist.personYoutubeChannels[i].fields['youtuber'] );
+				if (!pub) { return false; }
 				ret = pub.search(text);
 				if (ret) { return ret; }
 			}
@@ -4321,6 +4334,7 @@ var impresslist = {
 		// Mailout tool.
 		$('#mailout-content').keyup(function(){
 
+			var curGame = impresslist.findGameById(impresslist.config.user.game).name;
 			var steam_keys_md = "**Steam Keys:**\n\n";
 			steam_keys_md += "* XXXXX-XXXXX-XXXXX *(Sent by Nick on 23rd March 2015)*\n";
 			steam_keys_md += "* XXXXX-XXXXX-XXXXX *(Sent by Ashley on 3rd March 2015)*\n\n";
@@ -4335,6 +4349,23 @@ var impresslist = {
 			md_content = md_content.replace("{{steam_keys}}", steam_keys_md);
 			md_content = md_content.replace("{{switch_key}}", "XXXXX-XXXXX-XXXXX");
 			md_content = md_content.replace("{{switch_keys}}", switch_keys_md);
+
+			// foreach game project, check for {{switch_keys:game_name}}
+			for(var i = 0; i < impresslist.games.length; i++) {
+
+				var steam_keys_md = "**Steam Keys (" + impresslist.games[i].name + "):**\n\n";
+				steam_keys_md += "* XXXXX-XXXXX-XXXXX *(Sent by Nick on 23rd March 2015)*\n";
+				steam_keys_md += "* XXXXX-XXXXX-XXXXX *(Sent by Ashley on 3rd March 2015)*\n\n";
+
+				var switch_keys_md = "**Nintendo Switch Keys (" + impresslist.games[i].name + "):**\n\n";
+				switch_keys_md += "* XXXXX-XXXXX-XXXXX *(Sent by Nick on 23rd March 2015)*\n";
+				switch_keys_md += "* XXXXX-XXXXX-XXXXX *(Sent by Ashley on 3rd March 2015)*\n\n";
+
+				md_content = md_content.replace("{{switch_keys:" + impresslist.games[i].field('nameuniq') + "}}", switch_keys_md);
+				md_content = md_content.replace("{{steam_keys:" + impresslist.games[i].field('nameuniq') + "}}", steam_keys_md);
+
+			}
+
 			var html_content = markdown.toHTML( md_content );
 			$('#mailout-preview').html(html_content);
 		});
@@ -5068,7 +5099,7 @@ var impresslist = {
 		var r = this.binarySearchById(this.publications, id);
 		if (r != null) { return r; }
 
-		console.log("impresslist: could not findPublicationById: " + id);
+		console.error("impresslist: could not findPublicationById: " + id);
 		return null;
 	},
 	findYoutuberByChannelId: function(channelId) {

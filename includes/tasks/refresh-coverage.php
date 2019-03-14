@@ -76,8 +76,11 @@ function tryAddPublicationCoverage($publicationId, $publicationName, $gameId, $w
 		$stmt->bindValue(":utime", $time, Database::VARTYPE_INTEGER);
 		$stmt->execute();
 
-		@email_new_coverage($publicationName, $url, $time);
-		@slack_coverageAlert($publicationName, $title, $url);
+		if ($watchedGameId == null) {
+			@email_new_coverage($publicationName, $url, $time);
+			@slack_coverageAlert($publicationName, $title, $url);
+			@discord_coverageAlert($publicationName, $title, $url);
+		}
 	} else {
 		echo $existingCoverage[0]['url'] . "<br/>\n";
 		echo "<i>It was already in the database.</i><br/>\n";
