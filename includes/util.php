@@ -964,7 +964,7 @@ function discord_webhook($data, $decode = false) {
 }
 function discord_coverageAlert($fromName, $coverageTitle, $url) {
 	$data = array(
-		"content" => "*{$fromName}* - {$coverageTitle}: \n{$url}";
+		"content" => "*{$fromName}* - {$coverageTitle}: \n{$url}"
 	);
 	return discord_webhook($data);
 }
