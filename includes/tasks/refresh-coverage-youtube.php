@@ -37,6 +37,10 @@ function tryAddYoutubeCoverage($youtuberId, $youtuberName, $gameId, $watchedGame
 	$existingCoverage = $stmt->query();
 	if (count($existingCoverage) == 0) {
 
+		if ($thumbnail == null) {
+			$thumbnail = "";
+		}
+
 		echo "Adding coverage from {$youtuberName}<br/>\n";
 		echo $title . "<br/>\n";
 		echo $url . "<br/>\n";
@@ -44,8 +48,8 @@ function tryAddYoutubeCoverage($youtuberId, $youtuberName, $gameId, $watchedGame
 		echo $thumbnail . "<br/>\n";
 		echo "<hr/>\n";
 		// Add it to the database.
-		$stmt = $db->prepare("INSERT INTO youtuber_coverage (id, youtuber, person, game, watchedgame, url, title, thumbnail, `utime`)
-														VALUES (NULL, :youtuber, NULL, :game, :watchedgame, :url, :title, :thumbnail, :utime ); ");
+		$stmt = $db->prepare("INSERT INTO youtuber_coverage (id, youtuber, person, game, watchedgame, url, title, thumbnail, `utime`, thanked, removed)
+														VALUES (NULL, :youtuber, NULL, :game, :watchedgame, :url, :title, :thumbnail, :utime, 0, 0 ); ");
 		$stmt->bindValue(":youtuber", $youtuberId, Database::VARTYPE_INTEGER);
 		$stmt->bindValue(":game", $gameId, Database::VARTYPE_INTEGER);
 		$stmt->bindValue(":watchedgame", $watchedGameId, Database::VARTYPE_INTEGER);
