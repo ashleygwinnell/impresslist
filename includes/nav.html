@@ -33,7 +33,7 @@
 				    			<li><a id='nav-add-person' href="javascript:;">Person</a></li>
 				    			<li><a id='nav-add-publication' href="javascript:;">Publication</a></li>
 				    			<li><a id='nav-add-youtuber' href="javascript:;">YouTuber</a></li>
-				    			<li><a id='nav-add-twitchchannel' href="javascript:;">Twitch Streamer</a></li>
+				    			<li><a id='nav-add-twitchchannel' href="javascript:;">Twitch Channel</a></li>
 				    			<li class="divider"></li>
 				    			<li><a id='nav-add-youtuber-search-batch' href="javascript:;">YouTuber (Batch using Search)</a></li>
 				    			<li class="divider"></li>
@@ -59,12 +59,15 @@
 				    		<a href='#' class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Settings <span class="caret"></span></a>
 
 				    		<ul class="dropdown-menu" role="menu">
+				    			<li><a href='javascript:;'><b> Logged in as:</b><br/><span id='current-user-name'></span></a></li>
 				    			<?php if ($user_admin): ?>
-				    				<li><a id='nav-admin' data-nav-page='admin' href="javascript:;">Admin Panel</a></li>
+				    				<li><a id='nav-admin' data-nav-page='admin' href="javascript:;">&bullet; Admin Panel</a></li>
 				    				<li class="divider"></li>
 				    			<?php endif;?>
 
-				    			<li><a id='nav-user-changeproject' href="#" data-toggle='modal' data-target='.changeproject_modal'>Change Project</a></li>
+				    			<li><a href='javascript:;'><b>Current Project:</b><br/><span id='current-project-name'></span></a></li>
+				    			<li><a id='nav-user-changeproject' href="#" data-toggle='modal' data-target='.changeproject_modal'>&bullet; Change Project</a></li>
+				    			<li><a id='nav-user-changeaudience' href="#" data-toggle='modal' data-target='.changeaudience_modal'>&bullet; Change Audience</a></li>
 				    			<li class="divider"></li>
 				    			<li><a id='nav-user-changepassword' href="#" data-toggle='modal' data-target='.password_modal'>Change Password</a></li>
 				    			<li><a id='nav-user-changeimapsettings' href="#" data-toggle='modal' data-target='.imapsettings_modal'>Change IMAP Settings</a></li>

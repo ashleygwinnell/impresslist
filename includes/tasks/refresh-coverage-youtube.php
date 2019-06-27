@@ -7,6 +7,8 @@ $require_login = false;
 $require_config = true;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
+$impresslist_verbose = true;
+
 // Temp test
 //$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 165;");
 //$db->exec("UPDATE publication SET lastscrapedon = 0;");

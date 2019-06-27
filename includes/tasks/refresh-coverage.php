@@ -129,6 +129,7 @@ for($i = 0; $i < $num_publications; $i++) {
 
 				foreach ($items as $item) {
 					$title = htmlentities($item->title);
+					$description = htmlentities($item->description);
 					$time = strtotime($item->pubdate);
 					$url = $item->link->__toString();
 					if (strlen($url) == 0) {
@@ -139,14 +140,17 @@ for($i = 0; $i < $num_publications; $i++) {
 					//echo
 
 					foreach ($games as $game) {
-						if (strpos(strtolower($title), strtolower($game['name'])) !== FALSE ||
-							util_containsKeywords($title, $game['keywords']) ) {
+						$titleContainsGame = strpos(strtolower($title), strtolower($game['name'])) !== FALSE || util_containsKeywords($title, $game['keywords']);
+						$descriptionContainsGame = strpos(strtolower($description), strtolower($game['name'])) !== FALSE || util_containsKeywords($description, $game['keywords']);
+						if ($titleContainsGame || $descriptionContainsGame) {
 							tryAddPublicationCoverage( $publications[$i]['id'], $publications[$i]['name'], $game['id'], null, $title, $url, $time );
 						}
 					}
 					foreach($watchedgames as $watchedgame) {
-						if (strpos(strtolower($title), strtolower($watchedgame['name'])) !== FALSE ||
-							util_containsKeywords($title, $watchedgame['keywords'])) {
+						$titleContainsGame = strpos(strtolower($title), strtolower($watchedgame['name'])) !== FALSE || util_containsKeywords($title, $watchedgame['keywords']);
+						$descriptionContainsGame = strpos(strtolower($description), strtolower($watchedgame['name'])) !== FALSE || util_containsKeywords($description, $watchedgame['keywords']);
+
+						if ($titleContainsGame || $descriptionContainsGame) {
 							tryAddPublicationCoverage( $publications[$i]['id'], $publications[$i]['name'], null, $watchedgame['id'], $title, $url, $time );
 						}
 					}

@@ -71,14 +71,38 @@ function api_checkRequiredGETFieldsWithTypes($fields, &$result) {
 					$result = api_error($fields[$i]['name'] . " is not a valid alphanumeric (with spaces) string. -- " . $temp);
 					return true;
 				}
-			} else if ($type == 'country') {
+			}
+			else if ($type == 'language') {
+				$temp = $_GET[$fields[$i]['name']];
+				$languages = array_keys(listlanguages());
+				if (!in_array(strtolower($temp), $languages)) {
+					$result = api_error($fields[$i]['name'] . " / " . $temp . " is not a valid language code.");
+					return true;
+				}
+			}
+			else if ($type == 'country') {
 				$temp = $_GET[$fields[$i]['name']];
 				$countries = array_values(listcountries());
 				if (!in_array(strtolower($temp), $countries)) {
 					$result = api_error($fields[$i]['name'] . " / " . $temp . " is not a valid country code.");
 					return true;
 				}
-			} else if ($type == 'platform') {
+			}
+			else if ($type == 'tags') {
+				$tags = array_keys(listtags());
+				$temp = fixtags($_GET[$fields[$i]['name']]);
+				if (strlen($temp) == 0) {
+					return false;
+				}
+				$temps = explode(",", $temp);
+				for($j = 0; $j < count($temps); $j++) {
+					if (!in_array(strtolower($temps[$j]), $tags)) {
+						$result = api_error("'" . $temps[$j] . "' is not a valid tag.");
+						return true;
+					}
+				}
+			}
+			else if ($type == 'platform') {
 				$temp = $_GET[$fields[$i]['name']];
 				if (!util_isValidPlatformForProjectKeys($temp)) {
 					$result = api_error($fields[$i]['name'] . " is not a valid platform. " . implode(",",util_getValidPlatformsForProjectKeys()) . " only right now. -- " . $temp);
@@ -147,6 +171,7 @@ if (!isset($_GET['endpoint'])) {
 		"/person/add/",
 		"/person/save/",
 		"/person/remove/",
+		// "/person/move/", // TODO: move to different audience.
 		"/person/add-publication/",
 		"/person/save-publication/",
 		"/person/remove-publication/",
@@ -163,6 +188,7 @@ if (!isset($_GET['endpoint'])) {
 		"/publication/set-priority/",
 		"/publication/save/",
 		"/publication/remove/",
+		// "/publication/move/", // TODO: move to different audience.
 
 		// Youtubers
 		"/youtuber/list/",
@@ -171,6 +197,7 @@ if (!isset($_GET['endpoint'])) {
 		"/youtuber/save/",
 		"/youtuber/set-priority/",
 		"/youtuber/remove/",
+		// "/youtuber/move/", // TODO: move to different audience.
 
 		// Twitch Channels
 		"/twitchchannel/list/",
@@ -178,6 +205,7 @@ if (!isset($_GET['endpoint'])) {
 		"/twitchchannel/save/",
 		"/twitchchannel/set-priority/",
 		"/twitchchannel/remove/",
+		// "/twitchchannel/move/", // TODO: move to different audience.
 
 		// Projects
 		"/project/add/",
@@ -196,6 +224,7 @@ if (!isset($_GET['endpoint'])) {
 		"/user/change-imap-settings/",
 		"/user/change-password/",
 		"/user/change-project/",
+		"/user/change-audience/",
 
 		"/job/list/",
 		"/job/save-all/",
@@ -258,6 +287,9 @@ if (!isset($_GET['endpoint'])) {
 		"/social/account/twitter/list/",
 		"/social/account/twitter/add/",
 		"/social/account/twitter/remove/",
+		"/social/account/twitter/tools/unrequited-followings/",
+		"/social/account/twitter/tools/inactive-followings/",
+		"/social/account/twitter/tools/unfollow/",
 
 		"/social/account/facebook/list/",
 		"/social/account/facebook/add/",
@@ -769,7 +801,9 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once('init.php');
 
-			$results = $db->query("SELECT * FROM oauth_facebookpage WHERE removed = 0 ORDER BY id ASC;");
+			$stmt = $db->prepare("SELECT * FROM oauth_facebookpage WHERE company = :company AND removed = 0 ORDER BY id ASC;");
+			$stmt->bindValue(":company", $user_company,	Database::VARTYPE_INTEGER);
+			$results = $stmt->query();
 			usort($results, "sortById");
 
 			$result = new stdClass();
@@ -796,26 +830,32 @@ if (!isset($_GET['endpoint'])) {
 
 				$exists = db_singleOAuthFacebookPageByFBPId($db, $_GET['page_id']);
 				if (!is_null($exists)) {
+					if ($exists['company'] != $user_company) {
+						$result = api_error("Could not update facebook page as it does not belong to you.");
+					}
+					else {
 
-					$stmt = $db->prepare("UPDATE oauth_facebookpage SET page_name = :page_name, page_image = :page_image, page_accessToken = :page_accessToken, lastSync = :lastSync, removed = :removed WHERE page_id = :page_id; ");
+						$stmt = $db->prepare("UPDATE oauth_facebookpage SET page_name = :page_name, page_image = :page_image, page_accessToken = :page_accessToken, lastSync = :lastSync, removed = :removed WHERE page_id = :page_id; ");
 
-					$stmt->bindValue(":page_name", 			$_GET['page_name'], 		Database::VARTYPE_STRING);
-					$stmt->bindValue(":page_image", 		$image_url, 				Database::VARTYPE_STRING);
-					$stmt->bindValue(":page_accessToken",  	$_GET['page_accessToken'], 	Database::VARTYPE_STRING);
-					$stmt->bindValue(":page_id", 			$user['id'], 				Database::VARTYPE_STRING);
-					$stmt->bindValue(":lastSync", 			time(), 					Database::VARTYPE_INTEGER);
-					$stmt->bindValue(":removed", 			0, 							Database::VARTYPE_INTEGER);
-					$stmt->execute();
+						$stmt->bindValue(":page_name", 			$_GET['page_name'], 		Database::VARTYPE_STRING);
+						$stmt->bindValue(":page_image", 		$image_url, 				Database::VARTYPE_STRING);
+						$stmt->bindValue(":page_accessToken",  	$_GET['page_accessToken'], 	Database::VARTYPE_STRING);
+						$stmt->bindValue(":page_id", 			$user['id'], 				Database::VARTYPE_STRING);
+						$stmt->bindValue(":lastSync", 			time(), 					Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":removed", 			0, 							Database::VARTYPE_INTEGER);
+						$stmt->execute();
 
-					$result = new stdClass();
-					$result->success = true;
-					$result->facebookpage = $exists;
-					$result->updated = true;
+						$result = new stdClass();
+						$result->success = true;
+						$result->facebookpage = $exists;
+						$result->updated = true;
+					}
 
 				} else {
 
-					$stmt = $db->prepare("INSERT INTO oauth_facebookpage (id, page_id, page_name, page_image, page_accessToken, lastSync, removed)
-															VALUES ( NULL, :page_id, :page_name, :page_image, :page_accessToken, :lastSync, :removed);");
+					$stmt = $db->prepare("INSERT INTO oauth_facebookpage (id, company, page_id, page_name, page_image, page_accessToken, lastSync, removed)
+															VALUES ( NULL, :company, :page_id, :page_name, :page_image, :page_accessToken, :lastSync, :removed);");
+					$stmt->bindValue(":company", 			$user_company,				Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":page_id", 			$_GET['page_id'], 			Database::VARTYPE_STRING);
 					$stmt->bindValue(":page_name", 			$_GET['page_name'], 		Database::VARTYPE_STRING);
 					$stmt->bindValue(":page_image", 		$image_url, 				Database::VARTYPE_STRING);
@@ -841,13 +881,24 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error)
 			{
-				$stmt = $db->prepare(" UPDATE oauth_facebookpage SET removed = :removed WHERE id = :id; ");
-				$stmt->bindValue(":removed", 	1, 				Database::VARTYPE_INTEGER);
-				$stmt->bindValue(":id", 		$_GET['id'], 	Database::VARTYPE_STRING);
-				$stmt->execute();
+				$singlePage = db_singleOAuthFacebookPageById( $db, $_GET['id'] );
+				if (!$singlePage) {
+					$result = api_error("Facebook page does not exist.");
+				}
+				else if ($singlePage['company'] != $user_company) {
+					$result = api_error("Facebook page does not belong to you.");
+				}
+				else {
 
-				$result = new stdClass();
-				$result->success = true;
+					$stmt = $db->prepare(" UPDATE oauth_facebookpage SET removed = :removed WHERE id = :id AND company = :company; ");
+					$stmt->bindValue(":company", 	$user_company,	Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":removed", 	1, 				Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":id", 		$_GET['id'], 	Database::VARTYPE_STRING);
+					$stmt->execute();
+
+					$result = new stdClass();
+					$result->success = true;
+				}
 			}
 		}
 		else if ($endpoint == "/social/account/facebook/list/")
@@ -855,7 +906,9 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once('init.php');
 
-			$results = $db->query("SELECT * FROM oauth_facebookacc WHERE removed = 0 ORDER BY id ASC;");
+			$stmt = $db->prepare("SELECT * FROM oauth_facebookacc WHERE company = :company AND removed = 0 ORDER BY id ASC;");
+			$stmt->bindValue(":company", $user_company,	Database::VARTYPE_INTEGER);
+			$results = $stmt->query();
 			usort($results, "sortById");
 
 			$result = new stdClass();
@@ -1002,6 +1055,7 @@ if (!isset($_GET['endpoint'])) {
 			// This facebook account is in the db already. cool. update it.
 			$exists = db_singleOAuthFacebookByFBId($db, $user['id']);
 			if (!is_null($exists)) {
+				// TODO: check the company id is correct for the cur user
 
 				$stmt = $db->prepare("UPDATE oauth_facebookacc SET facebook_image = :facebook_image, facebook_accessToken = :facebook_accessToken, removed = :removed WHERE facebook_id = :facebook_id; ");
 
@@ -1029,10 +1083,10 @@ if (!isset($_GET['endpoint'])) {
 			}
 
 
-			$stmt = $db->prepare("INSERT INTO oauth_facebookacc (id, user, facebook_id, facebook_name, facebook_image, facebook_accessToken, removed)
+			$stmt = $db->prepare("INSERT INTO oauth_facebookacc (id, company, user, facebook_id, facebook_name, facebook_image, facebook_accessToken, removed)
 													VALUES ( NULL, :user, :facebook_id, :facebook_name, :facebook_image, :facebook_accessToken, :removed);
 								");
-			$stmt->bindValue(":user", 					$user_id, 					Database::VARTYPE_STRING);
+			$stmt->bindValue(":company", 				$user_company,				Database::VARTYPE_INTEGER);
 			$stmt->bindValue(":facebook_id", 			$user['id'], 				Database::VARTYPE_STRING);
 			$stmt->bindValue(":facebook_name", 			$user['name'], 				Database::VARTYPE_STRING);
 			$stmt->bindValue(":facebook_image", 		$image_url, 				Database::VARTYPE_STRING);
@@ -1085,7 +1139,8 @@ if (!isset($_GET['endpoint'])) {
 				$sentSQL = " AND sent = {$includeSent} ";
 			}
 
-			$results = $db->query("SELECT * FROM socialqueue WHERE `timestamp` > " . (time()-86400). " AND removed = 0 " . $sentSQL . " ORDER BY `timestamp` ASC;");
+			// TODO: prepare this
+			$results = $db->query("SELECT * FROM socialqueue WHERE `timestamp` > " . (time()-86400). " AND company = '" . $user_company . "' AND removed = 0 " . $sentSQL . " ORDER BY `timestamp` ASC;");
 
 			$result = new stdClass();
 			$result->success = true;
@@ -1100,16 +1155,17 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once('init.php');
 
-			$stmt = $db->prepare("INSERT INTO socialqueue (id, type, typedata, user_id, `timestamp`, ready, sent, removed)
-													VALUES ( NULL, :type, :typedata, :user_id, :ts, :ready, :sent, :removed);
+			$stmt = $db->prepare("INSERT INTO socialqueue (id, company, type, typedata, user_id, `timestamp`, ready, sent, removed)
+													VALUES ( NULL, :company, :type, :typedata, :user_id, :ts, :ready, :sent, :removed);
 								");
-			$stmt->bindValue(":type", 		'blank', 	Database::VARTYPE_STRING);
-			$stmt->bindValue(":typedata", 	"{}", 		Database::VARTYPE_STRING);
-			$stmt->bindValue(":user_id", 	$user_id, 	Database::VARTYPE_INTEGER);
-			$stmt->bindValue(":ts", 		0, 			Database::VARTYPE_INTEGER);
-			$stmt->bindValue(":ready", 		0, 			Database::VARTYPE_INTEGER);
-			$stmt->bindValue(":sent", 		0, 			Database::VARTYPE_INTEGER);
-			$stmt->bindValue(":removed", 	0, 			Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":company", 	$user_company,	Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":type", 		'blank', 		Database::VARTYPE_STRING);
+			$stmt->bindValue(":typedata", 	"{}", 			Database::VARTYPE_STRING);
+			$stmt->bindValue(":user_id", 	$user_id, 		Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":ts", 		0, 				Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":ready", 		0, 				Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":sent", 		0, 				Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":removed", 	0, 				Database::VARTYPE_INTEGER);
 
 			$stmt->execute();
 
@@ -1143,7 +1199,12 @@ if (!isset($_GET['endpoint'])) {
 					$result = new stdClass();
 					$result->success = false;
 					$result->message = "Cannot add retweets to a non-tweet item.";
-				} else {
+				} else if ($tweet['company'] != $user_company) {
+					$result = new stdClass();
+					$result->success = false;
+					$result->message = "Cannot add retweets to a non-linked twitter queue item.";
+				}
+				else {
 					$accounts = explode(",", $_GET['accounts']);
 
 
@@ -1151,6 +1212,7 @@ if (!isset($_GET['endpoint'])) {
 					for($i = 0; $i < count($accounts); $i++)
 					{
 						$r = db_singleOAuthTwitter($db, $accounts[$i]);
+						// TODO: check all of these twitter accounts with the cur company id.
 						if (is_null($r)) {
 							$correct = false;
 							break;
@@ -1179,16 +1241,17 @@ if (!isset($_GET['endpoint'])) {
 							);
 							$time = $tweet['timestamp'] + (($i+1) * $_GET['timesep']);
 
-							$stmt = $db->prepare("INSERT INTO socialqueue (id, type, typedata, user_id, `timestamp`, ready, sent, removed)
-																	VALUES ( NULL, :type, :typedata, :user_id, :ts, :ready, :sent, :removed);
+							$stmt = $db->prepare("INSERT INTO socialqueue (id, company, type, typedata, user_id, `timestamp`, ready, sent, removed)
+																	VALUES ( NULL, :company, :type, :typedata, :user_id, :ts, :ready, :sent, :removed);
 												");
-							$stmt->bindValue(":type", 		'retweet', 	Database::VARTYPE_STRING);
+							$stmt->bindValue(":company", 	$user_company,	Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":type", 		'retweet', 		Database::VARTYPE_STRING);
 							$stmt->bindValue(":typedata", 	json_encode($retweet_data), Database::VARTYPE_STRING);
-							$stmt->bindValue(":user_id", 	$user_id, 	Database::VARTYPE_INTEGER);
-							$stmt->bindValue(":ts", 		$time, 		Database::VARTYPE_INTEGER);
-							$stmt->bindValue(":ready", 		1, 			Database::VARTYPE_INTEGER);
-							$stmt->bindValue(":sent", 		0, 			Database::VARTYPE_INTEGER);
-							$stmt->bindValue(":removed", 	0, 			Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":user_id", 	$user_id, 		Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":ts", 		$time, 			Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":ready", 		1, 				Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":sent", 		0, 				Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":removed", 	0, 				Database::VARTYPE_INTEGER);
 							$stmt->execute();
 
 							$itemId = $db->lastInsertRowID();
@@ -1238,7 +1301,13 @@ if (!isset($_GET['endpoint'])) {
 					}
 
 					$tweet = db_singleSocialQueueItem($db, $d['tweet']);
-					if ($tweet['timestamp'] > $_GET['timestamp']) {
+					if ($tweet['company'] != $user_company) {
+						$valid = false;
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = "Cannot schedule a retweet on a non-linked twitter.";
+					}
+					else if ($tweet['timestamp'] > $_GET['timestamp']) {
 						$valid = false;
 						$result = new stdClass();
 						$result->success = false;
@@ -1283,7 +1352,13 @@ if (!isset($_GET['endpoint'])) {
 					}
 
 					$tweet = db_singleSocialQueueItem($db, $d['post']);
-					if ($tweet['timestamp'] > $_GET['timestamp']) {
+					if ($tweet['company'] != $user_company) {
+						$valid = false;
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = "Cannot schedule a share on a non-linked facebook page.";
+					}
+					else if ($tweet['timestamp'] > $_GET['timestamp']) {
 						$valid = false;
 						$result = new stdClass();
 						$result->success = false;
@@ -1350,14 +1425,23 @@ if (!isset($_GET['endpoint'])) {
 			if (!$error)
 			{
 				// TODO: validate ID is a valid item.
+				$singleItem = db_singleSocialQueueItem($db, $_GET['id']);
+				if (!$singleItem) {
+					$result = api_error("Queue item does not exist.");
+				}
+				else if ($singleItem['company'] != $user_company) {
+					$result = api_error("Queue item does not belong to you.");
+				}
+				else {
+					$stmt = $db->prepare("UPDATE socialqueue SET `removed` = :removed WHERE id = :id AND company = :company ;");
+					$stmt->bindValue(":company", $user_company, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":removed", 1, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+					$stmt->execute();
 
-				$stmt = $db->prepare("UPDATE socialqueue SET `removed` = :removed WHERE id = :id ;");
-				$stmt->bindValue(":removed", 1, Database::VARTYPE_INTEGER);
-				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
-				$stmt->execute();
-
-				$result = new stdClass();
-				$result->success = true;
+					$result = new stdClass();
+					$result->success = true;
+				}
 			}
 		}
 
@@ -1487,7 +1571,9 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once('init.php');
 
-			$results = $db->query("SELECT * FROM oauth_twitteracc WHERE removed = 0 ORDER BY id ASC;");
+			$stmt = $db->prepare("SELECT * FROM oauth_twitteracc WHERE company = :company AND removed = 0 ORDER BY id ASC;");
+			$stmt->bindValue(":company", $user_company,	Database::VARTYPE_INTEGER);
+			$results = $stmt->query();
 			usort($results, "sortById");
 
 			$result = new stdClass();
@@ -1523,9 +1609,10 @@ if (!isset($_GET['endpoint'])) {
 
 						$tw_user = twitter_getUserInfoById($token['oauth_token'], $token['oauth_token_secret'], $token['user_id']);
 
-						$stmt = $db->prepare("INSERT INTO oauth_twitteracc (id, twitter_id, twitter_name, twitter_handle, twitter_image, oauth_key, oauth_secret, removed)
-																VALUES ( NULL, :twitter_id, :twitter_name, :twitter_handle, :twitter_image, :oauth_key, :oauth_secret, :removed);
+						$stmt = $db->prepare("INSERT INTO oauth_twitteracc (id, company, twitter_id, twitter_name, twitter_handle, twitter_image, oauth_key, oauth_secret, removed)
+																VALUES ( NULL, :company, :twitter_id, :twitter_name, :twitter_handle, :twitter_image, :oauth_key, :oauth_secret, :removed);
 											");
+						$stmt->bindValue(":company", 		$user_company,					Database::VARTYPE_INTEGER);
 						$stmt->bindValue(":twitter_id", 	$token['user_id'], 				Database::VARTYPE_STRING);
 						$stmt->bindValue(":twitter_name", 	$token['screen_name'], 			Database::VARTYPE_STRING);
 						$stmt->bindValue(":twitter_handle", $token['screen_name'], 			Database::VARTYPE_STRING);
@@ -1547,31 +1634,37 @@ if (!isset($_GET['endpoint'])) {
 						//$result->success = false;
 						//$result->message = "Twitter Account already exists.";
 
-						$tw_user = twitter_getUserInfoById($existing_result['oauth_key'], $existing_result['oauth_secret'], $existing_result['twitter_id']);
+						if ($existing_result['company'] != $user_company) {
+							$result = api_error("Cannot update this Twitter as it does not belong to you.");
+						}
+						else {
 
-						// Update user
-						$stmt = $db->prepare("UPDATE oauth_twitteracc
-												SET twitter_id = :twitter_id,
-													twitter_name = :twitter_name,
-													twitter_handle = :twitter_handle,
-													twitter_image = :twitter_image,
-													removed = :removed
-												WHERE id = :id;
-											");
-						$stmt->bindValue(":twitter_id", 	$token['user_id'], 				Database::VARTYPE_STRING);
-						$stmt->bindValue(":twitter_name", 	$token['screen_name'], 			Database::VARTYPE_STRING);
-						$stmt->bindValue(":twitter_handle", $token['screen_name'], 			Database::VARTYPE_STRING);
-						$stmt->bindValue(":twitter_image",  $tw_user->profile_image_url, 	Database::VARTYPE_STRING);
-						$stmt->bindValue(":oauth_key", 		$token['oauth_token'], 			Database::VARTYPE_STRING);
-						$stmt->bindValue(":oauth_secret", 	$token['oauth_token_secret'], 	Database::VARTYPE_STRING);
-						$stmt->bindValue(":removed", 		0, 								Database::VARTYPE_INTEGER);
-						$stmt->bindValue(":id", 			$existing_result['id'], 		Database::VARTYPE_INTEGER);
-						$stmt->execute();
+							$tw_user = twitter_getUserInfoById($existing_result['oauth_key'], $existing_result['oauth_secret'], $existing_result['twitter_id']);
 
-						$result = new stdClass();
-						$result->success = true;
-						$result->twitteracc = db_singleOAuthTwitter( $db, $existing_result['id'] );
-						$result->updated = true;
+							// Update user
+							$stmt = $db->prepare("UPDATE oauth_twitteracc
+													SET twitter_id = :twitter_id,
+														twitter_name = :twitter_name,
+														twitter_handle = :twitter_handle,
+														twitter_image = :twitter_image,
+														removed = :removed
+													WHERE id = :id;
+												");
+							$stmt->bindValue(":twitter_id", 	$token['user_id'], 				Database::VARTYPE_STRING);
+							$stmt->bindValue(":twitter_name", 	$token['screen_name'], 			Database::VARTYPE_STRING);
+							$stmt->bindValue(":twitter_handle", $token['screen_name'], 			Database::VARTYPE_STRING);
+							$stmt->bindValue(":twitter_image",  $tw_user->profile_image_url, 	Database::VARTYPE_STRING);
+							$stmt->bindValue(":oauth_key", 		$token['oauth_token'], 			Database::VARTYPE_STRING);
+							$stmt->bindValue(":oauth_secret", 	$token['oauth_token_secret'], 	Database::VARTYPE_STRING);
+							$stmt->bindValue(":removed", 		0, 								Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":id", 			$existing_result['id'], 		Database::VARTYPE_INTEGER);
+							$stmt->execute();
+
+							$result = new stdClass();
+							$result->success = true;
+							$result->twitteracc = db_singleOAuthTwitter( $db, $existing_result['id'] );
+							$result->updated = true;
+						}
 
 					}
 				}
@@ -1587,14 +1680,165 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error)
 			{
-				$stmt = $db->prepare(" UPDATE oauth_twitteracc SET removed = :removed WHERE id = :id; ");
-				$stmt->bindValue(":removed", 	1, 				Database::VARTYPE_INTEGER);
-				$stmt->bindValue(":id", 		$_GET['id'], 	Database::VARTYPE_STRING);
-				$stmt->execute();
+				$singleTwitter = db_singleOAuthTwitter($db, $_GET['id']);
+				if (!$singleTwitter) {
+					$result = api_error("Twitter account does not exist.");
+				}
+				else if ($singleTwitter['company'] != $user_company) {
+					$result = api_error("Twitter account does not belong to you.");
+				}
+				else {
 
-				$result = new stdClass();
-				$result->success = true;
+					$stmt = $db->prepare("UPDATE oauth_twitteracc SET removed = :removed WHERE id = :id AND company = :company ;");
+					$stmt->bindValue(":removed", 	1, 				Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":company", 	$user_company, 	Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":id", 		$_GET['id'], 	Database::VARTYPE_STRING);
+					$stmt->execute();
+
+					$result = new stdClass();
+					$result->success = true;
+				}
 			}
+		}
+		else if ($endpoint == "/social/account/twitter/tools/unrequited-followings/")
+		{
+			set_time_limit(0);
+			$require_login = true;
+			include_once('init.php');
+			$required_fields = array( array('name' => 'handle', 	'type' => 'alphanumeric') );
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error)
+			{
+				$handle = $_GET['handle'];
+				$result = $db->query("SELECT * FROM oauth_twitteracc WHERE twitter_handle = '" . $handle . "' AND removed = 0;");
+				if (count($result) != 1) {
+					$result = api_error("No linked twitter account found.");
+				}
+				else if ($result[0]['company'] != $user_company) {
+					$result = api_error("Twitter account does not belong to you.");
+				}
+				else {
+					$scrapetime = 86400 * 7;
+					$account = $result[0];
+
+					$friends = [];
+					$followers = [];
+					if ($account['lastscrapedon'] < time() - $scrapetime) {
+						$r = twitter_util_scrape_relationships($account['id'], $handle);
+						if (!$r) {
+							$result = api_error("Rate limit exceeded.");
+						} else {
+							$result = $db->query("SELECT * FROM oauth_twitteracc WHERE twitter_handle = '" . $handle . "' AND removed = 0;");
+							$friends = json_decode($result[0]['twitter_friends']);
+							$followers = json_decode($result[0]['twitter_followers']);
+						}
+					} else {
+						//echo "Using database cache<br/>";
+						$friends = json_decode($account['twitter_friends']);
+						$followers = json_decode($account['twitter_followers']);
+					}
+
+					$diff = array_diff($friends, $followers);
+
+					$cache = $db->query("SELECT * FROM cache_external_twitteracc WHERE associated_oauth_twitteracc = '" . $account['id'] . "' AND twitter_id IN (" . implode(array_values($diff),",") . ");");
+
+					$result = new stdClass();
+					$result->success = true;
+					$result->accounts = $cache;
+				}
+			}
+		}
+		else if ($endpoint == "/social/account/twitter/tools/inactive-followings/")
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$required_fields = array(
+				array('name' => 'handle', 	'type' => 'alphanumeric'),
+				array('name' => 'years', 	'type' => 'number')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error)
+			{
+				$handle = $_GET['handle'];
+				$result = $db->query("SELECT * FROM oauth_twitteracc WHERE twitter_handle = '" . $handle . "' AND removed = 0;");
+				if (count($result) != 1) {
+					$result = api_error("No linked twitter account found.");
+				}
+				else if ($result[0]['company'] != $user_company) {
+					$result = api_error("Twitter account does not belong to you.");
+				}
+				else {
+					$years = $_GET['years'];
+					$timediff = 86400 * 360 * $years; // 1 year.
+					$friends = json_decode($result[0]['twitter_friends'],true);
+
+					$accounts = array();
+					$cache = $db->query("SELECT * FROM cache_external_twitteracc WHERE associated_oauth_twitteracc = '" . $result[0]['id'] . "' AND twitter_lastpostedon < " . (time()-$timediff) . " ORDER BY twitter_lastpostedon ASC;");
+					for($i = 0; $i < count($cache); $i++) {
+						if (in_array($cache[$i]['twitter_id'], $friends)) {
+							$accounts[] = $cache[$i];
+						}
+					}
+					$result = new stdClass();
+					$result->success = true;
+					$result->accounts = $accounts;
+				}
+
+
+			}
+		}
+		else if ($endpoint == "/social/account/twitter/tools/unfollow/")
+		{
+			$require_login = true;
+			include_once('init.php');
+
+			$required_fields = array(
+				array('name' => 'id', 		'type' => 'integer'), // oauthaccount id
+				array('name' => 'handle', 	'type' => 'textarea') // handle to unfollow.
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error)
+			{
+				$id = $_GET['id'];
+				$handle = $_GET['handle'];
+				$result = $db->query("SELECT * FROM oauth_twitteracc WHERE id = '" . $id . "' AND removed = 0;");
+				if (count($result) != 1) {
+					$result = api_error("No linked twitter account found.");
+				}
+				else if ($result[0]['company'] != $user_company) {
+					$result = api_error("Twitter account does not belong to you.");
+				}
+				else {
+					$cache = $db->query("SELECT twitter_id FROM cache_external_twitteracc WHERE `twitter_handle` = '" . $handle . "' LIMIT 1;");
+					if (count($cache) != 1) {
+						$result = api_error("This account is not in the cache.");
+					} else {
+						$twitterId = $cache[0]['twitter_id'];
+						$friends = json_decode($result[0]['twitter_friends']);
+						if (!in_array($twitterId, $friends)) {
+							$result = api_error("This following does not exist...");
+						} else {
+							$res = twitter_util_unfollow($id, $handle);
+							if (is_string($res)) {
+								$result = api_error($res);
+							} else {
+								$result = new stdClass();
+								$result->success = true;
+
+								$ind = array_search($twitterId, $friends);
+								array_splice($friends, $ind, 1);
+								$stmt = $db->prepare("UPDATE oauth_twitteracc SET twitter_friends = :twitter_friends WHERE id = :id LIMIT 1;");
+								$stmt->bindValue(":twitter_friends", json_encode($friends), Database::VARTYPE_STRING);
+								$stmt->bindValue(":id", 			 $id, 					Database::VARTYPE_INTEGER);
+								$stmt->execute();
+
+							}
+						}
+					}
+				}
+			}
+
 		}
 		else if ($endpoint == "/backup/")
 		{
@@ -1695,7 +1939,9 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once('init.php');
 
-			$results = $db->query("SELECT * FROM emailcampaignsimple WHERE removed = 0 ORDER BY ready ASC, sent ASC, `timestamp` DESC;");
+			$stmt = $db->prepare("SELECT * FROM emailcampaignsimple WHERE company = :company AND removed = 0 ORDER BY ready ASC, sent ASC, `timestamp` DESC;");
+			$stmt->bindValue(":company", $user_company, Database::VARTYPE_INTEGER);
+			$results = $stmt->query();
 
 			$result = new stdClass();
 			$result->success = true;
@@ -1706,9 +1952,10 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once('init.php');
 
-			$stmt = $db->prepare("INSERT INTO emailcampaignsimple (id, name, subject, recipients, markdown, `timestamp`, user, ready, sent, removed)
-														VALUES ( NULL, :name, :subject, :recipients, :markdown, :ts, :user, :ready, :sent, :removed);
+			$stmt = $db->prepare("INSERT INTO emailcampaignsimple (id, company, name, subject, recipients, markdown, `timestamp`, user, ready, sent, removed)
+														VALUES ( NULL, :company, :name, :subject, :recipients, :markdown, :ts, :user, :ready, :sent, :removed);
 								");
+			$stmt->bindValue(":company", 	$user_company, 		Database::VARTYPE_INTEGER);
 			$stmt->bindValue(":game_id", 	$user_currentGame, 	Database::VARTYPE_INTEGER);
 			$stmt->bindValue(":name", 		'Unnamed Mailout', 	Database::VARTYPE_STRING);
 			$stmt->bindValue(":subject", 	"Subject", 			Database::VARTYPE_STRING);
@@ -1746,9 +1993,10 @@ if (!isset($_GET['endpoint'])) {
 					$recipients[$i]['read'] = false;
 				}
 
-				$stmt = $db->prepare("INSERT INTO emailcampaignsimple (id, name, subject, recipients, markdown, `timestamp`, user, ready, sent, removed)
+				$stmt = $db->prepare("INSERT INTO emailcampaignsimple (id, company, name, subject, recipients, markdown, `timestamp`, user, ready, sent, removed)
 														VALUES ( NULL, :name, :subject, :recipients, :markdown, :ts, :user, :ready, :sent, :removed);
 								");
+				$stmt->bindValue(":company", 	$user_company, 						Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":game_id", 	$user_currentGame, 					Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":name", 		$mailout['name'] . ' Duplicate', 	Database::VARTYPE_STRING);
 				$stmt->bindValue(":subject", 	$mailout['subject'] . ' Duplicate', Database::VARTYPE_STRING);
@@ -1786,11 +2034,14 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				// validate person
-				$person = $_GET['person'];
-				if ($_GET['person'] != "" && !util_isInteger($person)) {
-					$result = api_error("person was not an integer");
-				} else {
+				$mailout = db_singlemailoutsimple($db, $_GET['id'] );
+				if (!$mailout) {
+					$result = api_error("Mailout does not exist");
+				}
+				else if ($mailout['company'] != $user_company) {
+					$result = api_error("Mailout does not belong to you.");
+				}
+				else {
 
 					$json = json_decode(urldecode($_POST['recipients']), true);
 					if ($json === NULL) {
@@ -1801,7 +2052,7 @@ if (!isset($_GET['endpoint'])) {
 						// Validate all people, personPublications, etc.
 						// [{"type":"person","person_id":333,"sent":true,"read":false},{"type":"personPublication","personPublication_id":221,"sent":true,"read":false}]
 
-						$games = $db->query("SELECT * FROM game;");
+						$games = $db->query("SELECT * FROM game WHERE company = '" . $user_company . "';"); // TODO: prepare-ise
 						// Validate for all games... bah
 						// Validate all countries.
 						// Validate there are enough codes based on region.
@@ -1947,9 +2198,13 @@ if (!isset($_GET['endpoint'])) {
 			$message  = $_GET['message'];
 
 			$acc = db_singleOAuthTwitterByHandle($db, $from_twitter);
-			$to_twitter_id = twitter_getUserId($to_twitter);
-			$data = twitter_sendDirectMessage($acc['oauth_key'], $acc['oauth_secret'], $to_twitter_id, $message);
-			//$data->event->id
+			if ($acc['company'] != $user_company) {
+				$result = api_error("Twitter account " . $from_twitter . " does not belong to you.");
+			} else {
+				$to_twitter_id = twitter_getUserId($to_twitter);
+				$data = twitter_sendDirectMessage($acc['oauth_key'], $acc['oauth_secret'], $to_twitter_id, $message);
+				//$data->event->id
+			}
 
 		}
 		else if ($endpoint == "/mailout/simple/send/")
@@ -1964,103 +2219,113 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				$user = db_singleuser($db, $_SESSION['user'], ['emailIMAPPassword', 'emailIMAPPasswordSalt', 'emailIMAPPasswordIV']);
+				$mailout = db_singlemailoutsimple($db, $_GET['id'] );
+				if (!$mailout) {
+					$result = api_error("Mailout does not exist.");
+				}
+				else if ($mailout['company'] != $user_company) {
+					$result = api_error("Mailout does not belong to you.");
+				}
+				else {
 
-				// check smtp settings.
-				if ($user['emailSMTPServer'] != '' &&
-					$user['emailIMAPServer'] != '' &&
-					$user['emailIMAPPassword'] != '' &&
-					$user['emailIMAPPasswordSalt'] != '' &&
-					$user['emailIMAPPasswordIV'] != '') {
+					$user = db_singleuser($db, $_SESSION['user'], ['emailIMAPPassword', 'emailIMAPPasswordSalt', 'emailIMAPPasswordIV']);
 
-					// if the mailout contains keys, we have to check that we have enough!
-					$stmt = $db->prepare("SELECT * FROM emailcampaignsimple WHERE id = :id ;");
-					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
-					$mailouts = $stmt->query();
-					$mailout = $mailouts[0];
-					$markdown = $mailout['markdown'];
+					// check smtp settings.
+					if ($user['emailSMTPServer'] != '' &&
+						$user['emailIMAPServer'] != '' &&
+						$user['emailIMAPPassword'] != '' &&
+						$user['emailIMAPPasswordSalt'] != '' &&
+						$user['emailIMAPPasswordIV'] != '') {
 
-					$doSend = true;
+						// if the mailout contains keys, we have to check that we have enough!
+						$stmt = $db->prepare("SELECT * FROM emailcampaignsimple WHERE id = :id ;");
+						$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+						$mailouts = $stmt->query();
+						$mailout = $mailouts[0];
+						$markdown = $mailout['markdown'];
 
-					// TODO: check recipients against keys with subplatform included.
+						$doSend = true;
 
-					$assertEnoughKeys = function($platform, $subplatform) use ($db, $mailout, &$doSend, &$result) {
-						$recipientsArray = json_decode($mailout['recipients'], true);
-						$countRecipients = count($recipientsArray);
-						// TODO: game_id should probably be part of the mailout data?!
-						$keysArray = $db->query("SELECT *
-											FROM game_key
-											WHERE
-												game = '" . $user_currentGame . "' AND
-												platform = '" . $platform . " AND
-												subplatform = '" . $subplatform . " AND
-												assigned = 0;");
-						$countKeys = count($keysArray);
+						// TODO: check recipients against keys with subplatform included.
 
-						if ($countKeys < $countRecipients) {
-							$doSend = false;
-							$numNewKeysNeeded = $countRecipients - $countKeys;
-							$result = api_error("There are not enough ".$platform."/" . $subplatform . " keys in the system to allocate to this mailout. {$numNewKeysNeeded} more needed.");
-						}
-						return false;
-					};
+						$assertEnoughKeys = function($platform, $subplatform) use ($db, $mailout, &$doSend, &$result) {
+							$recipientsArray = json_decode($mailout['recipients'], true);
+							$countRecipients = count($recipientsArray);
+							// TODO: game_id should probably be part of the mailout data?!
+							$keysArray = $db->query("SELECT *
+												FROM game_key
+												WHERE
+													game = '" . $user_currentGame . "' AND
+													platform = '" . $platform . " AND
+													subplatform = '" . $subplatform . " AND
+													assigned = 0;");
+							$countKeys = count($keysArray);
 
-					$assertEnoughKeysCountExisting = function($platform, $subplatform) use ($db, $mailout, &$doSend, &$result) {
-						$recipientsArray = json_decode($mailout['recipients'], true);
-						$newKeysNeeded = 0;
-						for ($i = 0; $i < count($recipientsArray); $i++) {
-							$contact = $recipientsArray[$i];
+							if ($countKeys < $countRecipients) {
+								$doSend = false;
+								$numNewKeysNeeded = $countRecipients - $countKeys;
+								$result = api_error("There are not enough ".$platform."/" . $subplatform . " keys in the system to allocate to this mailout. {$numNewKeysNeeded} more needed.");
+							}
+							return false;
+						};
 
-							$keysForContact = db_keysassignedtotype($db, $user_currentGame, $platform, $subplatform, $contact['type'], $contact[$contact['type'].'_id']);
-							if (count($keysForContact) == 0) {
-								$newKeysNeeded++;
+						$assertEnoughKeysCountExisting = function($platform, $subplatform) use ($db, $mailout, &$doSend, &$result) {
+							$recipientsArray = json_decode($mailout['recipients'], true);
+							$newKeysNeeded = 0;
+							for ($i = 0; $i < count($recipientsArray); $i++) {
+								$contact = $recipientsArray[$i];
+
+								$keysForContact = db_keysassignedtotype($db, $user_currentGame, $platform, $subplatform, $contact['type'], $contact[$contact['type'].'_id']);
+								if (count($keysForContact) == 0) {
+									$newKeysNeeded++;
+								}
+
 							}
 
+							$keysArray = $db->query("SELECT *
+												FROM game_key
+												WHERE
+													game = '" . $user_currentGame . "' AND
+													platform = '" . $platform . "' AND
+													subplatform = '" . $subplatform . "' AND
+													assigned = 0;");
+							$countKeys = count($keysArray);
+							if ($countKeys < $newKeysNeeded) {
+								$numNewKeysNeeded = $newKeysNeeded - $countKeys;
+								$doSend = false;
+								$result = api_error("There are not enough " . $platform . " keys in the system to allocate to this mailout. {$numNewKeysNeeded} more needed.");
+							}
+						};
+
+						if (strpos($markdown, "{{steam_key}}") !== false) {
+							$assertEnoughKeys("steam");
 						}
+						// if (strpos($markdown, "{{switch_key}}") !== false) {
+						// 	$assertEnoughKeys("switch");
+						// }
 
-						$keysArray = $db->query("SELECT *
-											FROM game_key
-											WHERE
-												game = '" . $user_currentGame . "' AND
-												platform = '" . $platform . "' AND
-												subplatform = '" . $subplatform . "' AND
-												assigned = 0;");
-						$countKeys = count($keysArray);
-						if ($countKeys < $newKeysNeeded) {
-							$numNewKeysNeeded = $newKeysNeeded - $countKeys;
-							$doSend = false;
-							$result = api_error("There are not enough " . $platform . " keys in the system to allocate to this mailout. {$numNewKeysNeeded} more needed.");
+						if (strpos($markdown, "{{steam_keys}}") !== false)
+						{
+							$assertEnoughKeysCountExisting("steam");
 						}
-					};
+						// if (strpos($markdown, "{{switch_keys}}") !== false)
+						// {
+						// 	$assertEnoughKeysCountExisting("switch");
+						// }
 
-					if (strpos($markdown, "{{steam_key}}") !== false) {
-						$assertEnoughKeys("steam");
+						if ($doSend) {
+							$stmt = $db->prepare(" UPDATE emailcampaignsimple SET ready = 1 WHERE id = :id ;");
+							$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+							$stmt->execute();
+
+							$result = new stdClass();
+							$result->success = true;
+							$result->mailout = db_singlemailoutsimple($db, $_GET['id'] );
+							$result->extras = $newKeysNeeded;
+						}
+					} else {
+						$result = api_error('You need to configure your e-mail settings to perform a mailout.');
 					}
-					// if (strpos($markdown, "{{switch_key}}") !== false) {
-					// 	$assertEnoughKeys("switch");
-					// }
-
-					if (strpos($markdown, "{{steam_keys}}") !== false)
-					{
-						$assertEnoughKeysCountExisting("steam");
-					}
-					// if (strpos($markdown, "{{switch_keys}}") !== false)
-					// {
-					// 	$assertEnoughKeysCountExisting("switch");
-					// }
-
-					if ($doSend) {
-						$stmt = $db->prepare(" UPDATE emailcampaignsimple SET ready = 1 WHERE id = :id ;");
-						$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
-						$stmt->execute();
-
-						$result = new stdClass();
-						$result->success = true;
-						$result->mailout = db_singlemailoutsimple($db, $_GET['id'] );
-						$result->extras = $newKeysNeeded;
-					}
-				} else {
-					$result = api_error('You need to configure your e-mail settings to perform a mailout.');
 				}
 			}
 		}
@@ -2076,13 +2341,23 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				$stmt = $db->prepare(" UPDATE emailcampaignsimple SET ready = 0 WHERE id = :id ;");
-				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
-				$stmt->execute();
+				$mailout = db_singlemailoutsimple($db, $_GET['id'] );
+				if (!$mailout) {
+					$result = api_error("Mailout does not exist.");
+				}
+				else if ($mailout['company'] != $user_company) {
+					$result = api_error("Mailout does not belong to you.");
+				}
+				else {
 
-				$result = new stdClass();
-				$result->success = true;
-				$result->mailout = db_singlemailoutsimple($db, $_GET['id'] );
+					$stmt = $db->prepare(" UPDATE emailcampaignsimple SET ready = 0 WHERE id = :id ;");
+					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+					$stmt->execute();
+
+					$result = new stdClass();
+					$result->success = true;
+					$result->mailout = db_singlemailoutsimple($db, $_GET['id'] );
+				}
 			}
 		}
 		else if ($endpoint == "/mailout/simple/remove/")
@@ -2097,12 +2372,22 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				$stmt = $db->prepare(" UPDATE emailcampaignsimple SET removed = 1 WHERE id = :id");
-				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
-				$stmt->execute();
+				$mailout = db_singlemailoutsimple($db, $_GET['id'] );
+				if (!$mailout) {
+					$result = api_error("Mailout does not exist.");
+				}
+				else if ($mailout['company'] != $user_company) {
+					$result = api_error("Mailout does not belong to you.");
+				}
+				else {
 
-				$result = new stdClass();
-				$result->success = true;
+					$stmt = $db->prepare(" UPDATE emailcampaignsimple SET removed = 1 WHERE id = :id");
+					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+					$stmt->execute();
+
+					$result = new stdClass();
+					$result->success = true;
+				}
 			}
 		}
 
@@ -2197,6 +2482,7 @@ if (!isset($_GET['endpoint'])) {
 
 
 								$data = [
+									'audience' => $user_currentAudience,
 									'twitchId' => '',
 									'twitchDescription' => '',
 									'twitchBroadcasterType' => '',
@@ -2330,9 +2616,12 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once("init.php");
 
+			// TODO: pass in audience id
+			// TODO: verify audience id once it is passed in.
 
-
-			$people = $db->query("SELECT * FROM person WHERE removed = 0;");
+			$stmt = $db->prepare("SELECT * FROM person WHERE audience = :audience AND removed = 0;");
+			$stmt->bindValue(":audience", $user_currentAudience, Database::VARTYPE_INTEGER);
+			$people = $stmt->query();
 			$num_people = count($people);
 			//usort($people, "sortByName");
 			usort($people, "sortById");
@@ -2351,7 +2640,12 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once("init.php");
 
-			$publications = $db->query("SELECT * FROM publication WHERE removed = 0;");
+			// TODO: pass in audience id
+			// TODO: verify audience id once it is passed in.
+
+			$stmt = $db->prepare("SELECT * FROM publication WHERE audience = :audience AND removed = 0;");
+			$stmt->bindValue(":audience", $user_currentAudience, Database::VARTYPE_INTEGER);
+			$publications = $stmt->query();
 			//usort($publications, "sortByName");
 			usort($publications, "sortById");
 
@@ -2364,7 +2658,12 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once("init.php");
 
-			$personPublications = $db->query("SELECT * FROM person_publication; ");
+			// TODO: pass in audience id
+			// TODO: verify audience id once it is passed in.
+
+			$stmt = $db->prepare("SELECT * FROM person_publication JOIN person ON person_publication.person = person.id WHERE person.audience = :audience; ");
+			$stmt->bindValue(":audience", $user_currentAudience, Database::VARTYPE_INTEGER);
+			$personPublications = $stmt->query();
 			usort($personPublications, "sortById");
 
 			$result = new stdClass();
@@ -2376,7 +2675,12 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once("init.php");
 
-			$personYoutubers = $db->query("SELECT * FROM person_youtuber; ");
+			// TODO: pass in audience id
+			// TODO: verify audience id once it is passed in.
+
+			$stmt = $db->prepare("SELECT * FROM person_youtuber JOIN person ON person_youtuber.person = person.id WHERE person.audience = :audience; ");
+			$stmt->bindValue(":audience", $user_currentAudience, Database::VARTYPE_INTEGER);
+			$personYoutubers = $stmt->query();
 			usort($personYoutubers, "sortById");
 
 			$result = new stdClass();
@@ -2388,7 +2692,12 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once("init.php");
 
-			$personTwitchChannels = $db->query("SELECT * FROM person_twitchchannel; ");
+			// TODO: pass in audience id
+			// TODO: verify audience id once it is passed in.
+
+			$stmt = $db->prepare("SELECT * FROM person_twitchchannel JOIN person ON person_twitchchannel.person = person.id WHERE person.audience = :audience; ");
+			$stmt->bindValue(":audience", $user_currentAudience, Database::VARTYPE_INTEGER);
+			$personTwitchChannels = $stmt->query();
 			usort($personTwitchChannels, "sortById");
 
 			$result = new stdClass();
@@ -2400,7 +2709,12 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once("init.php");
 
-			$youtubeChannels = $db->query("SELECT * FROM youtuber WHERE removed = 0;");
+			// TODO: pass in audience id
+			// TODO: verify audience id once it is passed in.
+
+			$stmt = $db->prepare("SELECT * FROM youtuber WHERE audience = :audience AND removed = 0;");
+			$stmt->bindValue(":audience", $user_currentAudience, Database::VARTYPE_INTEGER);
+			$youtubeChannels = $stmt->query();
 			$num_youtubeChannels = count($youtubeChannels);
 			//usort($youtubeChannels, "sortByName");
 			usort($youtubeChannels, "sortById");
@@ -2419,7 +2733,12 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once("init.php");
 
-			$twitchchannels = $db->query("SELECT * FROM twitchchannel WHERE removed = 0;");
+			// TODO: pass in audience id
+			// TODO: verify audience id once it is passed in.
+
+			$stmt = $db->prepare("SELECT * FROM twitchchannel WHERE audience = :audience AND removed = 0;");
+			$stmt->bindValue(":audience", $user_currentAudience, Database::VARTYPE_INTEGER);
+			$twitchchannels = $stmt->query();
 			$num_youtubeChannels = count($twitchchannels);
 			//usort($youtubeChannels, "sortByName");
 			usort($twitchchannels, "sortById");
@@ -2438,7 +2757,13 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once("init.php");
 
-			$emails = $db->query("SELECT * FROM email WHERE unmatchedrecipient = 0 AND removed = 0 ORDER BY utime DESC;");
+			$stmt = $db->prepare("SELECT email.* FROM email
+									JOIN user on email.user_id = user.id
+									JOIN company on user.company = company.id
+									WHERE company.id = :company AND unmatchedrecipient = 0 AND email.removed = 0
+									ORDER BY utime DESC;");
+			$stmt->bindValue(":company", $user_company, Database::VARTYPE_INTEGER);
+			$emails = $stmt->query();
 			$num_emails = count($emails);
 			for($i = 0; $i < $num_emails; $i++) {
 				$emails[$i]['contents'] = utf8_encode($emails[$i]['contents']);
@@ -2469,7 +2794,12 @@ if (!isset($_GET['endpoint'])) {
 					$result->message = 'ID must be a number.';
 				} else {
 
-					$stmt = $db->prepare("SELECT * FROM email WHERE id = :id LIMIT 1 ;");
+					$stmt = $db->prepare("SELECT email.* FROM email
+											JOIN user on email.user_id = user.id
+											JOIN company on user.company = company.id
+											WHERE company.id = :company AND email.id = :id
+											LIMIT 1 ;");
+					$stmt->bindValue(":company", $user_company, Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":id", $id, Database::VARTYPE_STRING);
 					$emails = $stmt->query();
 
@@ -2501,7 +2831,8 @@ if (!isset($_GET['endpoint'])) {
 			$watchedgames = $db->query("SELECT watchedgame.*
 										FROM watchedgame
 										LEFT JOIN game_watchedgame on watchedgame.id = game_watchedgame.watchedgame_id
-										WHERE game_watchedgame.game_id = {$user_currentGame} AND watchedgame.removed = 0 ORDER BY name ASC;");
+										WHERE game_watchedgame.game_id = {$user_currentGame} AND watchedgame.removed = 0
+										ORDER BY name ASC;");
 
 			// TODO refactor this into two calls rather than two for each game.
 			for($j = 0; $j < count($watchedgames); $j++) {
@@ -2544,41 +2875,50 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once("init.php");
 
+			// check curgame belongns to user/company.
+			$stmt = $db->prepare("SELECT game.* FROM `game` WHERE `id` = :id AND `company` = :company ;");
+			$stmt->bindValue(":id", $user_currentGame, Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":company", $user_company, Database::VARTYPE_INTEGER);
+			$games = $stmt->query();
+			if (count($games) == 0) {
+				$result = api_error("Could not find Game.");
+			}
+			else {
 
-
-			$publication_coverage = $db->query("SELECT * FROM publication_coverage WHERE game = {$user_currentGame} AND removed = 0 ORDER BY utime DESC;");
-			$num_publication_coverage = count($publication_coverage);
-			for($i = 0; $i < $num_publication_coverage; $i++) {
-				//$publication_coverage[$i]['title'] = utf8_encode($publication_coverage[$i]['title']);
-				if ($publication_coverage[$i]['title'] == null) {
-					$publication_coverage[$i]['title'] = "Untitled Article";
+				$publication_coverage = $db->query("SELECT * FROM publication_coverage WHERE game = {$user_currentGame} AND removed = 0 ORDER BY utime DESC;");
+				$num_publication_coverage = count($publication_coverage);
+				for($i = 0; $i < $num_publication_coverage; $i++) {
+					//$publication_coverage[$i]['title'] = utf8_encode($publication_coverage[$i]['title']);
+					if ($publication_coverage[$i]['title'] == null) {
+						$publication_coverage[$i]['title'] = "Untitled Article";
+					}
+					$publication_coverage[$i]['type'] = "publication";
 				}
-				$publication_coverage[$i]['type'] = "publication";
+
+				$youtuber_coverage = $db->query("SELECT * FROM youtuber_coverage WHERE game = {$user_currentGame} AND removed = 0 ORDER BY utime DESC;");
+				$youtuber_coverage_coverage = count($youtuber_coverage);
+				for($i = 0; $i < $youtuber_coverage_coverage; $i++) {
+					$youtuber_coverage[$i]['type'] = "youtuber";
+				}
+
+				$twitchchannel_coverage = $db->query("SELECT * FROM twitchchannel_coverage WHERE game = {$user_currentGame} AND removed = 0 ORDER BY utime DESC;");
+				$num_twitchchannel_coverage = count($twitchchannel_coverage);
+				for($i = 0; $i < $num_twitchchannel_coverage; $i++) {
+					$twitchchannel_coverage[$i]['type'] = "twitchchannel";
+					$twitchchannel_coverage[$i]['thumbnail'] = str_replace("%{width}", "300", $twitchchannel_coverage[$i]['thumbnail']);
+					$twitchchannel_coverage[$i]['thumbnail'] = str_replace("%{height}", "200", $twitchchannel_coverage[$i]['thumbnail']);
+					// iconurl = iconurl.replace("\%{width}", "300");
+					// iconurl = iconurl.replace("\%{height}", "300");
+				}
+
+				$coverage = array_merge($publication_coverage, $youtuber_coverage, $twitchchannel_coverage);
+
+				usort($coverage, "sortByUtime");
+
+				$result = new stdClass();
+				$result->success = true;
+				$result->coverage = $coverage;
 			}
-
-			$youtuber_coverage = $db->query("SELECT * FROM youtuber_coverage WHERE game = {$user_currentGame} AND removed = 0 ORDER BY utime DESC;");
-			$youtuber_coverage_coverage = count($youtuber_coverage);
-			for($i = 0; $i < $youtuber_coverage_coverage; $i++) {
-				$youtuber_coverage[$i]['type'] = "youtuber";
-			}
-
-			$twitchchannel_coverage = $db->query("SELECT * FROM twitchchannel_coverage WHERE game = {$user_currentGame} AND removed = 0 ORDER BY utime DESC;");
-			$num_twitchchannel_coverage = count($twitchchannel_coverage);
-			for($i = 0; $i < $num_twitchchannel_coverage; $i++) {
-				$twitchchannel_coverage[$i]['type'] = "twitchchannel";
-				$twitchchannel_coverage[$i]['thumbnail'] = str_replace("%{width}", "300", $twitchchannel_coverage[$i]['thumbnail']);
-				$twitchchannel_coverage[$i]['thumbnail'] = str_replace("%{height}", "200", $twitchchannel_coverage[$i]['thumbnail']);
-				// iconurl = iconurl.replace("\%{width}", "300");
-				// iconurl = iconurl.replace("\%{height}", "300");
-			}
-
-			$coverage = array_merge($publication_coverage, $youtuber_coverage, $twitchchannel_coverage);
-
-			usort($coverage, "sortByUtime");
-
-			$result = new stdClass();
-			$result->success = true;
-			$result->coverage = $coverage;
 		}
 		else if ($endpoint == "/coverage/publication/add/")
 		{
@@ -2586,7 +2926,8 @@ if (!isset($_GET['endpoint'])) {
 			include_once("init.php");
 
 			$stmt = $db->prepare(" INSERT INTO publication_coverage  (id, 	publication,  person,  game,  url,  title,  `utime`,  thanked, removed)
-															  VALUES (NULL, 0, 		  	  0,        0,    :url, :title, :utime, :thanked, :removed); ");
+															  VALUES (NULL, 0, 		  	  0,       :game,    :url, :title, :utime, :thanked, :removed); ");
+			$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
 			$stmt->bindValue(":url", "http://coverage.com/", Database::VARTYPE_STRING);
 			$stmt->bindValue(":title", "A massive article about your game project.", Database::VARTYPE_STRING);
 			$stmt->bindValue(":utime", time(), Database::VARTYPE_INTEGER);
@@ -2632,7 +2973,9 @@ if (!isset($_GET['endpoint'])) {
 						$thanked = ($_GET['thanked'] == "true")?1:0;
 						//die($_GET['thanked']);
 
-
+						// TODO: Make sure publication belongs to company audience.
+						// TODO: Make sure person belongs to company audience.
+						// TODO: Make sure game belongs to company audience.
 
 						$stmt = $db->prepare(" UPDATE publication_coverage
 												SET
@@ -2672,6 +3015,8 @@ if (!isset($_GET['endpoint'])) {
 			$required_fields = array(
 				array('name' => 'id', 'type' => 'integer')
 			);
+
+			// TODO: make sure publication/coverage id belongs to company.
 
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
@@ -2736,6 +3081,10 @@ if (!isset($_GET['endpoint'])) {
 						$result = api_error("youtuber was not an integer");
 					} else {
 
+						// TODO: Make sure youtuber belongs to company audience.
+						// TODO: Make sure person belongs to company audience.
+						// TODO: Make sure game belongs to company audience.
+
 						$title = "";
 						$thanked = ($_GET['thanked'] == "true")?1:0;
 						//die($_GET['thanked']);
@@ -2783,6 +3132,8 @@ if (!isset($_GET['endpoint'])) {
 			$required_fields = array(
 				array('name' => 'id', 'type' => 'integer')
 			);
+
+			// TODO: make sure publication/coverage id belongs to company.
 
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
@@ -2846,6 +3197,10 @@ if (!isset($_GET['endpoint'])) {
 						$result = api_error("twitchchannel was not an integer");
 					} else {
 
+						// TODO: Make sure twitchchannel belongs to company audience.
+						// TODO: Make sure person belongs to company audience.
+						// TODO: Make sure game belongs to company audience.
+
 						$title = "";
 						$thanked = ($_GET['thanked'] == "true")?1:0;
 						//die($_GET['thanked']);
@@ -2894,6 +3249,8 @@ if (!isset($_GET['endpoint'])) {
 				array('name' => 'id', 'type' => 'integer')
 			);
 
+			// TODO: Make sure twitchchannel belongs to company audience.
+
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
@@ -2931,6 +3288,11 @@ if (!isset($_GET['endpoint'])) {
 				if (!$game) {
 					$result = api_error("Invalid 'game' value.");
 					$dolist = false;
+				} else {
+					if ($game['company'] != $user_company) {
+						$result = api_error("Invalid 'game' value. Game does not belong to you.");
+						$dolist = false;
+					}
 				}
 			}
 
@@ -2943,14 +3305,19 @@ if (!isset($_GET['endpoint'])) {
 					$assignedSQL = " AND assignedToTypeId = 0 ";
 				}
 
-				$keys = $db->query("SELECT * FROM game_key
+				$stmt = $db->prepare("SELECT * FROM game_key
 									WHERE
-										game = '" . $user_currentGame . "' AND
-										platform = '" . $_GET['platform'] . "' AND
-										subplatform = '" . $_GET['subplatform'] . "' AND
+										game = :game AND
+										platform = :platform AND
+										subplatform = :subplatform AND
 										removed = 0
 										{$assignedSQL}
 									;");
+				$stmt->bindValue(":game", $_GET['game'], Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":platform", $_GET['platform'], Database::VARTYPE_STRING);
+				$stmt->bindValue(":subplatform", $_GET['subplatform'], Database::VARTYPE_STRING);
+				$keys = $stmt->query();
+
 				$result = new stdClass();
 				$result->success = true;
 				$result->keys = $keys;
@@ -2978,27 +3345,36 @@ if (!isset($_GET['endpoint'])) {
 				//game = :game
 											//AND
 
-				$stmt = $db->prepare("SELECT * FROM game_key
+				$stmt = $db->prepare("SELECT game_key.* FROM game_key
+										LEFT JOIN game on game_key.game = game.id
+										LEFT JOIN company on game.company = company.id
 										WHERE assignedToType = :assignedToType
 											AND assignedToTypeId = :assignedToTypeId
-											AND removed = :removed
+											AND game_key.removed = :removed
+											AND company.id = :company
+
 									;");
 				//$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":assignedToType", $type, Database::VARTYPE_STRING);
 				$stmt->bindValue(":assignedToTypeId", $typeId, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":company", $user_company, Database::VARTYPE_INTEGER);
 				$keys = $stmt->query();
 
 				if ($type == "person") {
-					$stmt = $db->prepare("SELECT * FROM game_key
+					$stmt = $db->prepare("SELECT game_key.* FROM game_key
 											JOIN person_publication ON game_key.assignedToTypeId = person_publication.id
+											LEFT JOIN game on game_key.game = game.id
+											LEFT JOIN company on game.company = company.id
 											WHERE assignedToType = 'personPublication'
 												AND person_publication.person = :assignedToTypeId
-												AND removed = :removed
+												AND game_key.removed = :removed
+												AND company.id = :company
 										;");
 					//$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":assignedToTypeId", $typeId, Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":company", $user_company, Database::VARTYPE_INTEGER);
 					$keys2 = $stmt->query();
 					$keys = array_merge($keys, $keys2);
 				}
@@ -3035,6 +3411,12 @@ if (!isset($_GET['endpoint'])) {
 					$result = api_error("Invalid 'game' value.");
 					$dopop = false;
 				}
+				else {
+					if ($game['company'] != $user_company) {
+						$result = api_error("Invalid 'game' value. Game does not belong to you.");
+						$dopop = false;
+					}
+				}
 			}
 
 			if ($dopop) { // make sure Game is valid.
@@ -3062,7 +3444,7 @@ if (!isset($_GET['endpoint'])) {
 											AND removed = :removed
 										LIMIT :amount
 									;");
-				$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":game", $_GET['game'], Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":platform", $_GET['platform'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":subplatform", $_GET['subplatform'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":assignedToTypeId", 0, Database::VARTYPE_INTEGER);
@@ -3127,6 +3509,9 @@ if (!isset($_GET['endpoint'])) {
 					$result = api_error("Invalid 'game' value.");
 					$dolist = false;
 				}
+				else if ($game['company'] != $user_company) {
+					$result = api_error("Invalid 'game' value. Game does nont belong to you.");
+				}
 				else {
 
 					// Check format of keys.
@@ -3153,7 +3538,7 @@ if (!isset($_GET['endpoint'])) {
 							for($j = 0; $j < count($keysArray); $j++) {
 								$stmt = $db->prepare("INSERT INTO game_key (id, game, platform, subplatform, keystring, assigned, assignedToType, assignedToTypeId, assignedByUser, assignedByUserTimestamp, createdOn, expiresOn, removed)
 														  			VALUES (NULL, :game, :platform, :subplatform, :keystring, :assigned, :assignedToType, :assignedToTypeId, :assignedByUser, :assignedByUserTimestamp, :createdOn, :expiresOn, :removed ); ");
-								$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
+								$stmt->bindValue(":game", $_GET['game'], Database::VARTYPE_INTEGER);
 								$stmt->bindValue(":platform", $_GET['platform'], Database::VARTYPE_STRING);
 								$stmt->bindValue(":subplatform", $_GET['subplatform'], Database::VARTYPE_STRING);
 								$stmt->bindValue(":keystring", $keysArray[$j], Database::VARTYPE_STRING);
@@ -3196,13 +3581,19 @@ if (!isset($_GET['endpoint'])) {
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
-				$stmt = $db->prepare(" INSERT INTO person  (id,   firstname, surnames,  email, priorities,   twitter, twitter_followers,   notes, lastcontacted, lastcontactedby, removed)
-													VALUES (NULL, :firstname, :surnames, :email, :priorities, :twitter, :twitter_followers, :notes, :lastcontacted, :lastcontactedby, :removed); ");
+				// TODO: pass in audience id
+				// TODO: verify audience id once it is passed in.
+				$stmt = $db->prepare(" INSERT INTO person  (id,   audience, firstname, surnames,  email, priorities,   twitter, twitter_followers,   twitter_updatedon, lang, tags, notes, lastcontacted, lastcontactedby, removed)
+													VALUES (NULL, :audience, :firstname, :surnames, :email, :priorities, :twitter, :twitter_followers, :twitter_updatedon, :lang, :tags, :notes, :lastcontacted, :lastcontactedby, :removed); ");
+				$stmt->bindValue(":audience", $user_currentAudience, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":firstname", $_GET['firstname'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":surnames", $_GET['surnames'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":email", "", Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter", "", Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter_followers", 0, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":twitter_updatedon", 0, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":lang", DEFAULT_LANG, Database::VARTYPE_STRING);
+				$stmt->bindValue(":tags", DEFAULT_TAGS, Database::VARTYPE_STRING);
 				$stmt->bindValue(":priorities", db_defaultPrioritiesString($db), Database::VARTYPE_STRING);
 				$stmt->bindValue(":notes", "", Database::VARTYPE_STRING);
 				$stmt->bindValue(":lastcontacted", 0, Database::VARTYPE_INTEGER);
@@ -3228,12 +3619,16 @@ if (!isset($_GET['endpoint'])) {
 				//array('name' => 'surnames', 'type' => 'alphanumericspaces'),
 				array('name' => 'email', 'type' => 'email'),
 				array('name' => 'notes', 'type' => 'textarea'),
+				array('name' => 'language', 'type' => 'language'),
 				array('name' => 'country', 'type' => 'country'),
+				array('name' => 'tags', 'type' => 'tags'),
 				array('name' => 'twitter', 'type' => 'alphanumericunderscores'),
 				array('name' => 'outofdate', 'type' => 'boolean')
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
+
+				// TODO: check person id belongs to company audience.
 
 				$surname = "";
 				if ($_GET['surnames'] != "") {
@@ -3242,10 +3637,11 @@ if (!isset($_GET['endpoint'])) {
 
 				$twitter_followers = twitter_countFollowers($_GET['twitter']);
 				if ($twitter_followers == "") { $twitter_followers = 0; }
+
 				$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
 				$outofdate = ($_GET['outofdate'] == "true")?1:0;
 
-				$stmt = $db->prepare(" UPDATE person SET firstname = :firstname, surnames = :surnames, email = :email, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes, country = :country, outofdate = :outofdate WHERE id = :id ");
+				$stmt = $db->prepare(" UPDATE person SET firstname = :firstname, surnames = :surnames, email = :email, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes, country = :country, lang = :lang, tags = :tags, outofdate = :outofdate WHERE id = :id ");
 				$stmt->bindValue(":firstname", $_GET['firstname'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":surnames", $surname, Database::VARTYPE_STRING);
 				$stmt->bindValue(":email", strtolower(trim($_GET['email'])), Database::VARTYPE_STRING);
@@ -3255,6 +3651,8 @@ if (!isset($_GET['endpoint'])) {
 				}
 				$stmt->bindValue(":notes", strip_tags(stripslashes($_GET['notes'])), Database::VARTYPE_STRING);
 				$stmt->bindValue(":country", $_GET['country'], Database::VARTYPE_STRING);
+				$stmt->bindValue(":lang", $_GET['language'], Database::VARTYPE_STRING);
+				$stmt->bindValue(":tags", fixtags($_GET['tags']), Database::VARTYPE_STRING);
 				$stmt->bindValue(":outofdate", $outofdate, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
 				$rs = $stmt->execute();
@@ -3274,6 +3672,8 @@ if (!isset($_GET['endpoint'])) {
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
+				// TODO: check person id belongs to company audience.
+
 				$stmt = $db->prepare("UPDATE person SET removed = 1 WHERE id = :id;");
 				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_STRING);
 				$rs = $stmt->execute();
@@ -3291,6 +3691,7 @@ if (!isset($_GET['endpoint'])) {
 				array('name' => 'person', 'type' => 'integer'),
 				array('name' => 'publication', 'type' => 'integer')
 			);
+			// TODO: check person id AND publication id belongs to company audience.
 
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error)
@@ -3330,6 +3731,8 @@ if (!isset($_GET['endpoint'])) {
 				array('name' => 'email', 'type' => 'email')
 			);
 
+			// TODO: check person id AND publication id belongs to company audience.
+
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error)
 			{
@@ -3352,6 +3755,8 @@ if (!isset($_GET['endpoint'])) {
 				array('name' => 'personPublication', 'type' => 'integer')
 			);
 
+			// TODO: check person id AND publication id belongs to company audience.
+
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error)
 			{
@@ -3372,6 +3777,8 @@ if (!isset($_GET['endpoint'])) {
 				array('name' => 'person', 'type' => 'integer'),
 				array('name' => 'youtubeChannel', 'type' => 'integer')
 			);
+
+			// TODO: check person id AND youtuber id belongs to company audience.
 
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error)
@@ -3407,6 +3814,8 @@ if (!isset($_GET['endpoint'])) {
 				array('name' => 'personYoutubeChannel', 'type' => 'integer')
 			);
 
+			// TODO: check person id AND youtuber id belongs to company audience.
+
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error)
 			{
@@ -3431,25 +3840,43 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error)
 			{
-				// make sure this user doesn't have this youtube channel already.
-				$stmt = $db->prepare("SELECT COUNT(*) as count FROM person_twitchchannel WHERE person = :person AND twitchchannel = :twitchchannel ;");
-				$stmt->bindValue(":person", $_GET['person'], Database::VARTYPE_INTEGER);
-				$stmt->bindValue(":twitchchannel", $_GET['twitchchannel'], Database::VARTYPE_INTEGER);
-				$row = $stmt->query();
-				if ($row[0]['count'] > 0) {
-					$result = api_error("This person already has this Twitch Channel attached.");
+				// check person id belongs to company audience.
+				$person = db_singleperson($_GET['person']);
+				if (!$person) {
+					$result = api_error("Invalid person.");
+				} else if ($person['company'] != $user_company) {
+					$result = api_error("Invalid person. (Does not belong to you.)");
 				} else {
 
-					$stmt = $db->prepare(" INSERT INTO person_twitchchannel (id, person, twitchchannel) VALUES (NULL, :person, :twitchchannel); ");
-					$stmt->bindValue(":person", $_GET['person'], Database::VARTYPE_INTEGER);
-					$stmt->bindValue(":twitchchannel", $_GET['twitchchannel'], Database::VARTYPE_INTEGER);
-					$rs = $stmt->execute();
+					// check twitch id belongs to company audience.
+					$tc = db_singletwitchchannel($_GET['twitchchannel']);
+					if (!$tc) {
+						$result = api_error("Invalid twitchchannel.");
+					} else if ($tc['company'] != $user_company) {
+						$result = api_error("Invalid twitchchannel. (Does not belong to you.)");
+					} else {
 
-					$personTwitchChannel_id = $db->lastInsertRowID();
+						// make sure this user doesn't have this youtube channel already.
+						$stmt = $db->prepare("SELECT COUNT(*) as count FROM person_twitchchannel WHERE person = :person AND twitchchannel = :twitchchannel ;");
+						$stmt->bindValue(":person", $_GET['person'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":twitchchannel", $_GET['twitchchannel'], Database::VARTYPE_INTEGER);
+						$row = $stmt->query();
+						if ($row[0]['count'] > 0) {
+							$result = api_error("This person already has this Twitch Channel attached.");
+						} else {
 
-					$result = new stdClass();
-					$result->success = true;
-					$result->personTwitchChannel = db_singlepersontwitchchannel($db, $personTwitchChannel_id);
+							$stmt = $db->prepare(" INSERT INTO person_twitchchannel (id, person, twitchchannel) VALUES (NULL, :person, :twitchchannel); ");
+							$stmt->bindValue(":person", $_GET['person'], Database::VARTYPE_INTEGER);
+							$stmt->bindValue(":twitchchannel", $_GET['twitchchannel'], Database::VARTYPE_INTEGER);
+							$rs = $stmt->execute();
+
+							$personTwitchChannel_id = $db->lastInsertRowID();
+
+							$result = new stdClass();
+							$result->success = true;
+							$result->personTwitchChannel = db_singlepersontwitchchannel($db, $personTwitchChannel_id);
+						}
+					}
 				}
 			}
 		}
@@ -3465,12 +3892,27 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error)
 			{
-				$stmt = $db->prepare(" DELETE FROM person_twitchchannel WHERE id = :id;");
+				$stmt = $db->prepare(" SELECT person_twitchchannel.*, audience.company FROM person_twitchchannel
+										JOIN person on person_twitchchannel.person = person.id
+										JOIN audience on person.audience = audience.id
+										WHERE person_twitchchannel.id = :id
+										LIMIT 1 ;");
 				$stmt->bindValue(":id", $_GET['personTwitchChannel'], Database::VARTYPE_INTEGER);
-				$rs = $stmt->execute();
+				$exists = $stmt->query();
+				if (count($exists) != 1) {
+					$result = api_error("Invalid person/twitchchannel. (Does not exist.)");
+				} else if ($exists[0]['company'] != $user_company) {
+					$result = api_error("Invalid person/twitchchannel. (Does not belong to you.)");
+				}
+				else {
 
-				$result = new stdClass();
-				$result->success = true;
+					$stmt = $db->prepare(" DELETE FROM person_twitchchannel WHERE id = :id;");
+					$stmt->bindValue(":id", $_GET['personTwitchChannel'], Database::VARTYPE_INTEGER);
+					$rs = $stmt->execute();
+
+					$result = new stdClass();
+					$result->success = true;
+				}
 			}
 		}
 
@@ -3486,20 +3928,32 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				// TODO: validate that id passed is actually a person.
-				// TODO: validate that assigned passed is actually a user id (or is 0 for n/a)
-
 				$singlePerson = db_singleperson($db, $_GET['id']);
 				$assigned = $_GET['user'];
 
-				$stmt = $db->prepare(" UPDATE person SET assigned = :assigned WHERE id = :id ");
-				$stmt->bindValue(":assigned", $assigned, Database::VARTYPE_STRING);
-				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
-				$rs = $stmt->execute();
+				if (!$singlePerson) {
+					$result = api_error("Invalid person.");
+				}
+				else if ($singlePerson['company'] != $user_company) {
+					$result = api_error("Invalid person. (Does not belong to you.)");
+				}
+				else {
+					$user = db_singleuser($assigned);
+					if (!$user) {
+						$result = api_error("Invalid assigned/user.");
+					} else if ($user['company'] != $user_company) {
+						$result = api_error("Invalid assigned/user. (Does not belong to your company.)");
+					}
 
-				$result = new stdClass();
-				$result->success = true;
-				$result->person = db_singleperson($db, $_GET['id']);
+					$stmt = $db->prepare("UPDATE person SET assigned = :assigned WHERE id = :id ");
+					$stmt->bindValue(":assigned", $assigned, Database::VARTYPE_STRING);
+					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+					$rs = $stmt->execute();
+
+					$result = new stdClass();
+					$result->success = true;
+					$result->person = db_singleperson($db, $_GET['id']);
+				}
 			}
 		}
 		else if ($endpoint == "/person/set-priority/")
@@ -3515,33 +3969,48 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				// TODO: validate that game passed is actually a game.
-				// TODO: validate that id passed is actually a person.
-
 				$singlePerson = db_singleperson($db, $_GET['id']);
-				$games = explode(",", $singlePerson['priorities']);
-				$foundGame = false;
-				for($i = 0; $i < count($games); $i++) {
-					$pieces = explode("=", $games[$i]);
-					if ($pieces[0] == $_GET['game']) {
-						$foundGame = true;
-						$pieces[1] = $_GET['priority'];
-						$games[$i] = implode("=", $pieces);
+				if (!$singlePerson) {
+					$result = api_error("Invalid person.");
+				}
+				else if ($singlePerson['company'] != $user_company){
+					$result = api_error("Invalid person. (Does not belong to you.)");
+				}
+				else {
+
+					$game = db_singlegame($_GET['game']);
+					if (!$game) {
+						$result = api_error("Invalid game id.");
+					} else if ($game['company'] != $user_company) {
+						$result = api_error("Invalid game id. (Does not belong to you.)");
+					}
+					else {
+
+						$games = explode(",", $singlePerson['priorities']);
+						$foundGame = false;
+						for($i = 0; $i < count($games); $i++) {
+							$pieces = explode("=", $games[$i]);
+							if ($pieces[0] == $_GET['game']) {
+								$foundGame = true;
+								$pieces[1] = $_GET['priority'];
+								$games[$i] = implode("=", $pieces);
+							}
+						}
+						if ($foundGame == false) {
+							$games[] = $_GET['game'] . "=" . $_GET['priority'];
+						}
+						$priorities = implode(",", $games);
+
+						$stmt = $db->prepare(" UPDATE person SET priorities = :priorities WHERE id = :id ");
+						$stmt->bindValue(":priorities", $priorities, Database::VARTYPE_STRING);
+						$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+						$rs = $stmt->execute();
+
+						$result = new stdClass();
+						$result->success = true;
+						$result->person = db_singleperson($db, $_GET['id']);
 					}
 				}
-				if ($foundGame == false) {
-					$games[] = $_GET['game'] . "=" . $_GET['priority'];
-				}
-				$priorities = implode(",", $games);
-
-				$stmt = $db->prepare(" UPDATE person SET priorities = :priorities WHERE id = :id ");
-				$stmt->bindValue(":priorities", $priorities, Database::VARTYPE_STRING);
-				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
-				$rs = $stmt->execute();
-
-				$result = new stdClass();
-				$result->success = true;
-				$result->person = db_singleperson($db, $_GET['id']);
 			}
 		}
 		else if ($endpoint == "/publication/add/")
@@ -3554,15 +4023,22 @@ if (!isset($_GET['endpoint'])) {
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
-				$stmt = $db->prepare(" INSERT INTO publication (id,   name,  url,  iconurl, rssfeedurl, twitter, twitter_followers,	notes, lastpostedon)
-														VALUES (NULL, :name, :url, :iconurl, :rssfeedurl, :twitter, :twitter_followers, :notes, :lastpostedon); ");
+				// TODO: pass in audience id
+				// TODO: verify audience id once it is passed in.
+				$stmt = $db->prepare(" INSERT INTO publication (id,   audience, name,  url,  email, iconurl, rssfeedurl, twitter, twitter_followers, twitter_updatedon, notes, lang, tags, lastpostedon)
+														VALUES (NULL, :audience, :name, :url, :email, :iconurl, :rssfeedurl, :twitter, :twitter_followers, :twitter_updatedon, :notes, :lang, :tags, :lastpostedon); ");
+				$stmt->bindValue(":audience", $user_currentAudience, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":name", $_GET['name'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":url", "http://example.com/", Database::VARTYPE_STRING);
+				$stmt->bindValue(":email", "", Database::VARTYPE_STRING);
 				$stmt->bindValue(":iconurl", "images/favicon.png", Database::VARTYPE_STRING);
 				$stmt->bindValue(":rssfeedurl", "http://example.com/rss/", Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter", "", Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter_followers", 0, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":twitter_updatedon", 0, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":notes", "", Database::VARTYPE_STRING);
+				$stmt->bindValue(":lang", DEFAULT_LANG, Database::VARTYPE_STRING);
+				$stmt->bindValue(":tags", DEFAULT_TAGS, Database::VARTYPE_STRING);
 				$stmt->bindValue(":lastpostedon", 0, Database::VARTYPE_INTEGER);
 				$stmt->execute();
 
@@ -3587,34 +4063,49 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				// TODO: validate that game passed is actually a game.
-				// TODO: validate that id passed is actually a publication.
-
 				$singlePublication = db_singlepublication($db, $_GET['id']);
-				$games = explode(",", $singlePublication['priorities']);
-				$foundGame = false;
-				for($i = 0; $i < count($games); $i++) {
-					$pieces = explode("=", $games[$i]);
-					if ($pieces[0] == $_GET['game']) {
-						$foundGame = true;
-						$pieces[1] = $_GET['priority'];
-						$games[$i] = implode("=", $pieces);
+				if (!$singlePublication) {
+					$result = api_error("Invalid publication id.");
+				}
+				else if ($singlePublication['company'] != $user_company){
+					$result = api_error("Invalid publication id. (Does not belong to you.)");
+				}
+				else {
+
+					$game = db_singlegame($_GET['game']);
+					if (!$game) {
+						$result = api_error("Invalid game id.");
+					} else if ($game['company'] != $user_company){
+						$result = api_error("Invalid game id. (Does not belong to you.)");
+					}
+					else {
+
+						$games = explode(",", $singlePublication['priorities']);
+						$foundGame = false;
+						for($i = 0; $i < count($games); $i++) {
+							$pieces = explode("=", $games[$i]);
+							if ($pieces[0] == $_GET['game']) {
+								$foundGame = true;
+								$pieces[1] = $_GET['priority'];
+								$games[$i] = implode("=", $pieces);
+							}
+						}
+						if ($foundGame == false) {
+							$games[] = $_GET['game'] . "=" . $_GET['priority'];
+						}
+						$priorities = implode(",", $games);
+
+						$stmt = $db->prepare(" UPDATE publication SET priorities = :priorities WHERE id = :id ");
+						$stmt->bindValue(":priorities", $priorities, Database::VARTYPE_STRING);
+						$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER
+							);
+						$rs = $stmt->execute();
+
+						$result = new stdClass();
+						$result->success = true;
+						$result->publication = db_singlepublication($db, $_GET['id']);
 					}
 				}
-				if ($foundGame == false) {
-					$games[] = $_GET['game'] . "=" . $_GET['priority'];
-				}
-				$priorities = implode(",", $games);
-
-				$stmt = $db->prepare(" UPDATE publication SET priorities = :priorities WHERE id = :id ");
-				$stmt->bindValue(":priorities", $priorities, Database::VARTYPE_STRING);
-				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER
-					);
-				$rs = $stmt->execute();
-
-				$result = new stdClass();
-				$result->success = true;
-				$result->publication = db_singlepublication($db, $_GET['id']);
 			}
 		}
 		else if ($endpoint == "/publication/save/")
@@ -3629,32 +4120,46 @@ if (!isset($_GET['endpoint'])) {
 				array('name' => 'rssfeedurl', 'type' => 'url'),
 				array('name' => 'twitter', 'type' => 'alphanumericunderscores'),
 				array('name' => 'notes', 'type' => 'textarea'),
+				array('name' => 'tags', 'type' => 'tags'),
 				array('name' => 'country', 'type' => 'country')
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				$twitter_followers = twitter_countFollowers($_GET['twitter']);
-				if ($twitter_followers == "") { $twitter_followers = 0; }
-				$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
-
-				$stmt = $db->prepare(" UPDATE publication SET name = :name, url = :url, email = :email, rssfeedurl = :rssfeedurl, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes, country = :country WHERE id = :id ");
-				$stmt->bindValue(":name", $_GET['name'], Database::VARTYPE_STRING);
-				$stmt->bindValue(":url", $_GET['url'], Database::VARTYPE_STRING);
-				$stmt->bindValue(":email", strtolower(trim($_GET['email'])), Database::VARTYPE_STRING);
-				$stmt->bindValue(":rssfeedurl", $_GET['rssfeedurl'], Database::VARTYPE_STRING);
-				$stmt->bindValue(":twitter", $_GET['twitter'], Database::VARTYPE_STRING);
-				if ($twitter_followers > 0) {
-					$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
+				$singlePublication = db_singlepublication($db, $_GET['id']);
+				if (!$singlePublication) {
+					$result = api_error("Invalid publication id.");
 				}
-				$stmt->bindValue(":notes", strip_tags(stripslashes($_GET['notes'])), Database::VARTYPE_STRING);
-				$stmt->bindValue(":country", $_GET['country'], Database::VARTYPE_STRING);
-				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
-				$rs = $stmt->execute();
+				else if ($singlePublication['company'] != $user_company){
+					$result = api_error("Invalid publication id. (Does not belong to you.)");
+				}
+				else {
+					$twitter_followers = twitter_countFollowers($_GET['twitter']);
+					if ($twitter_followers == "") { $twitter_followers = 0; }
+					$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
 
-				$result = new stdClass();
-				$result->success = true;
-				$result->publication = db_singlepublication($db, $_GET['id']);
+					$stmt = $db->prepare(" UPDATE publication SET name = :name, url = :url, email = :email, rssfeedurl = :rssfeedurl, twitter = :twitter, " . $twitter_followers_sql . " notes = :notes, country = :country, tags = :tags WHERE id = :id ");
+					$stmt->bindValue(":name", $_GET['name'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":url", $_GET['url'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":email", strtolower(trim($_GET['email'])), Database::VARTYPE_STRING);
+					$stmt->bindValue(":rssfeedurl", $_GET['rssfeedurl'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":twitter", $_GET['twitter'], Database::VARTYPE_STRING);
+					if ($twitter_followers > 0) {
+						$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
+					}
+					$stmt->bindValue(":notes", strip_tags(stripslashes($_GET['notes'])), Database::VARTYPE_STRING);
+					$stmt->bindValue(":country", $_GET['country'], Database::VARTYPE_STRING);
+					$stmt->bindValue(":tags", fixtags($_GET['tags']), Database::VARTYPE_STRING);
+					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+					$rs = $stmt->execute();
+					if (!$rs) {
+						$result = api_error("mysqli error" . $stmt->error);
+					} else {
+						$result = new stdClass();
+						$result->success = true;
+						$result->publication = db_singlepublication($db, $_GET['id']);
+					}
+				}
 			}
 		}
 		else if ($endpoint == "/publication/remove/")
@@ -3667,12 +4172,23 @@ if (!isset($_GET['endpoint'])) {
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
-				$stmt = $db->prepare("UPDATE publication SET removed = 1 WHERE id = :id;");
-				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
-				$rs = $stmt->execute();
 
-				$result = new stdClass();
-				$result->success = true;
+				$singlePublication = db_singlepublication($db, $_GET['id']);
+				if (!$singlePublication) {
+					$result = api_error("Invalid publication id.");
+				}
+				else if ($singlePublication['company'] != $user_company){
+					$result = api_error("Invalid publication id. (Does not belong to you.)");
+				}
+				else {
+
+					$stmt = $db->prepare("UPDATE publication SET removed = 1 WHERE id = :id;");
+					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+					$rs = $stmt->execute();
+
+					$result = new stdClass();
+					$result->success = true;
+				}
 			}
 		}
 		else if ($endpoint == "/youtuber/search-youtube/")
@@ -3718,22 +4234,32 @@ if (!isset($_GET['endpoint'])) {
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
+
 				$twitter = "youtube";
 				$twitter_followers = twitter_countFollowers($twitter);
 				if ($twitter_followers == "") { $twitter_followers = 0; }
-				$stmt = $db->prepare(" INSERT INTO youtuber (id, 	youtubeId, youtubeUploadsPlaylistId, name,   name_override, description, email, channel,  priorities, iconurl,   subscribers, views, notes, twitter,   twitter_followers, 	twitter_updatedon, lastpostedon, removed)
-													VALUES  (NULL, '', '', 'Blank', 'Blank', 	 	 '', '',	:channel, '', 		  '', 		 0, 		  0, 	 '', 	:twitter, :twitter_followers, 0,	 0, 		  	0);	");
+
+				$stmt = $db->prepare(" INSERT INTO youtuber (id, 	audience, youtubeId,  youtubeUploadsPlaylistId, name,   	name_override, 	 description, email, channel,  priorities, iconurl,   subscribers, views, notes, country, 	lang,  tags,  twitter,   twitter_followers, 	twitter_updatedon, lastpostedon, removed)
+													VALUES  (NULL,  :audience, '', 		'', 					  'Blank',  'Blank', 	 	 '', 		  '',	 :channel, '', 		   '', 		  0, 		   0, 	  '', 	 :country, 	:lang, :tags, :twitter,  :twitter_followers,    0,	 			   0, 		  	 0);	");
+				$stmt->bindValue(":audience", $user_currentAudience, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":channel", $_GET['channel'], Database::VARTYPE_STRING);
+				$stmt->bindValue(":country", DEFAULT_COUNTRY, Database::VARTYPE_STRING);
+				$stmt->bindValue(":lang", DEFAULT_LANG, Database::VARTYPE_STRING);
+				$stmt->bindValue(":tags", DEFAULT_TAGS, Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);
 				$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
-				$stmt->execute();
+				$res = $stmt->execute();
+				if (!$res) {
+					$result = api_error("mysqli error" . $stmt->error);
+				} else {
+					$youtuber_id = $db->lastInsertRowID();
+					$result = new stdClass();
+					$result->success = true;
+					$result->followers = $twitter_followers;
+					$result->youtubechannel = db_singleyoutubechannel($db, $youtuber_id);
+				}
 
 
-				$youtuber_id = $db->lastInsertRowID();
-				$result = new stdClass();
-				$result->success = true;
-				$result->followers = $twitter_followers;
-				$result->youtubechannel = db_singleyoutubechannel($db, $youtuber_id);
 
 			}
 		}
@@ -3743,82 +4269,96 @@ if (!isset($_GET['endpoint'])) {
 			include_once("init.php");
 
 			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer'),
 				array('name' => 'name', 'type' => 'textarea'),
 				array('name' => 'channel', 'type' => 'textarea'),
 				array('name' => 'email', 'type' => 'email'),
 				array('name' => 'twitter', 'type' => 'alphanumericunderscores'),
 				array('name' => 'notes', 'type' => 'textarea'),
-				array('name' => 'country', 'type' => 'country')
+				array('name' => 'country', 'type' => 'country'),
+				array('name' => 'tags', 'type' => 'tags')
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				$youtuber = youtube_v3_getInformation($_GET['channel']);
-				if ($youtuber == 0) {
-					$result = api_error("Youtube channel '" . $_GET['channel'] . "' not found.");
-				} else {
+				$singleYoutuber = db_singleyoutubechannel($db, $_GET['id']);
+				if (!$singleYoutuber) {
+					$result = api_error("Invalid youtuber id.");
+				}
+				else if ($singleYoutuber['company'] != $user_company) {
+					$result = api_error("Invalid youtuber id. (Does not belong to you.)");
+				}
+				else {
 
-					$twitter = $_GET['twitter'];
-					$twitter_followers = 0;
-					if (strlen($twitter) > 0) {
-						$twitter_followers = twitter_countFollowers($_GET['twitter']);
+					$youtuber = youtube_v3_getInformation($_GET['channel']);
+					if ($youtuber == 0) {
+						$result = api_error("Youtube channel '" . $_GET['channel'] . "' not found.");
+					} else {
+
+						$twitter = $_GET['twitter'];
+						$twitter_followers = 0;
+						if (strlen($twitter) > 0) {
+							$twitter_followers = twitter_countFollowers($_GET['twitter']);
+						}
+						if ($twitter_followers == "") { $twitter_followers = 0; }
+						$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
+
+						$stmt = $db->prepare(" UPDATE youtuber SET
+													channel = :channel,
+													name = :name,
+													name_override = :name_override,
+													description = :description,
+													email = :email,
+													iconurl = :iconurl,
+													subscribers = :subscribers,
+													views = :views,
+													twitter = :twitter,
+													" . $twitter_followers_sql . "
+													notes = :notes,
+													country = :country,
+													tags = :tags
+												WHERE
+													id = :id;
+											");
+						$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":channel", $_GET['channel'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":email", $_GET['email'], Database::VARTYPE_STRING);
+
+						$ytname = $youtuber['name'];
+						if (strlen(trim($ytname)) == 0) {
+							$ytname = $_GET['name'];
+						}
+						$stmt->bindValue(":name", $ytname, Database::VARTYPE_STRING);
+						$stmt->bindValue(":name_override", $_GET['name'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":description", $youtuber['description'], Database::VARTYPE_STRING);
+
+						$ytIconUrl = $youtuber['iconurl'];
+						if (strlen(trim($ytIconUrl)) == 0) {
+							$ytIconUrl = "images/favicon.png";
+						}
+
+						$stmt->bindValue(":iconurl", $ytIconUrl, Database::VARTYPE_STRING);
+						$stmt->bindValue(":subscribers", "" . $youtuber['subscribers'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":views", "" . $youtuber['views'], Database::VARTYPE_STRING);
+						//$stmt->bindValue(":lastpostedon", $youtuber['lastpostedon'], Database::VARTYPE_INTEGER);
+
+						$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);
+
+						if ($twitter_followers > 0) {
+							$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
+						}
+
+
+						$stmt->bindValue(":notes", strip_tags(stripslashes($_GET['notes'])), Database::VARTYPE_STRING);
+						$stmt->bindValue(":country", $_GET['country'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":tags", fixtags($_GET['tags']), Database::VARTYPE_STRING);
+
+						$rs = $stmt->execute();
+
+						$result = new stdClass();
+						$result->success = true;
+						$result->youtubechannel = db_singleyoutubechannel($db, $_GET['id']);
 					}
-					if ($twitter_followers == "") { $twitter_followers = 0; }
-					$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
-
-					$stmt = $db->prepare(" UPDATE youtuber SET
-												channel = :channel,
-												name = :name,
-												name_override = :name_override,
-												description = :description,
-												email = :email,
-												iconurl = :iconurl,
-												subscribers = :subscribers,
-												views = :views,
-												twitter = :twitter,
-												" . $twitter_followers_sql . "
-												notes = :notes,
-												country = :country
-											WHERE
-												id = :id;
-										");
-					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
-					$stmt->bindValue(":channel", $_GET['channel'], Database::VARTYPE_STRING);
-					$stmt->bindValue(":email", $_GET['email'], Database::VARTYPE_STRING);
-
-					$ytname = $youtuber['name'];
-					if (strlen(trim($ytname)) == 0) {
-						$ytname = $_GET['name'];
-					}
-					$stmt->bindValue(":name", $ytname, Database::VARTYPE_STRING);
-					$stmt->bindValue(":name_override", $_GET['name'], Database::VARTYPE_STRING);
-					$stmt->bindValue(":description", $youtuber['description'], Database::VARTYPE_STRING);
-
-					$ytIconUrl = $youtuber['iconurl'];
-					if (strlen(trim($ytIconUrl)) == 0) {
-						$ytIconUrl = "images/favicon.png";
-					}
-
-					$stmt->bindValue(":iconurl", $ytIconUrl, Database::VARTYPE_STRING);
-					$stmt->bindValue(":subscribers", "" . $youtuber['subscribers'], Database::VARTYPE_STRING);
-					$stmt->bindValue(":views", "" . $youtuber['views'], Database::VARTYPE_STRING);
-					//$stmt->bindValue(":lastpostedon", $youtuber['lastpostedon'], Database::VARTYPE_INTEGER);
-
-					$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);
-
-					if ($twitter_followers > 0) {
-						$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
-					}
-
-
-					$stmt->bindValue(":notes", strip_tags(stripslashes($_GET['notes'])), Database::VARTYPE_STRING);
-					$stmt->bindValue(":country", $_GET['country'], Database::VARTYPE_STRING);
-
-					$rs = $stmt->execute();
-
-					$result = new stdClass();
-					$result->success = true;
-					$result->youtubechannel = db_singleyoutubechannel($db, $_GET['id']);
 				}
 			}
 		}
@@ -3835,33 +4375,47 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				// TODO: validate that game passed is actually a game.
-				// TODO: validate that id passed is actually a youtuber.
-
 				$singleYoutuber = db_singleyoutubechannel($db, $_GET['id']);
-				$games = explode(",", $singleYoutuber['priorities']);
-				$foundGame = false;
-				for($i = 0; $i < count($games); $i++) {
-					$pieces = explode("=", $games[$i]);
-					if ($pieces[0] == $_GET['game']) {
-						$foundGame = true;
-						$pieces[1] = $_GET['priority'];
-						$games[$i] = implode("=", $pieces);
+				if (!$singleYoutuber) {
+					$result = api_error("Invalid youtuber id.");
+				}
+				else if ($singleYoutuber['company'] != $user_company) {
+					$result = api_error("Invalid youtuber id. (Does not belong to you.)");
+				}
+				else {
+					$singleGame = db_singlegame($db, $_GET['game']);
+					if (!$singleGame) {
+						$result = api_error("Invalid game id.");
+					} else if ($singleGame['company'] != $user_company){
+						$result = api_error("Invalid game id. (Does not belong to you.)");
+					}
+					else {
+
+						$games = explode(",", $singleYoutuber['priorities']);
+						$foundGame = false;
+						for($i = 0; $i < count($games); $i++) {
+							$pieces = explode("=", $games[$i]);
+							if ($pieces[0] == $_GET['game']) {
+								$foundGame = true;
+								$pieces[1] = $_GET['priority'];
+								$games[$i] = implode("=", $pieces);
+							}
+						}
+						if ($foundGame == false) {
+							$games[] = $_GET['game'] . "=" . $_GET['priority'];
+						}
+						$priorities = implode(",", $games);
+
+						$stmt = $db->prepare(" UPDATE youtuber SET priorities = :priorities WHERE id = :id ");
+						$stmt->bindValue(":priorities", $priorities, Database::VARTYPE_STRING);
+						$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+						$rs = $stmt->execute();
+
+						$result = new stdClass();
+						$result->success = true;
+						$result->youtubechannel = db_singleyoutubechannel($db, $_GET['id']);
 					}
 				}
-				if ($foundGame == false) {
-					$games[] = $_GET['game'] . "=" . $_GET['priority'];
-				}
-				$priorities = implode(",", $games);
-
-				$stmt = $db->prepare(" UPDATE youtuber SET priorities = :priorities WHERE id = :id ");
-				$stmt->bindValue(":priorities", $priorities, Database::VARTYPE_STRING);
-				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
-				$rs = $stmt->execute();
-
-				$result = new stdClass();
-				$result->success = true;
-				$result->youtubechannel = db_singleyoutubechannel($db, $_GET['id']);
 			}
 		}
 		else if ($endpoint == "/youtuber/remove/")
@@ -3874,12 +4428,22 @@ if (!isset($_GET['endpoint'])) {
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
-				$stmt = $db->prepare("UPDATE youtuber SET removed = 1 WHERE id = :id;");
-				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
-				$rs = $stmt->execute();
 
-				$result = new stdClass();
-				$result->success = true;
+				$singleYoutuber = db_singleyoutubechannel($db, $_GET['id']);
+				if (!$singleYoutuber) {
+					$result = api_error("Invalid youtuber id.");
+				}
+				else if ($singleYoutuber['company'] != $user_company) {
+					$result = api_error("Invalid youtuber id. (Does not belong to you.)");
+				}
+				else {
+					$stmt = $db->prepare("UPDATE youtuber SET removed = 1 WHERE id = :id;");
+					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+					$rs = $stmt->execute();
+
+					$result = new stdClass();
+					$result->success = true;
+				}
 			}
 		}
 		else if ($endpoint == "/twitchchannel/add/")
@@ -3893,6 +4457,10 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
+				// TODO: pass in audience id
+				// TODO: verify audience id once it is passed in.
+
+
 				$twitchDefault = 'twitch';
 				$twitch = twitch_getUsersFromLogin($twitchDefault);
 				if (!$twitch) {
@@ -3904,13 +4472,13 @@ if (!isset($_GET['endpoint'])) {
 
 					$subs = twitch_countSubscribers($data['id']);
 
-
 					$twitter = "twitch";
 					$twitter_followers = twitter_countFollowers($twitter);
 					if ($twitter_followers == "") { $twitter_followers = 0; }
 
 					$stmt = $db->prepare("INSERT INTO twitchchannel (
 											`id`,
+											`audience`,
 											`twitchId`, `twitchDescription`, `twitchBroadcasterType`, `twitchProfileImageUrl`, `twitchOfflineImageUrl`, `twitchUsername`,
 											`name`,
 											`email`,
@@ -3922,6 +4490,8 @@ if (!isset($_GET['endpoint'])) {
 											twitter_updatedon,
 											notes,
 											lang,
+											country,
+											tags,
 											lastpostedon,
 											lastpostedon_updatedon,
 											removed,
@@ -3929,9 +4499,31 @@ if (!isset($_GET['endpoint'])) {
 										)
 										VALUES (
 											NULL,
-											:twitchId, :twitchDescription, :twitchBroadcasterType, :twitchProfileImage, :twitchOfflineImage, :twitchUsername,
-											:name,  :email, :priorities, :subs, 			 :views,  :twitter, 		:twitter_followers, :twitter_updatedon,      		'',  	'', 	0,  		0, 						0, 			0
+											:audience,
+											:twitchId,
+											:twitchDescription,
+											:twitchBroadcasterType,
+											:twitchProfileImage,
+											:twitchOfflineImage,
+											:twitchUsername,
+											:name,
+											:email,
+											:priorities,
+											:subs,
+											:views,
+											:twitter,
+											:twitter_followers,
+											:twitter_updatedon,
+											:notes,
+											:lang,
+											:country,
+											:tags,
+											0,
+											0,
+											0,
+											0
 										); ");
+					$stmt->bindValue(":audience", $user_currentAudience, Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":twitchId", $data['id'], Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":twitchDescription", $data['description'], Database::VARTYPE_STRING);
 					$stmt->bindValue(":twitchBroadcasterType", $data['broadcaster_type'], Database::VARTYPE_STRING);
@@ -3943,6 +4535,10 @@ if (!isset($_GET['endpoint'])) {
 					$stmt->bindValue(":priorities", db_defaultPrioritiesString($db), Database::VARTYPE_STRING);
 					$stmt->bindValue(":views", $data['view_count'], Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":subs", $subs, Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":notes", "", Database::VARTYPE_STRING);
+					$stmt->bindValue(":lang", DEFAULT_LANG, Database::VARTYPE_STRING);
+					$stmt->bindValue(":country", DEFAULT_COUNTRY, Database::VARTYPE_STRING);
+					$stmt->bindValue(":tags", DEFAULT_TAGS, Database::VARTYPE_STRING);
 					$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);
 					$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_STRING);
 					$stmt->bindValue(":twitter_updatedon", time(), Database::VARTYPE_STRING);
@@ -3963,75 +4559,89 @@ if (!isset($_GET['endpoint'])) {
 			include_once("init.php");
 
 			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer'),
 				array('name' => 'channel', 'type' => 'textarea'),
 				array('name' => 'email', 'type' => 'email'),
 				array('name' => 'twitter', 'type' => 'alphanumericunderscores'),
-				array('name' => 'notes', 'type' => 'textarea')
+				array('name' => 'notes', 'type' => 'textarea'),
+				array('name' => 'tags', 'type' => 'tags')
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				$twitch = twitch_getUsersFromLogin($_GET['channel']);
-				if (!$twitch) {
-					$result = api_error("Twitch channel '" . $_GET['channel'] . "' not found.");
-				} else {
+				$singleTwitchChannel = db_singletwitchchannel($db, $_GET['id']);
+				if (!$singleTwitchChannel) {
+					$result = api_error("Invalid twitchchannel id.");
+				}
+				else if ($singleTwitchChannel['company'] != $user_company) {
+					$result = api_error("Invalid twitchchannel id. (Does not belong to you.)");
+				}
+				else {
 
-					//print_r($twitch);
-					$data = $twitch['data'][0];
+					$twitch = twitch_getUsersFromLogin($_GET['channel']);
+					if (!$twitch) {
+						$result = api_error("Twitch channel '" . $_GET['channel'] . "' not found.");
+					} else {
 
-					$subs = twitch_countSubscribers($data['id']);
+						//print_r($twitch);
+						$data = $twitch['data'][0];
 
-					$twitter = $_GET['twitter'];
-					$twitter_followers = 0;
-					if (strlen($twitter) > 0) {
-						$twitter_followers = twitter_countFollowers($_GET['twitter']);
+						$subs = twitch_countSubscribers($data['id']);
+
+						$twitter = $_GET['twitter'];
+						$twitter_followers = 0;
+						if (strlen($twitter) > 0) {
+							$twitter_followers = twitter_countFollowers($_GET['twitter']);
+						}
+						if ($twitter_followers == "") { $twitter_followers = 0; }
+						$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
+
+						$stmt = $db->prepare(" UPDATE twitchchannel SET
+													twitchId = :twitchId,
+													twitchDescription = :twitchDescription,
+													twitchBroadcasterType = :twitchBroadcasterType,
+													twitchProfileImageUrl = :twitchProfileImage,
+													twitchOfflineImageUrl = :twitchOfflineImage,
+													twitchUsername = :twitchUsername,
+													name = :name,
+													email = :email,
+													subscribers = :subscribers,
+													views = :views,
+													lastpostedon = :lastpostedon,
+													twitter = :twitter,
+													" . $twitter_followers_sql . "
+													notes = :notes,
+													tags = :tags
+												WHERE
+													id = :id;
+											");
+						$stmt->bindValue(":twitchId", intval($data['id']), Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":twitchDescription", $data['description'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":twitchBroadcasterType", $data['broadcaster_type'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":twitchProfileImage", $data['profile_image_url'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":twitchOfflineImage", $data['offline_image_url'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":twitchUsername", $data['login'], Database::VARTYPE_STRING);
+
+						$stmt->bindValue(":name", $data['display_name'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":email", $_GET['email'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":subscribers", "" . $subs, Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":views", "" . $data['view_count'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":lastpostedon", 0, Database::VARTYPE_INTEGER);
+
+						$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);
+						if ($twitter_followers > 0) {
+							$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
+						}
+						$stmt->bindValue(":notes", strip_tags(stripslashes($_GET['notes'])), Database::VARTYPE_STRING);
+						$stmt->bindValue(":tags", fixtags($_GET['tags']), Database::VARTYPE_STRING);
+						$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+						$rs = $stmt->execute();
+
+
+						$result = new stdClass();
+						$result->success = true;
+						$result->twitchchannel = db_singletwitchchannel($db, $_GET['id']);
 					}
-					if ($twitter_followers == "") { $twitter_followers = 0; }
-					$twitter_followers_sql = ($twitter_followers > 0)?" twitter_followers = :twitter_followers, ":"";
-
-					$stmt = $db->prepare(" UPDATE twitchchannel SET
-												twitchId = :twitchId,
-												twitchDescription = :twitchDescription,
-												twitchBroadcasterType = :twitchBroadcasterType,
-												twitchProfileImageUrl = :twitchProfileImage,
-												twitchOfflineImageUrl = :twitchOfflineImage,
-												twitchUsername = :twitchUsername,
-												name = :name,
-												email = :email,
-												subscribers = :subscribers,
-												views = :views,
-												lastpostedon = :lastpostedon,
-												twitter = :twitter,
-												" . $twitter_followers_sql . "
-												notes = :notes
-											WHERE
-												id = :id;
-										");
-					$stmt->bindValue(":twitchId", intval($data['id']), Database::VARTYPE_INTEGER);
-					$stmt->bindValue(":twitchDescription", $data['description'], Database::VARTYPE_STRING);
-					$stmt->bindValue(":twitchBroadcasterType", $data['broadcaster_type'], Database::VARTYPE_STRING);
-					$stmt->bindValue(":twitchProfileImage", $data['profile_image_url'], Database::VARTYPE_STRING);
-					$stmt->bindValue(":twitchOfflineImage", $data['offline_image_url'], Database::VARTYPE_STRING);
-					$stmt->bindValue(":twitchUsername", $data['login'], Database::VARTYPE_STRING);
-
-					$stmt->bindValue(":name", $data['display_name'], Database::VARTYPE_STRING);
-					$stmt->bindValue(":email", $_GET['email'], Database::VARTYPE_STRING);
-					$stmt->bindValue(":subscribers", "" . $subs, Database::VARTYPE_INTEGER);
-					$stmt->bindValue(":views", "" . $data['view_count'], Database::VARTYPE_INTEGER);
-					$stmt->bindValue(":lastpostedon", 0, Database::VARTYPE_INTEGER);
-
-					$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);
-					if ($twitter_followers > 0) {
-						$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
-					}
-					$stmt->bindValue(":notes", strip_tags(stripslashes($_GET['notes'])), Database::VARTYPE_STRING);
-					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
-					$rs = $stmt->execute();
-
-
-					$result = new stdClass();
-					$result->success = true;
-					$result->twitchchannel = db_singletwitchchannel($db, $_GET['id']);
 				}
 			}
 		}
@@ -4048,33 +4658,46 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				// TODO: validate that game passed is actually a game.
-				// TODO: validate that id passed is actually a youtuber.
-
 				$singleTwitchChannel = db_singletwitchchannel($db, $_GET['id']);
-				$games = explode(",", $singleTwitchChannel['priorities']);
-				$foundGame = false;
-				for($i = 0; $i < count($games); $i++) {
-					$pieces = explode("=", $games[$i]);
-					if ($pieces[0] == $_GET['game']) {
-						$foundGame = true;
-						$pieces[1] = $_GET['priority'];
-						$games[$i] = implode("=", $pieces);
+				if (!$singleTwitchChannel) {
+					$result = api_error("Invalid twitchchannel id.");
+				}
+				else if ($singleTwitchChannel['company'] != $user_company) {
+					$result = api_error("Invalid twitchchannel id. (Does not belong to you.)");
+				}
+				else {
+					$singleGame = db_singlegame($db, $_GET['game']);
+					if (!$singleGame) {
+						$result = api_error("Invalid game id.");
+					} else if ($singleGame['company'] != $user_company) {
+						$result = api_error("Invalid game id. (Does not belong to you.)");
+					}
+					else {
+						$games = explode(",", $singleTwitchChannel['priorities']);
+						$foundGame = false;
+						for($i = 0; $i < count($games); $i++) {
+							$pieces = explode("=", $games[$i]);
+							if ($pieces[0] == $_GET['game']) {
+								$foundGame = true;
+								$pieces[1] = $_GET['priority'];
+								$games[$i] = implode("=", $pieces);
+							}
+						}
+						if ($foundGame == false) {
+							$games[] = $_GET['game'] . "=" . $_GET['priority'];
+						}
+						$priorities = implode(",", $games);
+
+						$stmt = $db->prepare(" UPDATE twitchchannel SET priorities = :priorities WHERE id = :id ");
+						$stmt->bindValue(":priorities", $priorities, Database::VARTYPE_STRING);
+						$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+						$rs = $stmt->execute();
+
+						$result = new stdClass();
+						$result->success = true;
+						$result->twitchchannel = db_singletwitchchannel($db, $_GET['id']);
 					}
 				}
-				if ($foundGame == false) {
-					$games[] = $_GET['game'] . "=" . $_GET['priority'];
-				}
-				$priorities = implode(",", $games);
-
-				$stmt = $db->prepare(" UPDATE twitchchannel SET priorities = :priorities WHERE id = :id ");
-				$stmt->bindValue(":priorities", $priorities, Database::VARTYPE_STRING);
-				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
-				$rs = $stmt->execute();
-
-				$result = new stdClass();
-				$result->success = true;
-				$result->twitchchannel = db_singletwitchchannel($db, $_GET['id']);
 			}
 		}
 		else if ($endpoint == "/twitchchannel/remove/")
@@ -4087,12 +4710,22 @@ if (!isset($_GET['endpoint'])) {
 			);
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
-				$stmt = $db->prepare("UPDATE twitchchannel SET removed = 1 WHERE id = :id;");
-				$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
-				$rs = $stmt->execute();
+				$singleTwitchChannel = db_singletwitchchannel($db, $_GET['id']);
+				if (!$singleTwitchChannel) {
+					$result = api_error("Invalid twitchchannel id.");
+				}
+				else if ($singleTwitchChannel['company'] != $user_company) {
+					$result = api_error("Invalid twitchchannel id. (Does not belong to you.)");
+				}
+				else {
 
-				$result = new stdClass();
-				$result->success = true;
+					$stmt = $db->prepare("UPDATE twitchchannel SET removed = 1 WHERE id = :id;");
+					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+					$rs = $stmt->execute();
+
+					$result = new stdClass();
+					$result->success = true;
+				}
 			}
 		}
 		else if ($endpoint == "/project/add/")
@@ -4262,7 +4895,7 @@ if (!isset($_GET['endpoint'])) {
 			if (!$user['admin']) {
 				$result = new stdClass();
 				$result->success = false;
-				$result->message = 'You must be an admin to add users.';
+				$result->message = 'You must be an admin to change user passwords.';
 			}
 			else {
 				$data = $_GET;
@@ -4455,22 +5088,67 @@ if (!isset($_GET['endpoint'])) {
 
 					$newProject = $_GET['newProject'];
 
-					$stmt = $db->prepare("UPDATE user SET currentGame = :newProject WHERE id = :id ;");
-					$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
-					$stmt->bindValue(":newProject", $newProject, Database::VARTYPE_INTEGER);
-					$rs = $stmt->execute();
-					if (!$rs) {
-						$result = new stdClass();
-						$result->success = false;
+					$singleGame = db_singlegame($newProject);
+					if (!$singleGame) {
+						$result = api_error("Game/project does not exist.");
+					} else if ($singleGame['company'] != $user_company) {
+						$result = api_error("Game/project does not belong to you.");
 					} else {
-						$result = new stdClass();
-						$result->success = true;
+
+						$stmt = $db->prepare("UPDATE user SET currentGame = :newProject WHERE id = :id ;");
+						$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":newProject", $newProject, Database::VARTYPE_INTEGER);
+						$rs = $stmt->execute();
+						if (!$rs) {
+							$result = new stdClass();
+							$result->success = false;
+						} else {
+							$result = new stdClass();
+							$result->success = true;
+						}
 					}
 				}
-
-
 			}
+		}
+		else if ($endpoint == "/user/change-audience/")
+		{
+			$require_login = true;
+			include_once("init.php");
 
+			//error_reporting(0);
+			$required_fields = array(
+				array('name' => 'id', 'type' => 'integer'),
+				array('name' => 'audience', 'type' => 'integer')
+			);
+			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+			if (!$error) {
+				if ($user_id != $_GET['id']) {
+					$result = api_error("You can only change your own audience.");
+				} else {
+
+					$audience = $_GET['audience'];
+
+					$singleAudience = db_singleaudience($audience);
+					if (!$singleAudience) {
+						$result = api_error("Audience does not exist.");
+					} else if ($singleAudience['company'] != $user_company) {
+						$result = api_error("Audience does not belong to you.");
+					} else {
+
+						$stmt = $db->prepare("UPDATE user SET currentAudience = :audience WHERE id = :id ;");
+						$stmt->bindValue(":id", $_GET['id'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":audience", $audience, Database::VARTYPE_INTEGER);
+						$rs = $stmt->execute();
+						if (!$rs) {
+							$result = new stdClass();
+							$result->success = false;
+						} else {
+							$result = new stdClass();
+							$result->success = true;
+						}
+					}
+				}
+			}
 		}
 		// Chat functionality...
 		else if ($endpoint == "/chat/online-users/") {

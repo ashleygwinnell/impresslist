@@ -13,6 +13,18 @@
 	function sqlite_epoch($time = 0) {
 		return date("Y-m-d H:i:s", $time);
 	}
+	function db_singlecompany($db, $companyId, $extraFields = array() ) {
+		if (!is_numeric($companyId)) { return false; }
+		$extrasString = implode($extraFields, ',');
+		if (strlen($extrasString) > 0) {
+			$extrasString = ', '.$extrasString;
+		}
+		$q = "SELECT company.id, name $extrasString FROM company where removed = 0 and company.id = :company_id group by company.id ;";
+		$stmt = $db->prepare($q);
+		$stmt->bindValue(":company_id", $companyId, Database::VARTYPE_INTEGER);
+		$results = $stmt->query();
+		return $results[0];
+	}
 	function db_singleuser($db, $userId, $extraFields = array() ) {
 		if (!is_numeric($userId)) { return false; }
 
@@ -21,8 +33,10 @@
 			$extrasString = ', '.$extrasString;
 		}
 
-		$q = "SELECT user.id, forename, surname, email, color, emailGmailIndex, emailIMAPServer, emailSMTPServer, currentGame, lastactivity, count(email.id) as num_emails, admin, user.removed $extrasString FROM user LEFT JOIN email on email.user_id = user.id where user.removed = 0 and user.id = " . $userId. " group by user.id ;";
-		$results = $db->query($q);
+		$q = "SELECT user.id, company, forename, surname, email, color, emailGmailIndex, emailIMAPServer, emailSMTPServer, currentAudience, currentGame, lastactivity, count(email.id) as num_emails, admin, superadmin, user.removed $extrasString FROM user LEFT JOIN email on email.user_id = user.id where user.removed = 0 and user.id = :user_id group by user.id ;";
+		$stmt = $db->prepare($q);
+		$stmt->bindValue(":user_id", $userId, Database::VARTYPE_INTEGER);
+		$results = $stmt->query();
 
 		//echo $q;
 	//	print_r($results);
@@ -32,103 +46,181 @@
 	function db_singleperson($db, $personId) {
 		$lastcontacted = ", strftime('%s', lastcontacted) as lastcontacted_timestamp ";
 		if ($db->type == Database::TYPE_MYSQL) { $lastcontacted = ""; }
-		$rs = $db->query("SELECT * " . $lastcontacted . " FROM person WHERE id = '" . $personId . "' LIMIT 1;");
+		$stmt = $db->prepare("SELECT person.*, audience.company " . $lastcontacted . "
+								FROM person
+								JOIN audience on person.audience = audience.id
+								WHERE person.id = :person_id
+								LIMIT 1;");
+		$stmt->bindValue(":person_id", $personId, Database::VARTYPE_INTEGER);
+		$rs = $stmt->query();
 		return $rs[0];
 	}
 	function db_singlepersonpublication($db, $personPublicationId) {
 		$lastcontacted = ", strftime('%s', lastcontacted) as lastcontacted_timestamp ";
 		if ($db->type == Database::TYPE_MYSQL) { $lastcontacted = ""; }
 
-		$people = $db->query("SELECT * " . $lastcontacted . " FROM person_publication WHERE id = '" . $personPublicationId . "' LIMIT 1;");
+		$stmt = $db->prepare("SELECT person_publication.* " . $lastcontacted . "
+								FROM person_publication
+								WHERE id = :id
+								LIMIT 1;");
+		$stmt->bindValue(":id", $personPublicationId, Database::VARTYPE_INTEGER);
+		$people = $stmt->query();
 		return $people[0];
 	}
 	function db_singlepersonyoutubechannel($db, $personYoutubeChannelId) {
 		$lastcontacted = ", strftime('%s', lastcontacted) as lastcontacted_timestamp ";
 		if ($db->type == Database::TYPE_MYSQL) { $lastcontacted = ""; }
 
-		$people = $db->query("SELECT * " . $lastcontacted . " FROM person_youtuber WHERE id = '" . $personYoutubeChannelId . "' LIMIT 1;");
+		$stmt = $db->prepare("SELECT person_youtuber.* " . $lastcontacted . "
+								FROM person_youtuber
+								WHERE id = :id
+								LIMIT 1;");
+		$stmt->bindValue(":id", $personYoutubeChannelId, Database::VARTYPE_INTEGER);
+		$people = $stmt->query();
 		return $people[0];
 	}
 	function db_singlepersontwitchchannel($db, $personTwitchChannelId) {
 		$lastcontacted = ", strftime('%s', lastcontacted) as lastcontacted_timestamp ";
 		if ($db->type == Database::TYPE_MYSQL) { $lastcontacted = ""; }
 
-		$people = $db->query("SELECT * " . $lastcontacted . " FROM person_twitchchannel WHERE id = '" . $personTwitchChannelId . "' LIMIT 1;");
+		$stmt = $db->prepare("SELECT person_twitchchannel.* " . $lastcontacted . "
+								FROM person_twitchchannel
+								WHERE id = :id
+								LIMIT 1;");
+		$stmt->bindValue(":id", $personTwitchChannelId, Database::VARTYPE_INTEGER);
+		$people = $stmt->query();
 		return $people[0];
 	}
 	function db_singlepublication($db, $publicationId) {
 		if (!is_numeric($publicationId)) { return false; }
-		$publications = $db->query("SELECT * FROM publication WHERE id = '" . $publicationId . "' LIMIT 1;");
+		$stmt = $db->prepare("SELECT publication.*, audience.company
+								FROM publication
+								JOIN audience on publication.audience = audience.id
+								WHERE publication.id = :publication_id
+								LIMIT 1;");
+		$stmt->bindValue(":publication_id", $publicationId, Database::VARTYPE_INTEGER);
+		$publications = $stmt->query();
 		return $publications[0];
 	}
 	function db_singleyoutubechannel($db, $youtuberId) {
 		if (!is_numeric($youtuberId)) { return false; }
-		$youtubeChannels = $db->query("SELECT * FROM youtuber WHERE id = '" . $youtuberId . "' LIMIT 1;");
+		$stmt = $db->prepare("SELECT youtuber.*, audience.company
+								FROM youtuber
+								JOIN audience on youtuber.audience = audience.id
+								WHERE youtuber.id = :youtuber_id
+								LIMIT 1;");
+		$stmt->bindValue(":youtuber_id", $youtuberId, Database::VARTYPE_INTEGER);
+		$youtubeChannels = $stmt->query();
 		return $youtubeChannels[0];
 	}
 	function db_singletwitchchannel($db, $twitchChannelId) {
 		if (!is_numeric($twitchChannelId)) { return false; }
-		$twitchChannels = $db->query("SELECT * FROM twitchchannel WHERE id = '" . $twitchChannelId . "' LIMIT 1;");
+		$stmt = $db->prepare("SELECT twitchchannel.*, audience.company
+									FROM twitchchannel
+									JOIN audience on twitchchannel.audience = audience.id
+									WHERE twitchchannel.id = :twitchchannel_id
+									LIMIT 1;");
+		$stmt->bindValue(":twitchchannel_id", $twitchChannelId, Database::VARTYPE_INTEGER);
+		$twitchChannels = $stmt->query();
 		return $twitchChannels[0];
 	}
 	function db_singletwitchchannelbyusername($db, $twitchUsername) {
 		if (!is_string($twitchUsername)) { return false; }
-		$twitchChannels = $db->query("SELECT * FROM twitchchannel WHERE twitchUsername = '" . $twitchUsername . "' LIMIT 1;");
+		$stmt = $db->prepare("SELECT twitchchannel.*, audience.company
+								FROM twitchchannel
+								JOIN audience on twitchchannel.audience = audience.id
+								WHERE twitchchannel.twitchUsername = :username
+								LIMIT 1;");
+		$stmt->bindValue(":username", $twitchUsername, Database::VARTYPE_STRING);
+		$twitchChannels = $stmt->query();
 		return $twitchChannels[0];
 	}
 	function db_singlemailoutsimple($db, $mailoutId) {
 		if (!is_numeric($mailoutId)) { return false; }
-		$mailouts = $db->query("SELECT * FROM emailcampaignsimple WHERE id = '" . $mailoutId . "' LIMIT 1;");
+		$stmt = $db->prepare("SELECT *
+								FROM emailcampaignsimple
+								WHERE emailcampaignsimple.id = :mailout_id
+								LIMIT 1;");
+		$stmt->bindValue(":mailout_id", $mailoutId, Database::VARTYPE_INTEGER);
+		$mailouts = $stmt->query();
 		return $mailouts[0];
+	}
+	function db_singleaudience($db, $audienceId) {
+		if (!is_numeric($audienceId)) { return false; }
+		$stmt = $db->prepare("SELECT audience.* FROM audience WHERE audience.id = :audience_id LIMIT 1;");
+		$stmt->bindValue(":audience_id", $audienceId, Database::VARTYPE_INTEGER);
+		$rs = $stmt->query();
+		return $rs[0];
 	}
 	function db_singlegame($db, $gameId) {
 		if (!is_numeric($gameId)) { return false; }
-		$rs = $db->query("SELECT * FROM game WHERE id = '" . $gameId . "' LIMIT 1;");
+		$stmt = $db->prepare("SELECT game.* FROM game WHERE game.id = :game_id LIMIT 1;");
+		$stmt->bindValue(":game_id", $gameId, Database::VARTYPE_INTEGER);
+		$rs = $stmt->query();
 		return $rs[0];
 	}
 	function db_singleavailablekeyforgame($db, $gameid, $platform, $subplatform) {
 		if (!is_numeric($gameid)) { return false; }
-		$rs = $db->query("SELECT * FROM game_key WHERE game = '" . $gameid . "' AND platform = '" . $platform . "' AND subplatform = '" . $subplatform . "' AND assigned = 0 AND removed = 0 ORDER BY id ASC;");
+		$stmt = $db->prepare("SELECT * FROM game_key WHERE game = :game_id AND platform = :platform AND subplatform = :subplatform AND game_key.assigned = 0 AND game_key.removed = 0 ORDER BY game_key.id ASC;");
+		$stmt->bindValue(":game_id", $gameid, Database::VARTYPE_INTEGER);
+		$stmt->bindValue(":platform", $platform, Database::VARTYPE_STRING);
+		$stmt->bindValue(":subplatform", $subplatform, Database::VARTYPE_STRING);
+		$rs = $stmt->query();
 		return $rs[0];
 	}
 	function db_singleOAuthTwitter($db, $twitterAccId) {
 		//if (!is_numeric($gameid)) { return false; }
-		$rs = $db->query("SELECT * FROM oauth_twitteracc WHERE id = '" . $twitterAccId . "' AND removed = 0  LIMIT 1;");
+		$stmt = $db->prepare("SELECT * FROM oauth_twitteracc WHERE id = :id AND removed = 0 LIMIT 1;");
+		$stmt->bindValue(":id", $twitterAccId, Database::VARTYPE_INTEGER);
+		$rs = $stmt->query();
 		return $rs[0];
 	}
 	function db_singleOAuthTwitterById($db, $id) {
 		if (!is_numeric($id)) { return false; }
-		$rs = $db->query("SELECT * FROM oauth_twitteracc WHERE id = " . $id . " AND removed = 0 LIMIT 1;");
+		$stmt = $db->prepare("SELECT * FROM oauth_twitteracc WHERE id = :id AND removed = 0 LIMIT 1;");
+		$stmt->bindValue(":id", $id, Database::VARTYPE_INTEGER);
+		$rs = $stmt->query();
 		return $rs[0];
 	}
 	function db_singleOAuthTwitterByHandle($db, $twitterHandle) {
 		//if (!is_numeric($gameid)) { return false; }
-		$rs = $db->query("SELECT * FROM oauth_twitteracc WHERE twitter_handle = '" . $twitterHandle . "' AND removed = 0 LIMIT 1;");
+		$stmt = $db->prepare("SELECT * FROM oauth_twitteracc WHERE twitter_handle = :handle AND removed = 0 LIMIT 1;");
+		$stmt->bindValue(":handle", $twitterHandle, Database::VARTYPE_STRING);
+		$rs = $stmt->query();
 		return $rs[0];
 	}
 	function db_singleOAuthFacebookByFBId($db, $facebookId) {
 		//if (!is_numeric($gameid)) { return false; }
-		$rs = $db->query("SELECT * FROM oauth_facebookacc WHERE facebook_id = '" . $facebookId . "' AND removed = 0 LIMIT 1;");
+		$stmt = $db->prepare("SELECT * FROM oauth_facebookacc WHERE facebook_id = :facebook_id AND removed = 0 LIMIT 1;");
+		$stmt->bindValue(":facebook_id", $facebookId, Database::VARTYPE_STRING);
+		$rs = $stmt->query();
 		return $rs[0];
 	}
 	function db_singleOAuthFacebookByUserId($db, $userId) {
 		//if (!is_numeric($gameid)) { return false; }
-		$rs = $db->query("SELECT * FROM oauth_facebookacc WHERE user = '" . $userId . "' AND removed = 0 LIMIT 1;");
+		$stmt = $db->prepare("SELECT * FROM oauth_facebookacc WHERE user = :user_id AND removed = 0 LIMIT 1;");
+		$stmt->bindValue(":user_id", $userId, Database::VARTYPE_INTEGER);
+		$rs = $stmt->query();
 		return $rs[0];
 	}
 	function db_singleOAuthFacebookPageById($db, $pageId) {
 		//if (!is_numeric($gameid)) { return false; }
-		$rs = $db->query("SELECT * FROM oauth_facebookpage WHERE id = '" . $pageId . "' AND removed = 0 LIMIT 1;");
+		$stmt = $db->prepare("SELECT * FROM oauth_facebookpage WHERE id = :id AND removed = 0 LIMIT 1;");
+		$stmt->bindValue(":id", $pageId, Database::VARTYPE_INTEGER);
+		$rs = $stmt->query();
 		return $rs[0];
 	}
 	function db_singleOAuthFacebookPageByFBPId($db, $facebookPageId) {
 		//if (!is_numeric($gameid)) { return false; }
-		$rs = $db->query("SELECT * FROM oauth_facebookpage WHERE page_id = '" . $facebookPageId . "' AND removed = 0 LIMIT 1;");
+		$stmt = $db->prepare("SELECT * FROM oauth_facebookpage WHERE page_id = :page_id AND removed = 0 LIMIT 1;");
+		$stmt->bindValue(":page_id", $facebookPageId, Database::VARTYPE_STRING);
+		$rs = $stmt->query();
 		return $rs[0];
 	}
 	function db_singleSocialQueueItem($db, $id) {
 		if (!is_numeric($id)) { return false; }
-		$rs = $db->query("SELECT * FROM socialqueue WHERE id = " . $id . " LIMIT 1;");
+		$rs = $db->prepare("SELECT * FROM socialqueue WHERE id = :id LIMIT 1;");
+		$stmt->bindValue(":id", $id, Database::VARTYPE_INTEGER);
 		return $rs[0];
 	}
 	function db_keysassignedtotype($db, $gameid, $platform, $subplatform, $type, $typeid) {
@@ -166,6 +258,15 @@
 	}
 
 	function db_reset($db) {
+		$sql = "DROP TABLE audience;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE cache_external_twitteracc;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE company;";
+		$db->exec($sql);
+
 		$sql = "DROP TABLE email;";
 		$db->exec($sql);
 
@@ -196,7 +297,13 @@
 		$sql = "DROP TABLE person_publication;";
 		$db->exec($sql);
 
+		$sql = "DROP TABLE person_twitchchannel;";
+		$db->exec($sql);
+
 		$sql = "DROP TABLE person_youtuber;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE podcast;";
 		$db->exec($sql);
 
 		$sql = "DROP TABLE publication;";
@@ -209,6 +316,18 @@
 		$db->exec($sql);
 
 		$sql = "DROP TABLE socialqueue;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE twitchchannel;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE twitchchannel_coverage;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE twitter_directmessage;";
+		$db->exec($sql);
+
+		$sql = "DROP TABLE watchedgame;";
 		$db->exec($sql);
 
 		$sql = "DROP TABLE user;";
@@ -229,12 +348,43 @@
 		$blobTextDefaultToZero = " DEFAULT '0' ";
 		$sqlEngineAndCharset = '';
 		$defaultNull = "0";
+		$tinyint = "INTEGER";
 		if ($db->type == Database::TYPE_MYSQL) {
 			$autoincrement = "AUTO_INCREMENT";
 			$blobTextDefaultToZero = "";
-			$sqlEngineAndCharset = ' ENGINE=InnoDB DEFAULT CHARSET=utf8 ';
+			$sqlEngineAndCharset = ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
 			$defaultNull = "NULL";
+			$tinyint = "tinyint(4)";
 		}
+
+		// Audiences
+		$sql = "CREATE TABLE IF NOT EXISTS audience (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					company INTEGER NOT NULL,
+					name VARCHAR(255) NOT NULL,
+					removed {$tinyint} NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+		$db->exec("INSERT IGNORE INTO `audience` (`id`, `company`, `name`, `removed`) VALUES (1, 1, 'Audience', 0); ");
+
+		// Companies
+		$sql = "CREATE TABLE IF NOT EXISTS company (
+					`id` INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					`name` varchar(50) NOT NULL,
+					`keywords` text NOT NULL,
+					`address` varchar(255) NOT NULL,
+					`email` varchar(255) NOT NULL,
+					`twitter` varchar(30) NOT NULL,
+					`facebook` varchar(30) NOT NULL,
+					`discord_enabled` {$tinyint} NOT NULL DEFAULT 0,
+					`discord_webhookId` varchar(255) NOT NULL,
+					`discord_webhookToken` varchar(255) NOT NULL,
+					`createdon` INTEGER NOT NULL,
+					`removed` {$tinyint} NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+		$db->exec("INSERT IGNORE INTO `company` (`id`, `name`, `keywords`, `address`, `email`, `twitter`, `facebook`, `discord_enabled`, `discord_webhookId`, `discord_webhookToken`, `createdon`, `removed`) VALUES
+												 (1, 'Company Name', 'Company Name', 'Your full address line.', 'hello@yourdomain.com', 'twitter', 'facebook', 0, '', '', 0, 0);");
 
 		// Emails
 		$sql = "CREATE TABLE IF NOT EXISTS email (
@@ -255,6 +405,7 @@
 		// Email camapaign system (simple)
 		$sql = "CREATE TABLE IF NOT EXISTS emailcampaignsimple (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					company INTEGER NOT NULL DEFAULT 1,
 					game_id INTEGER DEFAULT {$defaultNull},
 					name VARCHAR(255) NOT NULL,
 					subject VARCHAR(255) NOT NULL,
@@ -283,6 +434,7 @@
 		// Game / project data
 		$sql = "CREATE TABLE IF NOT EXISTS game (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					company INTEGER NOT NULL DEFAULT 1,
 					name VARCHAR(255),
 					nameuniq VARCHAR(255),
 					iconurl VARCHAR(255) NOT NULL,
@@ -314,6 +466,7 @@
 		// Facebook accounts
 		$sql = "CREATE TABLE IF NOT EXISTS oauth_facebookacc (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					company INTEGER NOT NULL DEFAULT 1,
 					user INTEGER NOT NULL,
 					facebook_id VARCHAR(255) NOT NULL,
 					facebook_name VARCHAR(255) NOT NULL,
@@ -327,6 +480,7 @@
 		// Facebook pages
 		$sql = "CREATE TABLE IF NOT EXISTS oauth_facebookpage (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					company INTEGER NOT NULL DEFAULT 1,
 					page_id VARCHAR(255) NOT NULL,
 					page_name VARCHAR(255) NOT NULL,
 					page_image TEXT NOT NULL,
@@ -339,12 +493,16 @@
 		// Twitter accounts
 		$sql = "CREATE TABLE IF NOT EXISTS oauth_twitteracc (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					company INTEGER NOT NULL DEFAULT 1,
 					twitter_id TEXT NOT NULL,
 					twitter_name TEXT NOT NULL,
 					twitter_handle TEXT NOT NULL,
 					twitter_image TEXT NOT NULL,
 					oauth_key TEXT NOT NULL,
 					oauth_secret TEXT NOT NULL,
+					twitter_friends TEXT NOT NULL,
+					twitter_followers TEXT NOT NULL,
+					lastscrapedon INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0
 				) {$sqlEngineAndCharset} ;";
 		$db->exec($sql);
@@ -352,6 +510,7 @@
 		// People
 		$sql = "CREATE TABLE IF NOT EXISTS person (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					audience INTEGER NOT NULL DEFAULT 1,
 					firstname VARCHAR(255) NOT NULL,
 					surnames VARCHAR(255) NOT NULL,
 					email VARCHAR(255) NOT NULL,
@@ -362,6 +521,7 @@
 					notes TEXT NOT NULL,
 					lang VARCHAR(30) NOT NULL,
 					country VARCHAR(2) NOT NULL DEFAULT '',
+					tags TEXT NOT NULL,
 					lastcontacted INTEGER NOT NULL,
 					lastcontactedby INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0,
@@ -399,6 +559,7 @@
 		// create publications
 		$sql = "CREATE TABLE IF NOT EXISTS publication (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					audience INTEGER NOT NULL DEFAULT 1,
 					name VARCHAR(255) NOT NULL,
 					url VARCHAR(255) NOT NULL,
 					email VARCHAR(255) NOT NULL,
@@ -412,8 +573,11 @@
 					notes TEXT NOT NULL,
 					lang VARCHAR(30) NOT NULL,
 					country VARCHAR(2) NOT NULL DEFAULT '',
+					tags TEXT NOT NULL,
 					lastpostedon INTEGER NOT NULL,
 					lastpostedon_updatedon INTEGER NOT NULL DEFAULT 0,
+					lastcontacted INTEGER NULL DEFAULT NULL,
+					lastcontactedby INTEGER NULL DEFAULT NULL,
 					removed INTEGER NOT NULL DEFAULT 0,
 					lastscrapedon INTEGER NOT NULL DEFAULT 0
 				) {$sqlEngineAndCharset} ;";
@@ -435,6 +599,7 @@
 		$db->exec($sql);
 
 		$sql = "CREATE TABLE IF NOT EXISTS settings (
+					`company` INTEGER NOT NULL DEFAULT 1,
 					`key` VARCHAR(255) PRIMARY KEY NOT NULL,
 					`value` TEXT
 				) {$sqlEngineAndCharset} ;";
@@ -443,6 +608,7 @@
 		// Social timeline / queue.
 		$sql = "CREATE TABLE IF NOT EXISTS socialqueue (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					`company` INTEGER NOT NULL DEFAULT 1,
 					type VARCHAR(255) NOT NULL,
 					typedata TEXT NOT NULL,
 					user_id INTEGER NOT NULL,
@@ -456,6 +622,7 @@
 		// Users
 		$sql = "CREATE TABLE IF NOT EXISTS user (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					`company` INTEGER NOT NULL DEFAULT 1,
 					forename VARCHAR(255) NOT NULL,
 					surname VARCHAR(255) NOT NULL,
 					email VARCHAR(255) NOT NULL,
@@ -467,10 +634,12 @@
 					emailIMAPPasswordIV VARCHAR(255) NOT NULL,
 					password VARCHAR(32) NOT NULL,
 					passwordVersion INTEGER NOT NULL DEFAULT 1,
+					currentAudience INTEGER NOT NULL,
 					currentGame INTEGER NOT NULL,
 					coverageNotifications INTEGER NOT NULL DEFAULT 1,
 					color VARCHAR(10) NOT NULL DEFAULT '#000000',
 					admin INTEGER NOT NULL DEFAULT 0,
+					superadmin INTEGER NOT NULL DEFAULT 0,
 					lastactivity INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0
 				) {$sqlEngineAndCharset} ;";
@@ -496,6 +665,7 @@
 		// Youtuber profiles.
 		$sql = "CREATE TABLE IF NOT EXISTS youtuber (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					audience INTEGER NOT NULL DEFAULT 1,
 					youtubeId VARCHAR(255) NOT NULL,
 					youtubeUploadsPlaylistId VARCHAR(255) NOT NULL,
 					name VARCHAR(255) NOT NULL,
@@ -514,6 +684,7 @@
 					notes TEXT NOT NULL,
 					lang VARCHAR(30) NOT NULL,
 					country VARCHAR(2) NOT NULL DEFAULT '',
+					tags TEXT NOT NULL,
 					lastpostedon INTEGER NOT NULL,
 					lastpostedon_updatedon INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0,
@@ -542,6 +713,7 @@
 		// Twitch channel
 		$sql = "CREATE TABLE IF NOT EXISTS twitchchannel (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					audience INTEGER NOT NULL DEFAULT 1,
 					twitchId VARCHAR(255) NOT NULL,
 					twitchDescription TEXT NOT NULL,
 					twitchBroadcasterType VARCHAR(30) NOT NULL,
@@ -558,6 +730,8 @@
 					twitter_updatedon INTEGER NOT NULL DEFAULT 0,
 					notes TEXT NOT NULL,
 					lang VARCHAR(30) NOT NULL,
+					country VARCHAR(2) NOT NULL DEFAULT '',
+					tags TEXT NOT NULL,
 					lastpostedon INTEGER NOT NULL,
 					lastpostedon_updatedon INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0,
@@ -597,42 +771,42 @@
 
 
 		// Settings
-		$db->exec("INSERT IGNORE INTO settings VALUES ('company_name', 'Company Name'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES ('company_addressLine', 'Company Name, 1 Tree Hill, City, Country.'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES ('company_emailAddress', 'contact@yourwebdomain.com'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES ('company_twitter', 'http://twitter.com/company_name'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES ('company_facebook', 'http://facebook.com/company_name'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'company_name', 'Company Name'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'company_addressLine', 'Company Name, 1 Tree Hill, City, Country.'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'company_emailAddress', 'contact@yourwebdomain.com'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'company_twitter', 'http://twitter.com/company_name'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'company_facebook', 'http://facebook.com/company_name'); ");
 
-		$db->exec("INSERT IGNORE INTO settings VALUES ('cacheType', '" . Cache::TYPE_NONE . "'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES ('memcacheServer', 'localhost'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES ('memcachePort', '11211'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'cacheType', '" . Cache::TYPE_NONE . "'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'memcacheServer', 'localhost'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'memcachePort', '11211'); ");
 
-		$db->exec("INSERT IGNORE INTO settings VALUES ('auto_backup_email', ''); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES ('auto_backup_frequency', 0); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES ('manual_backup_lastbackedupon', 0); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES ('todolist', ''); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'auto_backup_email', ''); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'auto_backup_frequency', 0); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'manual_backup_lastbackedupon', 0); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'todolist', ''); ");
 
 		global $impresslist_version;
-		$db->exec("INSERT IGNORE INTO settings VALUES ('version', '" . $impresslist_version . "'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'version', '" . $impresslist_version . "'); ");
 
 		// Youtube settings
-		$db->exec("INSERT IGNORE INTO settings VALUES ('youtube_apiKey', 'youtube_api_key'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'youtube_apiKey', 'youtube_api_key'); ");
 
 		// Twitter API settings
-		$db->exec("INSERT IGNORE INTO settings VALUES ('twitter_configuration', '{}'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES ('twitter_consumerKey', 'consumer_key'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES ('twitter_consumerSecret', 'consumer_secret'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES ('twitter_oauthToken', 'oauth_token'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES ('twitter_oauthSecret', 'oauth_secret'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'twitter_configuration', '{}'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'twitter_consumerKey', 'consumer_key'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'twitter_consumerSecret', 'consumer_secret'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'twitter_oauthToken', 'oauth_token'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'twitter_oauthSecret', 'oauth_secret'); ");
 
 		// Facebook API settings - https://developers.facebook.com
-		$db->exec("INSERT IGNORE INTO settings VALUES ('facebook_appId', 'app_id'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES ('facebook_appSecret', 'app_secret'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES ('facebook_apiVersion', 'api_version'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'facebook_appId', 'app_id'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'facebook_appSecret', 'app_secret'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'facebook_apiVersion', 'api_version'); ");
 
 		// Slack integration settings
-		$db->exec("INSERT IGNORE INTO settings VALUES ('slack_enabled', 'false'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES ('slack_apiUrl', 'https://hooks.slack.com/services/GENERATE/THIS/URL'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'slack_enabled', 'false'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'slack_apiUrl', 'https://hooks.slack.com/services/GENERATE/THIS/URL'); ");
 
 		return true;
 	}

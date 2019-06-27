@@ -116,9 +116,12 @@ if ($require_login) {
 
 		//$user = array("id" => 1, "emailGmailIndex" => 1, "currentGame" => 1);
 		$user_id = $user['id'];
+		$user_company = $user['company'];
 		$user_gmailIndex = $user['emailGmailIndex'];
+		$user_currentAudience = $user['currentAudience'];
 		$user_currentGame = $user['currentGame'];
 		$user_admin = ($user['admin'] == 1)?true:false;
+		$user_superadmin = ($user['superadmin'] == 1)?true:false;
 		$user_imapServer = $user['emailIMAPServer'];
 		$user_smtpServer = $user['emailSMTPServer'];
 		user_updateActivity($user_id);

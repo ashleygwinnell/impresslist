@@ -1338,7 +1338,7 @@ API.setPersonAssignment = function(person, user, gameId) {
 			API.errorMessage("Could not set user-assignment on Person.");
 		});
 }
-API.savePerson = function(person, firstname, surnames, email, twitter, notes, country, outofdate) {
+API.savePerson = function(person, firstname, surnames, email, twitter, notes, country, language, tags, outofdate) {
 
 	var url = "api.php?endpoint=/person/save/" +
 					"&id=" + encodeURIComponent(person.id) +
@@ -1348,6 +1348,8 @@ API.savePerson = function(person, firstname, surnames, email, twitter, notes, co
 					"&twitter=" + encodeURIComponent(twitter) +
 					"&notes=" + encodeURIComponent(notes) +
 					"&country=" + encodeURIComponent(country) +
+					"&language=" + encodeURIComponent(language) +
+					"&tags=" + encodeURIComponent(tags) +
 					"&outofdate=" + encodeURIComponent(outofdate);
 	console.log(url);
 	$.ajax( url )
@@ -1443,7 +1445,7 @@ API.setPublicationPriority = function(publication, priority, gameId) {
 			API.errorMessage("Could not set priority on Publication.");
 		});
 }
-API.savePublication = function(publication, name, url, email, rssfeedurl, twitter, notes, country) {
+API.savePublication = function(publication, name, url, email, rssfeedurl, twitter, notes, country, tags) {
 
 	var url = "api.php?endpoint=/publication/save/" +
 					"&id=" + encodeURIComponent(publication.id) +
@@ -1453,7 +1455,8 @@ API.savePublication = function(publication, name, url, email, rssfeedurl, twitte
 					"&rssfeedurl=" + encodeURIComponent(rssfeedurl) +
 					"&twitter=" + encodeURIComponent(twitter) +
 					"&notes=" + encodeURIComponent(notes) +
-					"&country=" + encodeURIComponent(country);
+					"&country=" + encodeURIComponent(country) +
+					"&tags=" + encodeURIComponent(tags);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1582,7 +1585,7 @@ API.setYoutuberPriority = function(youtuber, priority, gameId) {
 			API.errorMessage("Could not set priority on Youtuber.");
 		});
 }
-API.saveYoutuber = function(youtuber, channel, nameOverride, email, twitter, notes, country) {
+API.saveYoutuber = function(youtuber, channel, nameOverride, email, twitter, notes, country, tags) {
 
 	var url = "api.php?endpoint=/youtuber/save/" +
 					"&id=" + encodeURIComponent(youtuber.id) +
@@ -1591,7 +1594,8 @@ API.saveYoutuber = function(youtuber, channel, nameOverride, email, twitter, not
 					"&email=" + encodeURIComponent(email) +
 					"&twitter=" + encodeURIComponent(twitter) +
 					"&notes=" + encodeURIComponent(notes) +
-					"&country=" + encodeURIComponent(country);
+					"&country=" + encodeURIComponent(country) +
+					"&tags=" + encodeURIComponent(tags);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1695,14 +1699,15 @@ API.setTwitchChannelPriority = function(twitchchannel, priority, gameId) {
 			API.errorMessage("Could not set priority on Twitch Channel.");
 		});
 }
-API.saveTwitchChannel = function(twitchchannel, channel, email, twitter, notes) {
+API.saveTwitchChannel = function(twitchchannel, channel, email, twitter, notes, tags) {
 
 	var url = "api.php?endpoint=/twitchchannel/save/" +
 					"&id=" + encodeURIComponent(twitchchannel.id) +
 					"&channel=" + encodeURIComponent(channel) +
 					"&email=" + encodeURIComponent(email) +
 					"&twitter=" + encodeURIComponent(twitter) +
-					"&notes=" + encodeURIComponent(notes);
+					"&notes=" + encodeURIComponent(notes) +
+					"&tags=" + encodeURIComponent(tags);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -2016,6 +2021,70 @@ API.removeOAuthTwitterAccount = function(acc) {
 		})
 		.fail(function() {
 			API.errorMessage("Could not remove Twitter Account.");
+		});
+}
+API.getOAuthTwitterAccountInactiveFollowings = function(handle, years, successCallback, errorCallback) {
+
+	var url = "api.php?endpoint=/social/account/twitter/tools/inactive-followings/&handle=" + encodeURIComponent(handle) + "&years=" + years;
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
+			var json = JSON.parse(result);
+			if (!json.success) { API.errorMessage(json.message); return; }
+
+			if (successCallback) {
+				successCallback(json);
+			}
+		})
+		.fail(function() {
+			API.errorMessage("Could not get OAuth Twitter Accounts Inactive Followings.");
+			if (errorCallback) {
+				errorCallback();
+			}
+		});
+}
+API.getOAuthTwitterAccountUnrequitedFollowings = function(handle, successCallback, errorCallback) {
+	var url = "api.php?endpoint=/social/account/twitter/tools/unrequited-followings/&handle=" + encodeURIComponent(handle);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+
+			if (successCallback) {
+				successCallback(json);
+			}
+		})
+		.fail(function() {
+			API.errorMessage("Could not get OAuth Twitter Accounts Unrequited Followings.");
+			if (errorCallback) {
+				errorCallback();
+			}
+		});
+}
+API.doOAuthTwitterAccountUnfollow = function(fromId, handle, successCallback, errorCallback) {
+	var url = "api.php?endpoint=/social/account/twitter/tools/unfollow/&id=" + encodeURIComponent(fromId) + "&handle=" + encodeURIComponent(handle);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Unfollow successful.");
+			if (successCallback) {
+				successCallback(json);
+			}
+		})
+		.fail(function() {
+			API.errorMessage("Could not unfollow Twitter Account.");
+			if (errorCallback) {
+				errorCallback();
+			}
 		});
 }
 API.sqlQuery = function(query) {

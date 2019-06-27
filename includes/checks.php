@@ -37,5 +37,6 @@ else if (file_exists($documentRoot . "/includes/config/config.php")) {
 	//header("Location: /");
 	//die();
 }
+header("Content-Type: text/html; charset=utf-8");
 
 ?>

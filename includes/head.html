@@ -21,7 +21,10 @@
 <script type="text/javascript" src="js/vendor/bootstrap-growl/jquery.bootstrap-growl.min.js"></script>
 <script type="text/javascript" src="js/vendor/markdown/lib/markdown.js"></script>
 <script type="text/javascript" src="js/vendor/bootstrap-fileinput/js/fileinput.min.js"></script>
+<script type="text/javascript" src="js/vendor/bootstrap-tagsinput/bootstrap-tagsinput.js"></script>
 <script type="text/javascript" src="js/vendor/twitter-text-js/js/twitter-text.js"></script>
+<script type="text/javascript" src="js/vendor/typeahead/typeahead.bundle.js"></script>
+<!-- <script type="text/javascript" src="js/vendor/bootstrap3-typeahead/bootstrap3-typeahead.js"></script> -->
 
 <script type="text/javascript" src="js/impresslist.js"></script>
 <script type="text/javascript" src="js/impresslist_api.js"></script>
@@ -33,16 +36,24 @@
 <link href="js/vendor/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css" rel="stylesheet" />
 <link href="js/vendor/bootstrap-multiselect/dist/css/bootstrap-multiselect.css" rel="stylesheet" />
 <link href="js/vendor/bootstrap-fileinput/css/fileinput.min.css" rel="stylesheet">
+<link href="js/vendor/bootstrap-tagsinput/bootstrap-tagsinput.css" rel="stylesheet">
 
 <link href="css/bootstrap-timeline-responsive.css" rel="stylesheet" />
 <link href="css/sticky-footer.css" rel="stylesheet">
 <link href="css/impresslist.css" rel="stylesheet">
-<style >
+<style>
 	.bootstrap-datetimepicker-widget {
 		z-index: 10;
 	}
 </style>
-
+<style>
+<?php
+	$tags = listtags();
+	foreach($tags as $name => $data) {
+		echo ".tag.tag-" . $name . " { background-color: " . $data['color'] . "; }\n";
+	}
+?>
+</style>
 
 <!-- Put themes and/or any custom css here -->
 <!-- <link href="css/bootstrap-theme-flatly.min.css" rel="stylesheet"> -->

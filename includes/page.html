@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en-gb">
 	<head>
-		<?php include_once("head.html"); ?>
+		<?php require_once("head.html"); ?>
 
       	<script type='text/javascript'>
 
@@ -12,8 +12,9 @@
 	        	impresslist.config.system.twitter = <?php echo $settings['twitter_configuration']; ?>;
 	        	impresslist.config.user.id = <?php echo $user_id; ?>;
         		impresslist.config.user.game = <?php echo $user_currentGame; ?>;
+        		impresslist.config.user.audience = <?php echo $user_currentAudience; ?>;
       			impresslist.config.user.gmail = <?php echo $user_gmailIndex; ?>;
-      			impresslist.config.user.admin = <?php echo $user_admin; ?>;
+      			impresslist.config.user.admin = <?php echo (($user_admin)?"true":"false"); ?>;
       			impresslist.config.user.imapServer = "<?php echo $user_imapServer; ?>";
       			impresslist.config.user.smtpServer = "<?php echo $user_smtpServer; ?>";
       			impresslist.config.misc.countries = {};
@@ -23,7 +24,13 @@
       				foreach($countries as $name => $code) {
       					echo "impresslist.config.misc.countries[\"" . $code . "\"] = \"" . $name. "\";\n";
       				}
+      			?>
 
+      			<?php
+      				$tags = listtags();
+      				foreach($tags as $name => $data) {
+      					echo "impresslist.config.tags[\"" . $name . "\"] = { name: \"" . $data['name'] . "\", color: \"" . $data['color'] . "\" };\n";
+      				}
       			?>
 
       			<?php for($i = 0; $i < $num_users; $i++): ?>
@@ -34,6 +41,27 @@
 	        		impresslist.addGame(new Game(<?php echo json_encode($games[$i]); ?>), true);
         		<?php endfor; ?>
 
+        		<?php for($i = 0; $i < $num_audiences; $i++): ?>
+	        		impresslist.addAudience(new Audience(<?php echo json_encode($audiences[$i]); ?>), true);
+        		<?php endfor; ?>
+
+        		// Tag search data/config/objs.
+        		impresslist.config.misc.tagSearch = new Bloodhound({
+					datumTokenizer: Bloodhound.tokenizers.obj.whitespace("name"),
+					queryTokenizer: Bloodhound.tokenizers.whitespace,
+					local: $.map(impresslist.config.tags, function (obj, k) {
+						return { key: k, name: obj.name, color: obj.color };
+					})
+				});
+				impresslist.config.misc.tagSearch.initialize();
+				impresslist.config.misc.tagSearchConfig = {
+					typeaheadjs: { name: "bh", displayKey: "name", valueKey: "name", source: impresslist.config.misc.tagSearch.ttAdapter() },
+					tagClass: function(item) {
+						return "tag-" + impresslist.util.findTagKey(item)
+					},
+					freeInput:false
+				};
+
         		impresslist.init();
 
         	});
@@ -41,7 +69,7 @@
 
 	</head>
 	<body>
-		<?php include_once("nav.html"); ?>
+		<?php require_once("nav.html"); ?>
 
 		<!-- Spacer -->
 		<div class='container mycontainer' style='margin-top:50px;'>
@@ -56,29 +84,72 @@
 
 
 			<div id='current-project' class='container mycontainer'>
-				<div class='filters' style='float:left;text-align:left;'>
-					<div class='filter-item'><b>Logged in as:</b> <span id='current-user-name'></span></div>
-					<div class='filter-item'><b>Current Project:</b> <span id='current-project-name'></span></div>
-					<br/><div class='filter-item'><b>Full Search:</b> &nbsp;<input id='search-option-full' type='checkbox'/></div>
-				</div>
 				<div class='filters'>
 					<div class='filter-item'><b>Filters:</b></div>
-					<div class='filter-item'>Not recently contacted (1 week) - <input id='filter-recent-contact' type='checkbox'/></div>
-					<div class='filter-item'>High Priority - <input id='filter-high-priority' type='checkbox'/></div>
-					<div class='filter-item'>People I've contacted - <input id='filter-personal-contact' type='checkbox'/></div>
-					<div class='filter-item'>People with Email Addresses - <input id='filter-email-attached' type='checkbox'/></div>
-					<div class='filter-item'>People assigned to me - <input id='filter-assigned-self' type='checkbox'/></div>
-					<div class='filter-item'>People who are out-of-date - <input id='filter-show-outofdate' type='checkbox'/></div>
+					<div style='display:none;'>
+						<input id='filter-recent-contact' type='checkbox'/>
+						<input id='filter-high-priority' type='checkbox'/>
+						<input id='filter-personal-contact' type='checkbox'/>
+						<input id='filter-email-attached' type='checkbox'/>
+						<input id='filter-assigned-self' type='checkbox'/>
+						<input id='filter-show-outofdate' type='checkbox'/>
+					</div>
+					<select id="filters-select" multiple="multiple">
+					    <option data-id='filter-recent-contact' value="filter-recent-contact">Not recently contacted (1 week)</option>
+					    <option data-id='filter-high-priority' value="filter-high-priority">High Priority</option>
+					    <option data-id='filter-personal-contact' value="filter-personal-contact">People I've contacted</option>
+					    <option data-id='filter-email-attached' value="filter-email-attached">People with Email Addresses</option>
+					    <option data-id='filter-assigned-self' value="filter-assigned-self">People assigned to me</option>
+					    <option data-id='filter-show-outofdate' value="filter-show-outofdate">People who are out-of-date</option>
+					</select>
+					<script type="text/javascript">
+					    $(document).ready(function() {
+					        $('#filters-select').multiselect({
+					        	includeResetOption: true,
+					        	buttonWidth: '200px',
+					        	dropRight: true,
+					        	templates: {
+					        		li: "<li style='font-size:12pt'><a href=\"javascript:void(0);\"><label></label></a></li>"
+					        	},
+					        	onChange: function(option, checked, select) {
+					        		console.log(option, checked, select);
+					        		$('#' + option.attr('data-id')).prop("checked", checked);
+					        		impresslist.refreshFilter();
+					        	}
+					        });
+					    });
+					</script>
 				</div>
+				<!-- <div class='filters' style='clear:both;'>
+					<div class='filter-item'><b>Tags:</b></div>
+					<div id='filter-tag-list'>
+
+					</div>
+					<script type="text/javascript">
+						$(document).ready(function() {
+							for(var key in impresslist.config.tags) {
+								var n = impresslist.config.tags[key].name;
+								var c = impresslist.config.tags[key].color;
+								$('#filter-tag-list').append("<span class='label label-default' style='background-color:" + c + "'>" + n + "</span> ");
+							}
+						});
+					</script>
+
+				</div> -->
+
+
+
 			</div><br/>
 
 			<div class='container mycontainer'>
+				<h3>Audience</h3>
 				<ul class="nav nav-pills" role='tablist'>
 					<li role="presentation"><a id='jobs-pill-link' href="#jobs-pill" aria-controls="jobs-pill" role="tab" data-toggle="pill" style='display:none;'>Jobs</a></li>
 					<li role="presentation" class="active"><a href="#people-pill" aria-controls="people-pill" role="tab" data-toggle="pill">People</a></li>
 					<li role="presentation"><a href="#publications-pill" aria-controls="publications-pill" role="tab" data-toggle="pill">Publications</a></li>
 					<li role="presentation"><a href="#youtubers-pill" aria-controls="youtubers-pill" role="tab" data-toggle="pill">YouTubers</a></li>
-					<li role="presentation"><a href="#twitchchannels-pill" aria-controls="twitchchannels-pill" role="tab" data-toggle="pill">Twitch Streamers</a></li>
+					<li role="presentation"><a href="#twitchchannels-pill" aria-controls="twitchchannels-pill" role="tab" data-toggle="pill">Twitch Channels</a></li>
+					<li role="presentation"><a href="#podcasts-pill" aria-controls="podcasts-pill" role="tab" data-toggle="pill">Podcasts</a></li>
 					<li role="presentation"><a id='chat-pill-link' href="#chat-pill" aria-controls="chat-pill" role="tab" data-toggle="pill" style='display:none;'>Chat</a></li>
 				</ul><br/>
 
@@ -246,7 +317,7 @@
 				  						class='nav-select-all nav-table-topright-item glyphicon glyphicon-check checkbox-column'
 				  						></span>
 
-				  					<span class='fl'>Twitch Streamers</span><span id='twitchchannel-count' class='fr'>(0)</span>
+				  					<span class='fl'>Twitch Channels</span><span id='twitchchannel-count' class='fr'>(0)</span>
 				  				</div>
 								<table class='table table-striped sortable' >
 									<thead>
@@ -264,6 +335,52 @@
 
 									</tbody>
 									<tfoot id='twitchchannels-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+								</table>
+							</div>
+						</div><br/>
+					</div>
+
+					<div role="tabpanel" class="tab-pane" id="podcasts-pill">
+
+						<!-- Podcasts  -->
+						<div id='podcasts-container'>
+							<div class="panel panel-default">
+				  				<div class="panel-heading oa">
+
+				  					<span
+				  						data-type='podcast'
+				  						title='Select Podcasts'
+				  						class='nav-select-edit nav-table-topright-item glyphicon glyphicon-edit'
+				  						></span>
+
+				  					<span
+										data-type='podcast'
+				  						title='Deselect All'
+				  						class='nav-deselect-all nav-table-topright-item glyphicon glyphicon-unchecked checkbox-column'></span>
+				  					<span
+				  						data-type='podcast'
+				  						title='Select All'
+				  						class='nav-select-all nav-table-topright-item glyphicon glyphicon-check checkbox-column'
+				  						></span>
+
+				  					<span class='fl'>Podcasts</span><span id='podcast-count' class='fr'>(0)</span>
+				  				</div>
+								<table class='table table-striped sortable' >
+									<thead>
+										<tr>
+											<!-- <th data-defaultsort="asc">ID</th> -->
+											<th data-defaultsort="asc">Name</th>
+											<th>Priority</th>
+											<!-- <th>Subscribers</th>
+											<th>Views</th> -->
+											<th>Twitter</th>
+											<th>Last Uploaded On</th>
+										</tr>
+									</thead>
+									<tbody id='podcasts'>
+
+									</tbody>
+									<tfoot id='podcasts-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
 								</table>
 							</div>
 						</div><br/>
@@ -339,6 +456,23 @@
 
 
 				<p><b>Tips</b></p>-->
+				<hr/>
+				<p><b>Mailout Tips:</b></p>
+				<p><b>For press releases:</b> A surprising number of people use Gmail inbox. Your best effort should be made to get out of the 'promotions' tab. You can do this by:
+				<ul>
+					<li>Using only one image.</li>
+					<li>Asking a question.</li>
+					<li>Sending no more than 1 email per week.</li>
+				</ul>
+				<p><b>For general mailing lists:</b></p>
+				<ul>
+					<li>Give, give, give, ask -- don't always sell your game, give them something nice. </li>
+					<li>Write your emails like you're writing to your best friend. Treat your list like your own fan club.</li>
+					<li>See more useful info from <a href='http://howtomarketagame.com/2018/02/02/how-to-build-your-marketing-system/' target='new'>howtomarketyourgame.com</a></li>
+				</ul>
+				<hr/>
+
+				<p><b>Other tips:</b></p>
 				<p>Using this tool is hopefully pretty self-explanatory, so instead we decided it would be better of us to list a bunch of really useful articles that help you hone your story, and make you think a bit more about how you approach your PR and Marketing.</p><p> As below:</p>
 				<ul>
 					<li><a href='http://indiegames.com/2013/07/five_pr_tips_indies_really_nee.html' target='new'>Five PR tips indies really need</a> - Leigh Alexander, indiegames.com</li>
@@ -613,7 +747,7 @@
 
 		</div>
 
-		<!-- Mailout -->
+		<!-- Social -->
 		<div id='social-page' data-type-page='true' data-page='social'>
 			<div class='container mycontainer'>
 
@@ -644,12 +778,13 @@
 
 				<div id='social-homepage' class='row'>
 					<div class='col-sm-9'>
-						<p><b>Social Scheduler</b></p>
+						<p><b>Social</b></p>
 
 						<ul class="nav nav-pills" role='tablist'>
-							<li role="presentation" class="active"><a href="#timeline-pill" aria-controls="timeline-pill" role="tab" data-toggle="pill">Timeline</a></li>
+							<li role="presentation" class="active"><a href="#accounts-pill" aria-controls="accounts-pill" role="tab" data-toggle="pill">Accounts</a></li>
+							<li role="presentation" ><a href="#timeline-pill" aria-controls="timeline-pill" role="tab" data-toggle="pill">Timeline</a></li>
 							<li role="presentation"><a href="#uploads-pill" aria-controls="uploads-pill" role="tab" data-toggle="pill">Uploads</a></li>
-							<li role="presentation"><a href="#accounts-pill" aria-controls="accounts-pill" role="tab" data-toggle="pill">Accounts</a></li>
+
 						</ul>
 
 
@@ -658,7 +793,7 @@
 				</div>
 				<hr/>
 				<div class="tab-content">
-					<div role="tabpanel" id='timeline-pill' class='tab-pane active'>
+					<div role="tabpanel" id='timeline-pill' class='tab-pane'>
 						<div class='row'>
 							<div class='col-sm-3'>
 								<p><b>Timeline</b></p>
@@ -713,11 +848,11 @@
 						</div>
 					</div>
 
-					<div role="tabpanel" id='accounts-pill' class='tab-pane'>
+					<div role="tabpanel" id='accounts-pill' class='tab-pane active'>
 						<div class='row'>
 
-							<div class='col-sm-9'>
-								<p><b>Accounts</b></p>
+							<div class='col-sm-12'>
+								<p><b>Twitter Accounts</b></p>
 								<div id='social-homepage-twitteracc-list'>
 								</div>
 								<div id='social-homepage-twitteracc-list-none' style='display:none;'>
@@ -726,9 +861,23 @@
 								<div id='social-homepage-twitteracc-list-loading'>
 									<p>Loading...</p>
 								</div>
+
+								<br/><p><b>Facebook Accounts/Pages</b></p>
+								<div id='social-homepage-facebookacc-list'>
+								</div>
+								<div id='social-homepage-facebookacc-list-none' style='display:none;'>
+									<p>No linked accounts.</p>
+								</div>
+								<div id='social-homepage-facebookacc-list-loading'>
+									<p>Loading...</p>
+								</div>
+
 								<!-- <p><img src='images/email-twitter.png' /> @ashleygwinnell</p> -->
 								<!-- <p><img src='images/email-facebook.png' /> Force Of Habit (page)</p>-->
 							</div>
+						</div>
+						<hr/>
+						<div class='row'>
 							<div class='col-sm-3'>
 								<p><b>Add</b></p>
 								<?php
@@ -756,6 +905,12 @@
 									<p><button id='social-addtwitteraccount-submit' class='btn btn-primary'>Add</button> <button id='social-addtwitteraccount-cancel' class='btn btn-danger'>Cancel</button></p>
 								</div>
 
+							</div>
+							<div class='col-sm-3'>
+								<p><b>Tasks</b></p>
+								<div id='social-refresh-social-icons'>
+									<a onclick='impresslist.util.iframe("/includes/tasks/refresh-social-icons.php");' target='new'><button class='btn btn-primary'>Refresh Icons</button></a>
+								</div>
 
 
 							</div>
@@ -789,6 +944,10 @@
 						<p><b>Simple Mailouts</b></p>
 						<p>Send an email out to multiple contacts.</p>
 						<button id='nav-add-simplemailout' class='btn btn-primary'>Add</button>
+
+						<br/><br/>
+
+						<button id='nav-mailout-tips' class='btn btn-info' data-nav-page="help" href='javascript:;'>Tips</button>
 					</div>
 					<div class='col-sm-9'>
 						<div class='panel panel-default'>
@@ -1037,6 +1196,22 @@
 
 				</div>
 			</div>
+			<div class='container mycontainer'>
+				<div class="panel panel-default">
+					<div class="panel-heading">Audiences:</div>
+					<div class='padx pady oa'>
+						<div id='admin-audiences-list'>
+
+						</div>
+						<hr/>
+						<p><b>Add Audience</b></p>
+						<input id='nav-add-audience-name' type='text' class='fl form-control' placeholder='Name' style='width:100%;'/>
+						<button id='nav-add-audience' class='fr btn btn-success'>Add Audience</button>
+
+					</div>
+
+				</div>
+			</div>
 
 			<div class='container mycontainer'>
 				<div class="panel panel-default">
@@ -1105,6 +1280,6 @@
 
 		<div id='modals'></div>
 
-		<?php include_once("footer.html"); ?>
+		<?php require_once("footer.html"); ?>
 	</body>
 </html>

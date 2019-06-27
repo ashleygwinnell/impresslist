@@ -55,6 +55,33 @@ function getMIMEType($extension) {
 	}
 }
 
+function util_wouldEmailBeDuplicate($user_id, $utime, $from_email, $to_email, $subject, $contents) {
+	global $db;
+	$stmt = $db->prepare("SELECT id
+							FROM email
+							WHERE
+								user_id = :user_id AND
+								utime = :utime AND
+								from_email = :from_email AND
+								to_email = :to_email AND
+								subject = :subject AND
+								contents = :contents
+							ORDER BY id ASC
+							LIMIT 1;");
+	$stmt->bindValue(":user_id", 		$userid, 		Database::VARTYPE_INTEGER);
+	$stmt->bindValue(":utime",  		$utime, 		Database::VARTYPE_INTEGER);
+	$stmt->bindValue(":from_email",  	$from_email, 	Database::VARTYPE_STRING);
+	$stmt->bindValue(":to_email",  		$to_email, 		Database::VARTYPE_STRING);
+	$stmt->bindValue(":subject",  		$subject, 		Database::VARTYPE_STRING);
+	$stmt->bindValue(":contents",  		$contents, 		Database::VARTYPE_STRING);
+	//$stmt->bindValue(":id",  			$id, 			Database::VARTYPE_INTEGER);
+	$results = $stmt->execute();
+	if (count($results) > 0) {
+		return true;
+	}
+	return false;
+}
+
 $platformsForKeys = [
 	"steam" => "Steam",
 	"switch" => "Nintendo Switch"
@@ -353,6 +380,35 @@ function twitter_countFollowers($username)
 	//echo json_encode($twitter_content);
 	return $twitter_content->followers_count;
 }
+function twitter_listFollowingIds($username)
+{
+	global $twitter_oauthToken;
+	global $twitter_oauthSecret;
+	if (strlen($username) == 0) { return array(); }
+
+	$twitter_connection = twitter_getConnectionWithAccessToken($twitter_oauthToken, $twitter_oauthSecret);
+	$twitter_content = $twitter_connection->get("friends/ids", ['id' => $username ]);
+	if (isset($twitter_content->errors)) {
+		//print_r($twitter_content->errors);
+		return array();
+	}
+	return $twitter_content->ids;
+}
+function twitter_listFollowerIds($username, $offset = -1) {
+	global $twitter_oauthToken;
+	global $twitter_oauthSecret;
+	if (strlen($username) == 0) { return array(); }
+
+	$url = "followers/ids";
+	$twitter_connection = twitter_getConnectionWithAccessToken($twitter_oauthToken, $twitter_oauthSecret);
+	$twitter_content = $twitter_connection->get($url, array("screen_name" => $username, "cursor" => $offset));
+	if (isset($twitter_content->errors)) {
+		//print_r($twitter_content->errors);
+		return array();
+	}
+	return $twitter_content->ids;
+}
+
 function twitter_getUserId($username)
 {
 	global $twitter_oauthToken;
@@ -369,6 +425,27 @@ function twitter_getUserId($username)
 	return $twitter_content->id;
 }
 
+function twitter_getUserInfoByUsername($username) {
+	global $twitter_oauthToken;
+	global $twitter_oauthSecret;
+	$url = "users/show";
+	$twitter_connection = twitter_getConnectionWithAccessToken($twitter_oauthToken, $twitter_oauthSecret);
+	return $twitter_connection->get($url, array("screen_name" => $username));
+}
+function twitter_getUserInfo($id) {
+	global $twitter_oauthToken;
+	global $twitter_oauthSecret;
+	$url = "users/show";
+	$twitter_connection = twitter_getConnectionWithAccessToken($twitter_oauthToken, $twitter_oauthSecret);
+	return $twitter_connection->get($url, array("user_id" => $id));
+}
+function twitter_getUserInfos($ids = array()) {
+	global $twitter_oauthToken;
+	global $twitter_oauthSecret;
+	$url = "users/lookup";
+	$twitter_connection = twitter_getConnectionWithAccessToken($twitter_oauthToken, $twitter_oauthSecret);
+	return $twitter_connection->get($url, array("user_id" => implode($ids,",")));
+}
 function twitter_getUserInfoById($oauthtoken, $oauthsecret, $id) {
 	$url = "users/show";
 	$twitter_connection = twitter_getConnectionWithAccessToken($oauthtoken, $oauthsecret);
@@ -425,6 +502,21 @@ function twitter_postStatusWithImage($oauthtoken, $oauthsecret, $status, $imagef
 		"status" => $status,
 		"media_ids" => implode(",", $media_ids)
 	));
+}
+function twitter_util_unfollow($oauthAccountId, $unfollow_handle) {
+	global $db;
+	$account = db_singleOAuthTwitterById($db, $oauthAccountId);
+	if (is_null($account)) {
+		return "Invalid twitter account";
+	}
+
+	$url = "friendships/destroy";
+	$twitter_connection = twitter_getConnectionWithAccessToken($account['oauth_key'], $account['oauth_secret']);
+	$results = $twitter_connection->post($url, array("screen_name" => $unfollow_handle));
+	if (isset($results->errors)) {
+		return "Twitter Error: " . $results->errors[0]->message;
+	}
+	return $results;
 
 }
 function twitter_helpConfiguration() {
@@ -450,6 +542,35 @@ function twitter_helpConfigurationSave($config = false) {
 	$stmt->bindValue(":value", 	$rjson, 					Database::VARTYPE_STRING);
 	$stmt->bindValue(":key",  	"twitter_configuration", 	Database::VARTYPE_STRING);
 	return $stmt->execute();
+}
+
+function twitter_util_scrape_relationships($id, $username) {
+	global $db;
+	$friends = twitter_listFollowingIds($username);
+	if (count($friends) == 0) {
+		//echo "Rate limit exceeded.";
+		return false;
+	}
+
+	$followers = twitter_listFollowerIds($username);
+	if (count($followers) == 0) {
+		//echo "Rate limit exceeded.";
+		return false;
+	}
+
+	$stmt = $db->prepare("UPDATE oauth_twitteracc SET
+						twitter_friends = :friends,
+						twitter_followers = :followers,
+						lastscrapedon = :curtime
+						WHERE id = :id
+						AND removed = 0
+						LIMIT 1;");
+	$stmt->bindValue(":friends", 	json_encode($friends),		Database::VARTYPE_STRING);
+	$stmt->bindValue(":followers", 	json_encode($followers), 	Database::VARTYPE_STRING);
+	$stmt->bindValue(":curtime", 	time(), 					Database::VARTYPE_INTEGER);
+	$stmt->bindValue(":id", 		$id, 						Database::VARTYPE_INTEGER);
+	$done = $stmt->execute();
+	return true;
 }
 
 function util_get_github_releases() {
@@ -1057,6 +1178,72 @@ function user_updateActivity($user_id) {
 	$stmt->execute();
 }
 
+function listtags() {
+	$tags = array(
+		"todo" => array( "name" => "Todo", "color" => "#ff0066", "autokeywords" => array("to do") ),
+		"ood" => array( "name" => "Out Of Date", "color" => "#aaaa00", "autokeywords" => array("outofdate") ),
+		"press" => array( "name" => "Press", "color" => "#770077", "autokeywords" => array("press") ),
+		"industry" => array( "name" => "Biz Press", "color" => "#770077", "autokeywords" => array("industry") ),
+		"xbox" => array( "name" => "Xbox", "color" => "#9bc848", "autokeywords" => array("xbox", "microsoft", "xbone") ),
+		"playstation" => array( "name" => "PlayStation", "color" => "#2E6DB4", "autokeywords" => array("playstationn", "ps3", "ps4", "sony") ),
+		"switch" => array( "name" => "Nintendo Switch", "color" => "#ff0000", "autokeywords" => array("switch", "nintendo", "nindie") ),
+		"ios" => array( "name" => "iOS", "color" => "#3498DB", "autokeywords" => array("ios", "iphone", "itunes", "ipad") ),
+		"android" => array( "name" => "Android", "color" => "#009900", "autokeywords" => array("android", "google play", "play store") ),
+
+		"pc" => array( "name" => "PC", "color" => "#999999", "autokeywords" => array("pc") ),
+		"mac" => array( "name" => "Mac", "color" => "#999999", "autokeywords" => array("mac", "macos", "osx") ),
+		"linux" => array( "name" => "Linux", "color" => "#999999", "autokeywords" => array("linux", "ubuntu", "debian") ),
+		"mobile" => array( "name" => "Mobile", "color" => "#999999", "autokeywords" => array("mobile", "pocket", "app") ),
+		"console" => array( "name" => "Console", "color" => "#999999", "autokeywords" => array("console") ),
+		"kids" => array( "name" => "Kids", "color" => "#999999", "autokeywords" => array("kids") ),
+		"retro" => array( "name" => "Retro", "color" => "#999999", "autokeywords" => array("commodore", "spectrum", "c64", "amstrad", "sinclair", "8bit", "8-bit", "16bit", "16-bit", "snes", "super nintendo", "nes", "master system", "sega", "atari", "pixel") ),
+		"localmulti" => array( "name" => "Local Multiplayer", "color" => "#999999", "autokeywords" => array("couch", "co-op", "co op", "local multi", "local-multi", "4 player", "2 player") ),
+		"indie" => array( "name" => "Indie", "color" => "#999999", "autokeywords" => array("indie") ),
+		"blog" => array( "name" => "Blog", "color" => "#999999", "autokeywords" => array("blog") ),
+		"freelance" => array( "name" => "Freelance", "color" => "#777777", "autokeywords" => array("freelance", "freelancer", "contract", "contractor") )
+
+	);
+	return $tags;
+}
+function fixtags($tagsString) {
+	$tags = array_keys(listtags());
+	$temps = explode(",", $tagsString);
+	// echo $tagsString . "<br>";
+	// echo $temps . "<br>";
+	// remove empty tags.
+	for($j = 0; $j < count($temps); $j++) {
+		if (strlen($temps[$j]) == 0) {
+			array_splice($temps, $j, 1);
+			$j = 0;
+		}
+
+	}
+	// trim whitespace
+	for($j = 0; $j < count($temps); $j++) {
+		$temps[$j] = trim($temps[$j]);
+	}
+
+	return implode($temps, ",");
+}
+const DEFAULT_TAGS = "todo";
+const DEFAULT_LANG = "en";
+const DEFAULT_COUNTRY = "us";
+
+function listlanguages() {
+	$c = array(
+		"en" => "English",
+		"fr" => "French",
+		"it" => "Italian",
+		"de" => "German",
+		"es" => "Spanish (EU)",
+		"es" => "Spanish (MX)",
+		"pt" => "Portuguese (EU)",
+		"pt" => "Portuguese (BR)",
+		"jp" => "Japanese",
+		"zh" => "Chinese"
+	);
+	return $c;
+}
 
 function listcountries() {
 	$c = array(
@@ -1313,7 +1500,8 @@ function listcountries() {
 	return $c;
 }
 function util_listNintendoRegions() {
-	return array('us' => 'Americas',
+	return array(
+		'us' => 'Americas',
 		'eu' => 'Europe &amp; South Africa',
 		'au' => 'Australia &amp; New Zealand',
 		'jp' => 'Japan'
@@ -1350,6 +1538,13 @@ function urlformat($str) {
 	$str = str_replace("&", "and", $str);
 	$str = str_replace(array("[", "]", "!", '"', "'", ".", ",", ":", "(", ")"), "", $str);
 	return $str;
+}
+
+function decodeEmoticons($src) {
+    $replaced = preg_replace("/\\\\u([0-9A-F]{1,4})/i", "&#x$1;", $src);
+    $result = mb_convert_encoding($replaced, "UTF-16", "HTML-ENTITIES");
+    $result = mb_convert_encoding($result, 'utf-8', 'utf-16');
+    return $result;
 }
 
 ?>

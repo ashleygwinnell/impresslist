@@ -52,9 +52,8 @@ h3 {
 #importtool-page { display:none; }
 
 /* Override text input for tags */
-.bootstrap-tagsinput {
+/*.bootstrap-tagsinput {
 	min-height:34px;
-	/*height:34px;*/
 	display:none;
 }
 .bootstrap-tagsinput input {
@@ -69,6 +68,13 @@ h3 {
 }
 .bootstrap-tagsinput[disabled] span[data-role="remove"] {
 	display:none;
+}*/
+.bootstrap-tagsinput {
+	width:100%;
+}
+.bootstrap-tagsinput pre {
+	background-color:white;
+	width:100%;
 }
 
 /* OK. That jquery plugin was naff. Roll your own simple solution. */
@@ -158,3 +164,8 @@ h3 {
 	cursor:pointer;
 }
 
+.social-account-list-item {
+	clear:both;
+	/* overflow:auto;*/
+	padding:8px;
+}

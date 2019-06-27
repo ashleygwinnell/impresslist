@@ -113,6 +113,7 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 			}
 
+			// person and personPublications
 			if (
 				(($count_recipients_1 == 1 && $count_recipients_2 == 0) || ($count_recipients_1 == 0 && $count_recipients_2 == 1)) && $count_recipients_3 == 0 && $count_recipients_4 == 0
 			)
@@ -122,32 +123,15 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 				$result = (count($rs2arr) > 0)?$rs2arr[0]:$rs3arr[0];
 				$person_id = (count($rs2arr) > 0)?$rs2arr[0]['id']:$rs3arr[0]['person'];
 
+				$would_be_dupe = util_wouldEmailBeDuplicate($userResults[0]['id'], $in[$i]['timestamp'], $from, $to, $in[$i]['subject'], $in[$i]['contents']);
 
-				// make sure this email isn't already in there!
-				$stmt5 = $db->prepare("SELECT * FROM email WHERE user_id = :user_id AND
-																person_id = :person_id AND
-																utime = :utime AND
-																to_email = :to_email AND
-																from_email = :from_email AND
-																subject = :subject AND
-																contents = :contents;");
-				$stmt5->bindValue(":user_id", $userResults[0]['id'], Database::VARTYPE_INTEGER);
-				$stmt5->bindValue(":person_id", $person_id, Database::VARTYPE_INTEGER);
-				$stmt5->bindValue(":utime", $in[$i]['timestamp'], Database::VARTYPE_INTEGER);
-				$stmt5->bindValue(":from_email", $from, Database::VARTYPE_STRING);
-				$stmt5->bindValue(":to_email", $to, Database::VARTYPE_STRING);
-				$stmt5->bindValue(":subject", $in[$i]['subject'], Database::VARTYPE_STRING);
-				$stmt5->bindValue(":contents", $in[$i]['contents'], Database::VARTYPE_STRING);
-				$rs5 = $stmt5->query();
-
-				$count_email_dups = count($rs5);
-
-				if ($count_email_dups > 0) {
-					echo "already in database (" . $count_email_dups . ") <br/>";
+				if ($would_be_dupe) {
+					echo "already in database (dupe: " . $would_be_dupe . ") / deleting! <br/>";
 					imap_delete($imap_connection, $in[$i]['id']);
 				//	print_r($result);
 				} else {
 					echo "add email to database<br/>";
+					echo "dupe? " . (($would_be_dupe)?"true":"false") . "<br/>";
 
 					$stmt = $db->prepare("INSERT INTO email (id, 	user_id, 	person_id, 	utime, 	from_email,  to_email, 	subject,  contents, unmatchedrecipient   )
 													VALUES  (NULL, :user_id, 	:person_id, :utime, :from_email, :to_email, :subject, :contents, :unmatchedrecipient );");
@@ -191,6 +175,87 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 			} else if ($count_recipients_1 >= 1 && $count_recipients_2 >= 1) {
 				echo "Cannot add email to database. the recipient's email was found twice and the system got confused...<br/>";
+			}
+
+			// publications
+			if ($count_recipients_1 == 0 && $count_recipients_2 == 0 && $count_recipients_3 > 0 && $count_recipients_4 == 0) {
+				if ($count_recipients_3 > 1) {
+					echo "RECIPIENT (PUBLICATION) EXISTS TWICE<br/>";
+				}
+				else {
+					echo "RECIPIENT (PUBLICATION) EXISTS. ADD JUST THE EMAIL.<br/>";
+					//lastcontacted
+					$result = $rs4arr[0]; 				//(count($rs4arr) > 0)?$rs2arr[0]:$rs3arr[0];
+					$publication_id = $result['id']; 	// (count($rs4arr) > 0)?$rs2arr[0]['id']:$rs3arr[0]['person'];
+
+					$would_be_dupe = util_wouldEmailBeDuplicate($userResults[0]['id'], $in[$i]['timestamp'], $from, $to, $in[$i]['subject'], $in[$i]['contents']);
+
+					if ($would_be_dupe) {
+						echo "already in database (dupe: " . $would_be_dupe . ") / deleting! <br/>";
+						imap_delete($imap_connection, $in[$i]['id']);
+					} else {
+						echo "Adding...<br/>";
+
+						$stmt = $db->prepare("INSERT INTO email (id, 	user_id, 	publication_id, 	utime, 	from_email,  to_email, 	subject,  contents, unmatchedrecipient   )
+														VALUES  (NULL, :user_id, 	:publication_id, :utime, :from_email, :to_email, :subject, :contents, :unmatchedrecipient );");
+						$stmt->bindValue(":user_id", $userResults[0]['id'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":publication_id", $publication_id, Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":utime", $in[$i]['timestamp'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":from_email", $from, Database::VARTYPE_STRING);
+						$stmt->bindValue(":to_email", $to, Database::VARTYPE_STRING);
+						$stmt->bindValue(":subject", $in[$i]['subject'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":contents", $in[$i]['contents'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":unmatchedrecipient", 0, Database::VARTYPE_INTEGER);
+						$stmt->execute();
+
+						// update "last contacted" for this publication.
+						$stmt = $db->prepare("UPDATE publication SET lastcontacted = :lastcontacted, lastcontactedby = :lastcontactedby WHERE id = :id LIMIT 1; ");
+						$stmt->bindValue(":id", $publication_id, Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":lastcontacted", $in[$i]['timestamp'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":lastcontactedby", $userResults[0]['id'], Database::VARTYPE_INTEGER);
+						$stmt->execute();
+					}
+				}
+			}
+
+			// youtubers
+			if ($count_recipients_1 == 0 && $count_recipients_2 == 0 && $count_recipients_3 == 0 && $count_recipients_4 > 0) {
+				if ($count_recipients_4 > 1) {
+					echo "RECIPIENT (YOUTUBER) EXISTS TWICE<br/>";
+				}
+				else {
+					echo "RECIPIENT (YOUTUBER) EXISTS. ADD JUST THE EMAIL.<br/>";
+					$result = $rs5arr[0];
+					$youtuber_id = $result['id'];
+
+					$would_be_dupe = util_wouldEmailBeDuplicate($userResults[0]['id'], $in[$i]['timestamp'], $from, $to, $in[$i]['subject'], $in[$i]['contents']);
+
+					if ($would_be_dupe) {
+						echo "already in database (dupe: " . $would_be_dupe . ") / deleting! <br/>";
+						imap_delete($imap_connection, $in[$i]['id']);
+					} else {
+						echo "Adding...<br/>";
+
+						$stmt = $db->prepare("INSERT INTO email (id, 	user_id, 	youtuber_id, 	utime, 	from_email,  to_email, 	subject,  contents, unmatchedrecipient   )
+														VALUES  (NULL, :user_id, 	:youtuber_id, :utime, :from_email, :to_email, :subject, :contents, :unmatchedrecipient );");
+						$stmt->bindValue(":user_id", $userResults[0]['id'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":youtuber_id", $youtuber_id, Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":utime", $in[$i]['timestamp'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":from_email", $from, Database::VARTYPE_STRING);
+						$stmt->bindValue(":to_email", $to, Database::VARTYPE_STRING);
+						$stmt->bindValue(":subject", $in[$i]['subject'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":contents", $in[$i]['contents'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":unmatchedrecipient", 0, Database::VARTYPE_INTEGER);
+						$stmt->execute();
+
+						// update "last contacted" for this youtuber.
+						$stmt = $db->prepare("UPDATE youtuber SET lastcontacted = :lastcontacted, lastcontactedby = :lastcontactedby WHERE id = :id; ");
+						$stmt->bindValue(":id", $youtuber_id, Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":lastcontacted", $in[$i]['timestamp'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":lastcontactedby", $userResults[0]['id'], Database::VARTYPE_INTEGER);
+						$stmt->execute();
+					}
+				}
 			}
 
 			//print_r($in[$i]);

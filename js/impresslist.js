@@ -854,6 +854,24 @@ Coverage = function(data) {
 		}
 	}
 
+Audience = function(data) {
+	DBO.call(this, data);
+}
+	Audience.prototype = Object.create(DBO.prototype);
+	Audience.prototype.constructor = Audience;
+	Audience.prototype.init = function(data) {
+		DBO.prototype.init.call(this, data);
+		this.id = parseInt(this.field('id'));
+		this.name = this.field('name');
+	}
+	Audience.prototype.onAdded = function() {
+		var html = "<div data-audience-container data-audience-id='" + this.id + "' style='padding:5px;'> \
+						<span data-field='name'>" + this.name + "</span> \
+					</div>";
+		$('#admin-audiences-list').append(html);
+	}
+
+
 Game = function(data) {
 	DBO.call(this, data);
 }
@@ -931,6 +949,46 @@ User = function(data) {
 		});
 		$('#user-change-project-close').click(function() {
 			$('.changeproject_modal').modal("hide");
+		});
+	}
+	User.prototype.openChangeAudience = function() {
+		var curAudience = impresslist.config.user.audience;
+		var html = "<div class='modal fade changeaudience_modal' tabindex='-1' role='dialog'> \
+						<div class='modal-dialog'> \
+							<div class='modal-content' style='padding:5px;'> \
+								<div style='min-height:100px;padding:20px;'> \
+									<h3>Change Audience</h3> \
+									<form role='form' class='oa' onsubmit='return false;'>	\
+										<div class='form-group'>\
+											<select id='user-change-audience-new' data-audience-id='" + this.id + "' data-input-field='id' class='form-control'>";
+											for(var i = 0; i < impresslist.audiences.length; i++) {
+												html += "<option value='" + impresslist.audiences[i].id + "' " + ((impresslist.audiences[i].id==curAudience)?"selected='true'":"") + ">" + impresslist.audiences[i].name + "</option>\n";
+											}
+		html +=	"							</select>\
+										</div>\
+										<div class='fl'> \
+											<button id='user-change-audience-submit' type='submit' class='btn btn-primary'>Save</button> \
+											&nbsp;<button id='user-change-audience-close' type='submit' class='btn btn-default'>Close</button> \
+										</div>\
+									</form> \
+								</div>\
+							</div>\
+						</div>\
+					</div>";
+		$('#modals').html(html);
+
+		var thiz = this;
+		$('#user-change-audience-submit').click(function() {
+			var newProject = $('#user-change-audience-new').val();
+			console.log(newProject);
+			API.userChangeAudience(thiz, newProject, function(){
+				window.location.href = window.location.href;
+			});
+
+			$('.changeaudience_modal').modal("hide");
+		});
+		$('#user-change-audience-close').click(function() {
+			$('.changeaudience_modal').modal("hide");
 		});
 	}
 	User.prototype.openChangePassword = function() {
@@ -1212,6 +1270,20 @@ YouTuberBatchModal = function() {
 	}
 
 
+Podcast = function(data) {
+	DBO.call(this, data);
+}
+	Podcast.prototype = Object.create(DBO.prototype);
+	Podcast.prototype.constructor = Podcast;
+	Podcast.prototype.init = function(data) {
+		DBO.prototype.init.call(this, data);
+		this.id = parseInt(this.field('id'));
+		this.name = this.field('name');
+
+
+	}
+
+
 TwitchChannel = function(data) {
 	DBO.call(this, data);
 }
@@ -1306,6 +1378,10 @@ TwitchChannel = function(data) {
 											<label for='email'>Notes:&nbsp; </label> \
 											<textarea data-twitchchannel-id='" + this.id + "' data-input-field='notes' class='form-control' style='height:100px;'>" + this.field('notes') + "</textarea>\
 										</div>\
+										<div class='form-group'>\
+											<label for='tags'>Tags:</label><Br/> \
+											<input id='twitchchannel-modal-tagsinput' data-twitchchannel-id='" + this.id + "' data-input-field='tags' class='form-control' type='text' value='" + impresslist.util.tagStringToInputField(this.field('tags')) + "' data-role=\"tagsinput\" />\
+										</div>\
 										<div class='fl'> \
 											<button id='save_twitchchannelId" + this.id + "' type='submit' class='btn btn-primary'>Save</button>";
 			html += "						&nbsp;<button id='close_twitchchannelId" + this.id + "' type='submit' class='btn btn-default'>Close</button>";
@@ -1319,6 +1395,7 @@ TwitchChannel = function(data) {
 						</div>\
 					</div>";
 		$('#modals').html(html);
+		$('#twitchchannel-modal-tagsinput').tagsinput(impresslist.config.misc.tagSearchConfig);
 
 		var twitchchannel = this;
 		$("#save_twitchchannelId" + this.id).click(function() { twitchchannel.save(); });
@@ -1379,10 +1456,13 @@ TwitchChannel = function(data) {
 		ret = this.name.toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
-		ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
+		ret = this.field('tags').indexOf(text) != -1;
 		if (ret) { return ret; }
 
 		if ($('#search-option-full').is(':checked')) {
+			ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
+			if (ret) { return ret; }
+
 			ret = this.fields['description'].toLowerCase().indexOf(text) != -1;
 			if (ret) { return ret; }
 		}
@@ -1397,8 +1477,9 @@ TwitchChannel = function(data) {
 		var email   = $("[data-twitchchannel-id=" + this.id + "][data-input-field='email']").val();
 		var twitter = $("[data-twitchchannel-id=" + this.id + "][data-input-field='twitter']").val();
 		var notes   = $("[data-twitchchannel-id=" + this.id + "][data-input-field='notes']").val();
+		var tags = impresslist.util.tagInputFieldToString($('#twitchchannel-modal-tagsinput').val());
 
-		API.saveTwitchChannel(this, channel, email, twitter, notes);
+		API.saveTwitchChannel(this, channel, email, twitter, notes, tags);
 	};
 	TwitchChannel.prototype.saveWith = function(channel, nameOverride) {
 		//API.saveTwitchChannel(this, channel, nameOverride, "", "", "");
@@ -1550,6 +1631,10 @@ Youtuber = function(data) {
 											<label for='email'>Notes:&nbsp; </label> \
 											<textarea data-youtuber-id='" + this.id + "' data-input-field='notes' class='form-control' style='height:100px;'>" + this.field('notes') + "</textarea>\
 										</div>\
+										<div class='form-group'>\
+											<label for='tags'>Tags:</label><Br/> \
+											<input id='youtuber-modal-tagsinput' data-youtuber-id='" + this.id + "' data-input-field='tags' class='form-control' type='text' value='" + impresslist.util.tagStringToInputField(this.field('tags')) + "' data-role=\"tagsinput\" />\
+										</div>\
 										<div class='fl'> \
 											<button id='save_youtuberId" + this.id + "' type='submit' class='btn btn-primary'>Save</button>";
 			html += "						&nbsp;<button id='close_youtuberId" + this.id + "' type='submit' class='btn btn-default'>Close</button>";
@@ -1563,6 +1648,7 @@ Youtuber = function(data) {
 						</div>\
 					</div>";
 		$('#modals').html(html);
+		$('#youtuber-modal-tagsinput').tagsinput(impresslist.config.misc.tagSearchConfig);
 
 		var youtuber = this;
 		$("#save_youtuberId" + this.id).click(function() { youtuber.save(); });
@@ -1623,10 +1709,13 @@ Youtuber = function(data) {
 		ret = this.name.toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
-		ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
+		ret = this.field('tags').indexOf(text) != -1;
 		if (ret) { return ret; }
 
 		if ($('#search-option-full').is(':checked')) {
+			ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
+			if (ret) { return ret; }
+
 			ret = this.fields['description'].toLowerCase().indexOf(text) != -1;
 			if (ret) { return ret; }
 		}
@@ -1643,11 +1732,12 @@ Youtuber = function(data) {
 		var twitter = $("[data-youtuber-id=" + this.id + "][data-input-field='twitter']").val();
 		var notes   = $("[data-youtuber-id=" + this.id + "][data-input-field='notes']").val();
 		var country = $("[data-youtuber-id='" + this.id + "'][data-input-field='country']").val();
+		var tags = impresslist.util.tagInputFieldToString($('#youtuber-modal-tagsinput').val());
 
-		API.saveYoutuber(this, channel, nameOverride, email, twitter, notes, country);
+		API.saveYoutuber(this, channel, nameOverride, email, twitter, notes, country, tags);
 	};
 	Youtuber.prototype.saveWith = function(channel, nameOverride) {
-		API.saveYoutuber(this, channel, nameOverride, "", "", "", "");
+		API.saveYoutuber(this, channel, nameOverride, "", "", "", "", "");
 	}
 	Youtuber.prototype.savePriority = function() {
 		var priority = $("[data-youtuber-id='" + this.id + "'][data-input-field='priority']").val();
@@ -2214,9 +2304,11 @@ Person = function(data) {
 		var twitter = $("[data-person-id=" + this.id + "][data-input-field='twitter']").val();
 		var notes = $("[data-person-id=" + this.id + "][data-input-field='notes']").val();
 		var country = $("[data-person-id='" + this.id + "'][data-input-field='country']").val();
+		var language = $("[data-person-id='" + this.id + "'][data-input-field='lang']").val();
+		var tags = impresslist.util.tagInputFieldToString($('#person-modal-tagsinput').val());
 		var outofdate = $("[data-person-id=" + this.id + "][data-input-field='outofdate']").is(':checked');
 
-		API.savePerson(this, firstname, surnames, email, twitter, notes, country, outofdate);
+		API.savePerson(this, firstname, surnames, email, twitter, notes, country, language, tags, outofdate);
 	}
 	Person.prototype.savePriority = function() {
 		var priority = $("[data-person-id='" + this.id + "'][data-input-field='priority']").val();
@@ -2343,8 +2435,8 @@ Person = function(data) {
 									</div>\
 									<div class='row'>\
 										<div class='form-group col-md-3'>\
-											<label for='email'>Language:</label>";
-											var language = this.field('language');
+											<label for='language'>Language:</label>";
+											var language = this.field('lang');
 											html += "	<select data-person-id='" + this.id + "' data-input-field='lang' class='form-control'>\
 															<option value='en' " + ((language=='en')?"selected='true'":"") + ">English</option>\
 															<option value='fr' " + ((language=='fr')?"selected='true'":"") + ">French</option>\
@@ -2354,9 +2446,13 @@ Person = function(data) {
 															<option value='pt' " + ((language=='pt')?"selected='true'":"") + ">Portuguese</option>\
 														</select>";
 				html += "				</div>\
-											<div class='form-group col-md-3'>\
-												" + this.countrySelectHtml('person') + "\
-											</div>\
+										<div class='form-group col-md-3'>\
+											" + this.countrySelectHtml('person') + "\
+										</div>\
+										<div class='form-group col-md-6'>\
+											<label for='tags'>Tags:</label><Br/> \
+											<input id='person-modal-tagsinput' data-person-id='" + this.id + "' data-input-field='tags' class='form-control' type='text' value='" + impresslist.util.tagStringToInputField(this.field('tags')) + "' data-role=\"tagsinput\" />\
+										</div>\
 									</div>\
 									<div class='form-group'>\
 										<label class='checkbox-inline'><input data-person-id='" + this.id + "' data-input-field='outofdate' type='checkbox' " + (((this.field('outofdate')==1)?"checked":"")) + "><strong>Out of date?</strong></label>\
@@ -2548,6 +2644,8 @@ Person = function(data) {
 						</div>\
 					</div>";
 		$('#modals').html(html);
+
+		$('#person-modal-tagsinput').tagsinput(impresslist.config.misc.tagSearchConfig);
 
 
 		// Button actions
@@ -3013,8 +3111,13 @@ Person = function(data) {
 		ret = this.fullname().toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
-		ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
+		ret = this.field('tags').indexOf(text) != -1;
 		if (ret) { return ret; }
+
+		if ($('#search-option-full').is(':checked')) {
+			ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
+			if (ret) { return ret; }
+		}
 
 		ret = this.fields['email'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
@@ -3116,7 +3219,11 @@ Publication = function(data) {
 										</div>\
 										<div class='form-group'>\
 											<label for='email'>Notes:&nbsp; </label> \
-											<textarea data-publication-id='" + this.id + "' data-input-field='notes' class='form-control' style='height:100px;'>" + this.field('notes') + "</textarea>\
+											<textarea data-publication-id='" + this.id + "' data-input-field='notes' class='form-control' style='height:50px;'>" + this.field('notes') + "</textarea>\
+										</div>\
+										<div class='form-group'>\
+											<label for='tags'>Tags:</label><Br/> \
+											<input id='publication-modal-tagsinput' data-publication-id='" + this.id + "' data-input-field='tags' class='form-control' type='text' value='" + impresslist.util.tagStringToInputField(this.field('tags')) + "' data-role=\"tagsinput\" />\
 										</div>\
 										<div class='fl'> \
 											<button id='save_publicationId" + this.id + "' type='submit' class='btn btn-primary'>Save</button>";
@@ -3131,6 +3238,7 @@ Publication = function(data) {
 						</div>\
 					</div>";
 		$('#modals').html(html);
+		$('#publication-modal-tagsinput').tagsinput(impresslist.config.misc.tagSearchConfig);
 
 		var publication = this;
 		$("#save_publicationId" + this.id).click(function() { publication.save(); });
@@ -3150,8 +3258,9 @@ Publication = function(data) {
 		var twitter = $("[data-publication-id=" + this.id + "][data-input-field='twitter']").val();
 		var notes = $("[data-publication-id=" + this.id + "][data-input-field='notes']").val();
 		var country = $("[data-publication-id=" + this.id + "][data-input-field='country']").val();
+		var tags = impresslist.util.tagInputFieldToString($('#publication-modal-tagsinput').val());
 
-		API.savePublication(this, name, url, email, rssfeedurl, twitter, notes, country);
+		API.savePublication(this, name, url, email, rssfeedurl, twitter, notes, country, tags);
 	}
 	Publication.prototype.savePriority = function() {
 		var priority = $("[data-publication-id='" + this.id + "'][data-input-field='priority']").val();
@@ -3245,8 +3354,13 @@ Publication = function(data) {
 		ret = this.name.toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
 
-		ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
+		ret = this.field('tags').indexOf(text) != -1;
 		if (ret) { return ret; }
+
+		if ($('#search-option-full').is(':checked')) {
+			ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
+			if (ret) { return ret; }
+		}
 
 		ret = this.fields['url'].toLowerCase().indexOf(text) != -1;
 		if (ret) { return ret; }
@@ -3326,13 +3440,128 @@ OAuthTwitterAccount = function(data) {
 		}
 	}
 	OAuthTwitterAccount.prototype.createItem = function(fromInit) {
+		var followers = 0;
+		var following = 0;
+		try { followers = JSON.parse(this.field('twitter_followers')).length; } catch(e) {}
+		try { following = JSON.parse(this.field('twitter_friends')).length; } catch(e) {}
+
+		console.log(followers);
+		console.log(following);
 		var html = "";
-		html += "<p id='social-twitteracc-" + this.id + "'>";
-		html += "	<img src='" + this.field("twitter_image") + "' /> <a href='http://twitter.com/" + this.field("twitter_name") + "' target='new'>@" + this.field("twitter_name") + "</a>";
-		html += "	<button id='social-remove-twitteracc-" + this.id + "' class='btn btn-sm btn-danger fr'>X</button>";
-		html += "</p>";
+		html += "<div class='social-account-list-item' id='social-twitteracc-" + this.id + "'>";
+		html += "	<div class='fl'><img src='" + this.field("twitter_image") + "' style='width:60px;'/></div>";
+		html += "	<div class='fl' style='padding-left:10px;'>"
+					 + this.field("twitter_name") + "<br/> "
+					 + "<a href='http://twitter.com/" + this.field("twitter_handle") + "' target='new'>@" + this.field("twitter_handle") + "</a><br/>"
+					 + "Followers: <b>" + followers + "</b> Following: <b>" + following + "</b>"
+					+ "</div>";
+
+		html += "	<button id='social-remove-twitteracc-" + this.id + "' class='btn btn-danger fr'>X</button>";
+		//html += "	<button id='' data-years='1' class='btn btn-sm btn-info fr'>Inactive Followings (1Y)</button>";
+		//html += "	<button id='' class='btn btn-sm btn-info fr'>Inactive Followings (0.5Y)</button>";
+		//html += "	<button id='' class='btn btn-sm btn-info fr'>Unrequited Followings</button> ";
+
+		html += "	<div class='fr dropdown' style='margin-right:8px;'> \
+		  				<button class='btn btn-primary dropdown-toggle' type='button' data-toggle='dropdown'>View Tools <span class='caret'></span></button> \
+					  	<ul class='dropdown-menu dropdown-menu-right'> \
+					    	<li><a href='javascript:;' id='social-twitteracc-" + this.id + "-unrequited-followings' >Unrequited Followings</a></li> \
+					    	<li><a href='javascript:;' id='social-twitteracc-" + this.id + "-inactive-followings-1' data-years='1'>Inactive Followings (1 year)</a></li> \
+					    	<li><a href='javascript:;' id='social-twitteracc-" + this.id + "-inactive-followings-half' data-years='0.5'>Inactive Followings (6 mths)</a></li> \
+					    	<li><a href='javascript:;' id='social-twitteracc-" + this.id + "-inactive-followings-qt' data-years='0.25'>Inactive Followings (3 mths)</a></li> \
+					  	</ul> \
+					</div>";
+
+		html += "</div>";
 		$('#social-homepage-twitteracc-list').append(html);
+
+		var th = this;
+		$("#social-twitteracc-" + this.id + "-inactive-followings-1").click(function(){
+			th.showInactiveFollowings($(this).attr("data-years"));
+		});
+		$("#social-twitteracc-" + this.id + "-inactive-followings-half").click(function(){
+			th.showInactiveFollowings($(this).attr("data-years"));
+		});
+		$("#social-twitteracc-" + this.id + "-inactive-followings-qt").click(function(){
+			th.showInactiveFollowings($(this).attr("data-years"));
+		});
+
+		$("#social-twitteracc-" + this.id + "-unrequited-followings").click(function(){
+			th.showUnrequitedFollowings();
+		});
+
+
 		this.update();
+	}
+
+	OAuthTwitterAccount.prototype.accountListModal = function(title) {
+		var height = Math.round(window.innerHeight * 0.8);
+		var html = "";
+		html += "	<div id='twitterAccountsList_modal' class='modal fade' tabindex='-1' role='dialog'> \
+						<div class='modal-dialog'> \
+							<div class='modal-content'> \
+								<div style='min-height:" + height + "px;padding:20px;'>";
+		html += "					<h3>" + title + "</h3>";
+		html += "					<h4>" + this.field('twitter_name') + " (@" + this.field('twitter_handle') + ")</h4>";
+		html += "					<div id='twitterAccountsList_data'></div>";
+		html += "				</div> \
+							</div> \
+						</div> \
+					</div>";
+		$('#modals').html(html);
+
+		$('#twitterAccountsList_modal').modal('show');
+	}
+	OAuthTwitterAccount.prototype.accountListModalSetTotal = function(count) {
+		var html = "<b>Total: " + count + "</b><br/><br/>";
+		$('#twitterAccountsList_data').append(html);
+	}
+	OAuthTwitterAccount.prototype.accountListModalAddAccount = function(row) {
+		var html = "<div id='twitter-acc-row-" + row.twitter_id + "' class='oa' style='padding:4px;'> \
+						<div class='fl'><img src='" + row.twitter_image + "' style='display:inline-block;width:75px;padding-right:6px;'/></div> \
+						<div class='fl' style='width:385px;'> \
+							<b>" + row.twitter_name + "</b> (<a href='http://twitter.com/" + row.twitter_handle + "' target='new'>@" + row.twitter_handle + "</a>)<br/> \
+							\"<i>" + row.twitter_bio.substr(0,127) + "...</i>\"<br/> \
+							" + impresslist.util.relativetime_contact(row.twitter_lastpostedon) + "\
+						</div>\
+						<button id='unfollow-twitter-account' data-from-id='" + this.id + "' data-from-handle='" + this.field('twitter_handle') + "' data-handle='" + row.twitter_handle + "' class='btn btn-sm btn-danger fr'>Unfollow</button>\
+					</div>";
+		$('#twitterAccountsList_data').append(html);
+
+		$('#unfollow-twitter-account[data-from-handle=' + this.field('twitter_handle') + '][data-handle=' + row.twitter_handle + ']').click(function(e) {
+			console.log('Unfollow', $(this).attr('data-from-handle'), $(this).attr('data-handle'));
+			$(this).prop("disabled",true);
+
+			API.doOAuthTwitterAccountUnfollow(
+				$(this).attr('data-from-id'),
+				$(this).attr('data-handle'),
+				function(data) {
+					$('#twitter-acc-row-' + row.twitter_id).fadeOut();
+				},
+				function(){
+					$(this).prop("disabled",false);
+				}
+			);
+		})
+	}
+	OAuthTwitterAccount.prototype.showInactiveFollowings = function(years) {
+		var th = this;
+		this.accountListModal("Inactive Followings (" + years + " years)");
+		API.getOAuthTwitterAccountInactiveFollowings(this.field("twitter_handle"), years, function(data) {
+			th.accountListModalSetTotal(data.accounts.length);
+			for(var i = 0; i < data.accounts.length; i++) {
+				th.accountListModalAddAccount(data.accounts[i]);
+			}
+		}, null);
+	}
+	OAuthTwitterAccount.prototype.showUnrequitedFollowings = function() {
+		var th = this;
+		this.accountListModal("Unrequited Followings");
+		API.getOAuthTwitterAccountUnrequitedFollowings(this.field("twitter_handle"), function(data) {
+			th.accountListModalSetTotal(data.accounts.length);
+			for(var i = 0; i < data.accounts.length; i++) {
+				th.accountListModalAddAccount(data.accounts[i]);
+			}
+		}, null);
 	}
 	OAuthTwitterAccount.prototype.removeItem = function() {
 		$("#social-twitteracc-" + this.id).remove();
@@ -3369,11 +3598,11 @@ OAuthFacebookAccount = function(data) {
 	}
 	OAuthFacebookAccount.prototype.createItem = function(fromInit) {
 		var html = "";
-		html += "<p id='social-facebookacc-" + this.id + "'>";
+		html += "<div class='social-account-list-item' id='social-facebookacc-" + this.id + "'>";
 		html += "	<img src='" + this.field("facebook_image") + "' /> <a href='http://facebook.com/" + this.field("facebook_id") + "' target='new'>" + this.field("facebook_name") + "</a>";
 		html += "	<button id='social-remove-facebookacc-" + this.id + "' class='btn btn-sm btn-danger fr'>X</button>";
-		html += "</p>";
-		$('#social-homepage-twitteracc-list').append(html);
+		html += "</div>";
+		$('#social-homepage-facebookacc-list').append(html);
 		this.update();
 	}
 	OAuthFacebookAccount.prototype.removeItem = function() {
@@ -3397,7 +3626,7 @@ OAuthFacebookPage = function(data) {
 	}
 	OAuthFacebookPage.prototype.onAdded = function(fromInit) {
 		this.createItem(fromInit);
-		$('#social-homepage-twitteracc-list-none').hide();
+		$('#social-homepage-facebookacc-list-none').hide();
 		//if (!fromInit) {
 		//	$('#social-addfacebookpage-cancel').click();
 		//}
@@ -3406,7 +3635,7 @@ OAuthFacebookPage = function(data) {
 		this.removeItem();
 
 		if (impresslist.oauthFacebookPages.length - 1 == 0) {
-			$('#social-homepage-twitteracc-list-none').show();
+			$('#social-homepage-facebookacc-list-none').show();
 		}
 	}
 	OAuthFacebookPage.prototype.createItem = function(fromInit) {
@@ -3415,7 +3644,7 @@ OAuthFacebookPage = function(data) {
 		html += "	<img src='" + this.field("page_image") + "' /> <a href='http://facebook.com/" + this.field("page_id") + "' target='new'>" + this.field("page_name") + "</a>";
 		html += "	<button id='social-remove-facebookpage-" + this.id + "' class='btn btn-sm btn-danger fr'>X</button>";
 		html += "</p>";
-		$('#social-homepage-twitteracc-list').append(html);
+		$('#social-homepage-facebookacc-list').append(html);
 		this.update();
 	}
 	OAuthFacebookPage.prototype.removeItem = function() {
@@ -4135,10 +4364,15 @@ var impresslist = {
 		user: {
 			id: 0,
 			game: 0,
+			audience: 0,
 			gmail: 0,
 			admin: false,
+			superadmin: false,
 			imapServer: '',
 			smtpServer: ''
+		},
+		tags: {
+
 		},
 		misc: {
 			countries: []
@@ -4151,9 +4385,11 @@ var impresslist = {
 	personTwitchChannels: [],
 	youtubers: [],
 	twitchchannels: [],
+	podcasts: [],
 	emails: [],
 	users: [],
 	games: [],
+	audiences: [],
 	coverage: [],
 	watchedgames: [],
 	simpleMailouts: [],
@@ -4211,12 +4447,14 @@ var impresslist = {
 		$('#nav-add-publication').click(API.addPublication);
 		$('#nav-add-youtuber').click(API.addYoutuber);
 		$('#nav-add-twitchchannel').click(API.addTwitchChannel);
+		$('#nav-add-podcast').click(API.addPodcast);
 		$('#nav-add-youtuber-search-batch').click(function() { YouTuberBatchModal.open(); });
 		$('#nav-add-coverage-publication').click(API.addPublicationCoverage);
 		$('#nav-add-coverage-youtuber').click(API.addYoutuberCoverage);
 		$('#nav-add-simplemailout').click(API.addSimpleMailout);
 		$('#nav-add-user').click(API.addUser);
 		$('#nav-user-changeproject').click(function() { thiz.findUserById(thiz.config.user.id).openChangeProject(); });
+		$('#nav-user-changeaudience').click(function() { thiz.findUserById(thiz.config.user.id).openChangeAudience(); });
 		$('#nav-user-changepassword').click(function() { thiz.findUserById(thiz.config.user.id).openChangePassword(); });
 		$('#nav-user-changeimapsettings').click(function() { thiz.findUserById(thiz.config.user.id).openChangeIMAPSettings(); });
 		$('.nav-user-changeimapsettings').click(function() { $('#nav-user-changeimapsettings').click(); });
@@ -4227,6 +4465,7 @@ var impresslist = {
 		$('#nav-social').click(this.changePage);
 		$('#nav-mailout').click(this.changePage);
 		$('#nav-mailout-addrecipients').click(this.changePage);
+		$('#nav-mailout-tips').click(this.changePage);
 		$('#nav-admin').click(this.changePage);
 		$('#nav-importtool').click(this.changePage);
 		$('#nav-help').click(this.changePage);
@@ -4255,7 +4494,14 @@ var impresslist = {
 		$("[data-last-backup='true']").html(new Date(this.config.system.backups.lastmanual*1000).toUTCString());
 
 		// Set up search / filter
-		$('#filter').keyup(this.refreshFilter);
+		var searchKeyUpTimeout = null;
+		$('#filter').keyup(function(){
+			if (searchKeyUpTimeout != null) { clearTimeout(searchKeyUpTimeout); searchKeyUpTimeout = null; }
+			searchKeyUpTimeout = setTimeout(function() {
+				if (searchKeyUpTimeout != null) { impresslist.refreshFilter(); }
+				searchKeyUpTimeout = null;
+			}, 300);
+		});
 		$('#filter-recent-contact').change(this.refreshFilter);
 		$('#filter-personal-contact').change(this.refreshFilter);
 		$('#filter-high-priority').change(this.refreshFilter);
@@ -4858,8 +5104,17 @@ var impresslist = {
 		obj.onAdded();
 		if (!fromInit) { impresslist.refreshFilter(); }
 	},
+	addPodcast: function(obj, fromInit) {
+		this.podcasts.push(obj);
+		obj.onAdded();
+		if (!fromInit) { impresslist.refreshFilter(); }
+	},
 	addGame: function(obj, fromInit) {
 		this.games.push(obj);
+		obj.onAdded();
+	},
+	addAudience: function(obj, fromInit) {
+		this.audiences.push(obj);
 		obj.onAdded();
 	},
 	addCoverage: function(obj, fromInit) {
@@ -5011,6 +5266,17 @@ var impresslist = {
 			}
 		}
 	},
+	removePodcast: function(obj) {
+		for(var i = 0, len = this.podcasts.length; i < len; ++i) {
+			if (this.podcasts[i].id == obj.id) {
+				console.log('podcast removed: ' + obj.id);
+				obj.onRemoved();
+				this.podcasts.splice(i, 1);
+				impresslist.refreshFilter();
+				break;
+			}
+		}
+	},
 	removePersonPublication: function(obj) {
 		for(var i = 0, len = this.personPublications.length; i < len; ++i) {
 			if (this.personPublications[i].id == obj.id) {
@@ -5136,6 +5402,13 @@ var impresslist = {
 		if (r != null) { return r; }
 
 		console.log("impresslist: could not findTwitchChannelById: " + id);
+		return null;
+	},
+	findPodcastById: function(id) {
+		var r = this.binarySearchById(this.podcasts, id);
+		if (r != null) { return r; }
+
+		console.log("impresslist: could not findPodcastById: " + id);
 		return null;
 	},
 	findUserById: function(id) {
@@ -5437,6 +5710,64 @@ impresslist.chat = {
 
 
 impresslist.util = {
+	iframe: function(url, title) {
+		var height = Math.round(window.innerHeight * 0.8);
+		var html = "";
+		html += "	<div id='iframe_modal' class='modal fade' tabindex='-1' role='dialog'> \
+						<div class='modal-dialog'> \
+							<div class='modal-content' style='padding:5px;'> \
+								<div style='min-height:" + height + "px;padding:0px;'>";
+		html += "					<iframe id='iframe_modal_frame' src='" + url + "' style='width:100%; height:100%; min-height:" + height + "px; border:0;'></iframe>";
+		html += "				</div> \
+							</div> \
+						</div> \
+					</div>";
+		$('#modals').html(html);
+
+		$('#iframe_modal').modal('show');
+	},
+	findTagKey: function(tagName) {
+		var inverseTags = [];
+		for(var key in impresslist.config.tags) {
+			inverseTags[impresslist.config.tags[key].name] = key;
+		}
+		return inverseTags[tagName];
+	},
+	tagStringToInputField: function(str) {
+		var output = "";
+		if (str.trim().length == 0) { return output; }
+
+		var bits = str.split(",");
+		console.log(bits);
+		for(var i = 0; i < bits.length; i++) {
+			output += impresslist.config.tags[bits[i]].name;
+			if (i != bits.length - 1) {
+				output += ",";
+			}
+		}
+		return output;
+	},
+	tagInputFieldToString: function(data) {
+		var array = [];
+		if (typeof data === "string") {
+			if (data.trim().length == 0) {
+				return "";
+			}
+			array = data.split(",");
+		} else {
+			array = data;
+		}
+
+		var str = "";
+		for(var i = 0; i < array.length; i++) {
+			str += impresslist.util.findTagKey(array[i]);
+			if (i != array.length - 1) {
+				str += ",";
+			}
+		}
+		return str;
+	},
+
 	relativetime_contact: function(previous) {
 	    //console.log(previous);
 	    if (Number(previous) == 0 || Number(previous) == 3600) { return "Never"; }

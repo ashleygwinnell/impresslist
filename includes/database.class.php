@@ -185,7 +185,7 @@ class MysqliDatabase extends Database {
 		//}
 
 
-
+		$this->db->set_charset('utf8mb4');
 		$selected = $this->db->select_db( $database );
 		if (!$selected) {
 			throw new Exception("Could not select MySQL database: " . $database . ". Does it exist? ");
