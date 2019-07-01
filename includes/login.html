@@ -3,7 +3,7 @@
 	<head>
 		<?php include_once("head.html"); ?>
 	</head>
-	<body> 
+	<body>
 
 		<br/>
 		<div class='container'>
@@ -25,7 +25,7 @@
 				?>
 				<form class="form" role="login" action='/' method='POST'>
 					<div class="form-group">
-						<input name='email' type="text" class="form-control" placeholder="Email" <?php 
+						<input name='email' type="text" class="form-control" placeholder="Email" <?php
 
 						if (isset($_POST['email'])) {
 							echo "value='" . $_POST['email'] . "' ";
@@ -34,7 +34,7 @@
 						?> />
 					</div>
 					<div class="form-group">
-						<input name='password' type="password" class="form-control" placeholder="Password" <?php 
+						<input name='password' type="password" class="form-control" placeholder="Password" <?php
 
 						if (isset($_POST['password'])) {
 							echo "value='' ";
@@ -49,14 +49,10 @@
 
 			</div>
 
-			
+
 		</div>
 
-		<footer class="footer">
-			<div class="container mywidecontainer">
-				<p class="text-muted">&copy; Made with love by <a href='http://forceofhab.it/'>Force Of Habit</a></p>
-			</div>
-		</footer>
+		<?php require_once("footer.html"); ?>
 
 	</body>
 </html>

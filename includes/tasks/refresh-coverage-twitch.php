@@ -10,13 +10,13 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 // Games
 $doTimelimit = true;
 $timeLimitStr = ($doTimelimit) ? ("AND twitchLastScraped < " . (time()-3600)):"";
-$games = $db->query("SELECT * FROM game WHERE twitchId != 0 {$timeLimitStr} ORDER BY twitchLastScraped ASC;");
+$games = $db->query("SELECT * FROM game WHERE twitchId != 0 {$timeLimitStr} AND removed = 0 ORDER BY twitchLastScraped ASC;");
 $num_games = count($games);
 
 $streamers = $db->query("SELECT * FROM twitchchannel WHERE twitchId != 0 AND lastscrapedon < " . (time()-3600) . " AND removed = 0 ORDER BY lastscrapedon ASC;");
 $num_streamers = count($streamers);
 
-function tryAddTwitchCoverage($myChannelId, $twitchChannelId, $twitchChannelName, $twitchVideoId, $twitchClipId, $gameId, $url, $title, $description, $thumbnail, $time) {
+function tryAddTwitchCoverage($companyId, $myChannelId, $twitchChannelId, $twitchChannelName, $twitchVideoId, $twitchClipId, $gameId, $url, $title, $description, $thumbnail, $time) {
 	global $db;
 	// YES! We got coverage.
 	// ... but we need to make sure we don't have it saved already!
@@ -50,9 +50,9 @@ function tryAddTwitchCoverage($myChannelId, $twitchChannelId, $twitchChannelName
 		$e = $stmt->execute();
 
 
-		@email_new_coverage($twitchChannelName, $url, $time);
-		@slack_coverageAlert($twitchChannelName, $title, $url);
-		@discord_coverageAlert($twitchChannelName, $title, $url);
+		@email_new_coverage($companyId, $twitchChannelName, $url, $time);
+		@slack_coverageAlert($companyId, $twitchChannelName, $title, $url);
+		@discord_coverageAlert($companyId, $twitchChannelName, $title, $url);
 
 	} else {
 		echo $existingCoverage[0]['url'] . "<br/>\n";
@@ -101,7 +101,7 @@ for($i = 0; $i < $num_games; ++$i)
 				$video = $videos['data'][$j];
 
 				$channel = tryAddTwitchChannel($video['user_id']);
-				tryAddTwitchCoverage($channel['id'], $video['user_id'], $video['user_name'], $video['id'], null, $games[$i]['id'], $video['url'], $video['title'], $video['description'], $video['thumbnail_url'], strtotime($video['created_at']));
+				tryAddTwitchCoverage($games[$i]['company'], $channel['id'], $video['user_id'], $video['user_name'], $video['id'], null, $games[$i]['id'], $video['url'], $video['title'], $video['description'], $video['thumbnail_url'], strtotime($video['created_at']));
 				// TODO:
 				// $video['view_count'];
 				// $video['type'];
@@ -119,7 +119,7 @@ for($i = 0; $i < $num_games; ++$i)
 				$clip = $clips['data'][$j];
 
 				$channel = tryAddTwitchChannel($clip['broadcaster_id']);
-				tryAddTwitchCoverage($channel['id'], $clip['broadcaster_id'], $clip['broadcaster_name'], null, $clip['id'], $games[$i]['id'], $clip['url'], $clip['title'], "", $clip['thumbnail_url'], strtotime($clip['created_at']));
+				tryAddTwitchCoverage($games[$i]['company'], $channel['id'], $clip['broadcaster_id'], $clip['broadcaster_name'], null, $clip['id'], $games[$i]['id'], $clip['url'], $clip['title'], "", $clip['thumbnail_url'], strtotime($clip['created_at']));
 
 				// TODO:
 				// $clip['view_count'];
@@ -165,7 +165,7 @@ for($i = 0; $i < count($streamers); $i++) {
 						util_containsKeywords($item['title'], $game['keywords']) ||
 						util_containsKeywords($item['description'], $game['keywords']))
 					{
-					tryAddTwitchCoverage($streamer['id'], $item['user_id'], $item['user_name'], $item['id'], null, $game['id'], $item['url'], $item['title'], $item['description'], $item['thumbnail_url'], strtotime($item['created_at']));
+					tryAddTwitchCoverage($game['company'], $streamer['id'], $item['user_id'], $item['user_name'], $item['id'], null, $game['id'], $item['url'], $item['title'], $item['description'], $item['thumbnail_url'], strtotime($item['created_at']));
 					// TODO:
 					// $video['view_count'];
 					// $video['type'];
@@ -191,7 +191,7 @@ for($i = 0; $i < count($streamers); $i++) {
 				if (strpos(strtolower($item['title']), strtolower($game['name'])) !== FALSE ||
 						util_containsKeywords($item['title'], $game['keywords']))
 					{
-					tryAddTwitchCoverage($streamer['id'], $item['broadcaster_id'], $item['broadcaster_name'], null, $item['id'], $game['id'], $item['url'], $item['title'], "", $item['thumbnail_url'], strtotime($item['created_at']));
+					tryAddTwitchCoverage($game['company'], $streamer['id'], $item['broadcaster_id'], $item['broadcaster_name'], null, $item['id'], $game['id'], $item['url'], $item['title'], "", $item['thumbnail_url'], strtotime($item['created_at']));
 					// TODO:
 					// $clip['view_count'];
 					// $clip['language'];

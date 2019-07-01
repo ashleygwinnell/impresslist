@@ -10,10 +10,6 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/includes/checks.php");
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 //die($_SERVER['DOCUMENT_ROOT']);
 
-
-// id = 165 -- plus10damage.com
-//echo url_get_contents("http://androidrundown.com/");
-//die();
 // Temp test
 //$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 165;");
 //$db->exec("UPDATE publication SET lastscrapedon = 0;");
@@ -23,11 +19,11 @@ $publications = $db->query("SELECT * FROM publication WHERE lastscrapedon < " . 
 $num_publications = count($publications);
 
 // Games
-$games = $db->query("SELECT * FROM game;");
+$games = $db->query("SELECT * FROM game WHERE removed = 0;");
 $num_games = count($games);
 
 // Watched Games
-$watchedgames = $db->query("SELECT * FROM watchedgame;");
+$watchedgames = $db->query("SELECT * FROM watchedgame WHERE removed = 0;");
 $num_watchedgames = count($watchedgames);
 
 
@@ -42,7 +38,7 @@ function fixrelativeurl($host, $url) {
 	return $url;
 }
 
-function tryAddPublicationCoverage($publicationId, $publicationName, $gameId, $watchedGameId, $title, $url, $time) {
+function tryAddPublicationCoverage($companyId, $publicationId, $publicationName, $gameId, $watchedGameId, $title, $url, $time) {
 	// echo $publicationId . "<br/>" .
 	// 	 $publicationName . "<br/>" .
 	// 	 $gameId . "<br/>" .
@@ -76,10 +72,10 @@ function tryAddPublicationCoverage($publicationId, $publicationName, $gameId, $w
 		$stmt->bindValue(":utime", $time, Database::VARTYPE_INTEGER);
 		$stmt->execute();
 
-		if ($watchedGameId == null) {
-			@email_new_coverage($publicationName, $url, $time);
-			@slack_coverageAlert($publicationName, $title, $url);
-			@discord_coverageAlert($publicationName, $title, $url);
+		if ($watchedGameId == null && $company != 0) {
+			@email_new_coverage($companyId, $publicationName, $url, $time);
+			@slack_coverageAlert($companyId, $publicationName, $title, $url);
+			@discord_coverageAlert($companyId, $publicationName, $title, $url);
 		}
 	} else {
 		echo $existingCoverage[0]['url'] . "<br/>\n";
@@ -143,7 +139,7 @@ for($i = 0; $i < $num_publications; $i++) {
 						$titleContainsGame = strpos(strtolower($title), strtolower($game['name'])) !== FALSE || util_containsKeywords($title, $game['keywords']);
 						$descriptionContainsGame = strpos(strtolower($description), strtolower($game['name'])) !== FALSE || util_containsKeywords($description, $game['keywords']);
 						if ($titleContainsGame || $descriptionContainsGame) {
-							tryAddPublicationCoverage( $publications[$i]['id'], $publications[$i]['name'], $game['id'], null, $title, $url, $time );
+							tryAddPublicationCoverage($game['company'], $publications[$i]['id'], $publications[$i]['name'], $game['id'], null, $title, $url, $time );
 						}
 					}
 					foreach($watchedgames as $watchedgame) {
@@ -151,7 +147,7 @@ for($i = 0; $i < $num_publications; $i++) {
 						$descriptionContainsGame = strpos(strtolower($description), strtolower($watchedgame['name'])) !== FALSE || util_containsKeywords($description, $watchedgame['keywords']);
 
 						if ($titleContainsGame || $descriptionContainsGame) {
-							tryAddPublicationCoverage( $publications[$i]['id'], $publications[$i]['name'], null, $watchedgame['id'], $title, $url, $time );
+							tryAddPublicationCoverage(0, $publications[$i]['id'], $publications[$i]['name'], null, $watchedgame['id'], $title, $url, $time );
 						}
 					}
 				}
@@ -200,7 +196,7 @@ for($i = 0; $i < $num_publications; $i++) {
 				{
 
 					$checkedUrls = array();
-					$checkForGameOrWatchedGame = function($name, $name_safe, $gameId, $watchedGameId) use ($xml, $checkedUrls) {
+					$checkForGameOrWatchedGame = function($companyId, $name, $name_safe, $gameId, $watchedGameId) use ($xml, $checkedUrls) {
 
 						// match any links that contain the game/watchedgame name
 						$arr = $xml->xpath('//a[contains(concat(" ", @href, " "), "' . $name_safe . '")] | //a[contains(concat(" ", @title, " "), "' . $name . '")]');
@@ -222,6 +218,7 @@ for($i = 0; $i < $num_publications; $i++) {
 								if (isset($__attrs['title'])) {
 									$obj['title'] = htmlentities($__attrs['title']->__toString());
 								}
+								$obj['company'] = $company;
 								$checkedUrls[] = $obj;
 							} else {
 								for($j = 0; $j < count($checkedUrls); $j++) {
@@ -267,23 +264,9 @@ for($i = 0; $i < $num_publications; $i++) {
 
 						//print_r($checkedUrls);
 
-					// add to database!
-					foreach ($checkedUrls as $key => $checked) {
-						tryAddPublicationCoverage(
-							$publications[$i]['id'],
-							$publications[$i]['name'],
-							$gameId,
-							$watchedGameId,
-							$checkedUrls[$key]['title'],
-							fixrelativeurl($publications[$i]['url'], $checkedUrls[$key]['url']),
-							$checkedUrls[$key]['time']
-						);
-					}
-
-
-
 					foreach ($games as $game) {
 						$checkForGameOrWatchedGame(
+							$game['company'],
 							$game['name'],
 							strtolower(str_replace(" ", "-", $game['name'])),
 							$game['id'],
@@ -293,10 +276,26 @@ for($i = 0; $i < $num_publications; $i++) {
 
 					foreach ($watchedgames as $watchedgame) {
 						$checkForGameOrWatchedGame(
+							0,
 							$watchedgame['name'],
 							strtolower(str_replace(" ", "-", $watchedgame['name'])),
 							$watchedgame['id'],
 							0
+						);
+					}
+
+
+					// add to database!
+					foreach ($checkedUrls as $key => $checked) {
+						tryAddPublicationCoverage(
+							$checkedUrls[$key]['company'],
+							$publications[$i]['id'],
+							$publications[$i]['name'],
+							$gameId,
+							$watchedGameId,
+							$checkedUrls[$key]['title'],
+							fixrelativeurl($publications[$i]['url'], $checkedUrls[$key]['url']),
+							$checkedUrls[$key]['time']
 						);
 					}
 

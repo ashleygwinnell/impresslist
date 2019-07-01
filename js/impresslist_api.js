@@ -5,6 +5,31 @@ API.prototype = {
 
 }
 
+API.search = function(q, successCallback, failCallback) {
+	var url = "api.php?endpoint=/search/&q=" + encodeURIComponent(q);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				if (failCallback) { failCallback(); }
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				if (failCallback) { failCallback(); }
+				return;
+			}
+
+			if (successCallback) { successCallback(json); }
+		})
+		.fail(function() {
+			API.errorMessage("Could not perform Full Search.");
+			if (failCallback) { failCallback(); }
+		});
+
+}
+
 API.listSocialTimeline = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
@@ -31,6 +56,9 @@ API.listSocialTimeline = function(fromInit) {
 				$('#social-timeline-loading').hide();
 			}
 			impresslist.loading.set('socialTimelineItem', false);
+			if (fromInit) {
+				impresslist.loading.onCategoryItemLoaded('social');
+			}
 		})
 		.fail(function() {
 			API.errorMessage("Could not pull Social Timeline.");
@@ -168,6 +196,9 @@ API.listSocialUploads = function(fromInit) {
 				impresslist.addSocialUpload(upload, fromInit);
 			}
 			impresslist.loading.set('socialUploads', false);
+			if (fromInit) {
+				impresslist.loading.onCategoryItemLoaded('social');
+			}
 		})
 		.fail(function() {
 			API.errorMessage("Could not list Social Uploads.");
@@ -230,7 +261,7 @@ API.removeSocialUpload = function(acc) {
 		});
 }
 
-API.listPeople = function(fromInit) {
+API.listPeople = function(fromInit) {//
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
 	var url = "api.php?endpoint=/person/list/";
@@ -250,7 +281,10 @@ API.listPeople = function(fromInit) {
 				var person = new Person(json.people[i]);
 				impresslist.addPerson(person, fromInit);
 			}
-			if (fromInit) { impresslist.refreshFilter(); }
+			if (fromInit) {
+				impresslist.loading.onCategoryItemLoaded('home');
+				//impresslist.refreshFilter();
+			}
 		})
 		.fail(function() {
 			API.errorMessage("Could not list People.");
@@ -277,7 +311,8 @@ API.listPublications = function(fromInit) {
 				impresslist.addPublication(publication, fromInit);
 			}
 			if (fromInit) {
-				impresslist.refreshFilter();
+				impresslist.loading.onCategoryItemLoaded('home');
+				//impresslist.refreshFilter();
 			}
 		})
 		.fail(function() {
@@ -303,7 +338,10 @@ API.listPersonPublications = function(fromInit) {
 				var publication = new PersonPublication(json.personPublications[i]);
 				impresslist.addPersonPublication(publication, fromInit);
 			}
-			if (fromInit) { impresslist.refreshFilter(); }
+			if (fromInit) {
+				impresslist.loading.onCategoryItemLoaded('home');
+				//impresslist.refreshFilter();
+			}
 		})
 		.fail(function() {
 			API.errorMessage("Could not list Person Publications.");
@@ -328,7 +366,10 @@ API.listPersonYoutubeChannels = function(fromInit) {
 				var channel = new PersonYoutubeChannel(json.personYoutubeChannels[i]);
 				impresslist.addPersonYoutubeChannel(channel, fromInit);
 			}
-			if (fromInit) { impresslist.refreshFilter(); }
+			if (fromInit) {
+				impresslist.loading.onCategoryItemLoaded('home');
+				//impresslist.refreshFilter();
+			}
 		})
 		.fail(function() {
 			API.errorMessage("Could not list Person Youtube Channels.");
@@ -353,7 +394,10 @@ API.listPersonTwitchChannels = function(fromInit) {
 				var channel = new PersonTwitchChannel(json.personTwitchChannels[i]);
 				impresslist.addPersonTwitchChannel(channel, fromInit);
 			}
-			if (fromInit) { impresslist.refreshFilter(); }
+			if (fromInit) {
+				impresslist.loading.onCategoryItemLoaded('home');
+				//impresslist.refreshFilter();
+			}
 		})
 		.fail(function() {
 			API.errorMessage("Could not list Person Youtube Channels.");
@@ -380,6 +424,9 @@ API.listYoutubeChannels = function(fromInit) {
 				impresslist.addYoutuber(youtuber, fromInit);
 			}
 			impresslist.loading.set('youtubeChannels', false);
+			if (fromInit) {
+				impresslist.loading.onCategoryItemLoaded('home');
+			}
 		})
 		.fail(function() {
 			API.errorMessage("Could not list Youtubers.");
@@ -406,9 +453,8 @@ API.listTwitchChannels = function(fromInit) {
 				impresslist.addTwitchChannel(channel, fromInit);
 			}
 			if (fromInit) {
-				impresslist.refreshFilter();
-				API.listCoverage(fromInit);
-				API.listWatchedGames(fromInit);
+				impresslist.loading.onCategoryItemLoaded('home');
+				//impresslist.refreshFilter();
 			}
 			impresslist.loading.set('twitchChannels', false);
 		})
@@ -435,7 +481,10 @@ API.listEmails = function(fromInit) {
 				var email = new Email(json.emails[i]);
 				impresslist.addEmail(email, fromInit);
 			}
-			if (fromInit) { impresslist.refreshFilter(); }
+			if (fromInit) {
+				impresslist.loading.onCategoryItemLoaded('home');
+				//impresslist.refreshFilter();
+			}
 		})
 		.fail(function() {
 			API.errorMessage("Could not list Emails.");
@@ -461,7 +510,10 @@ API.listCoverage = function(fromInit) {
 				var coverage = new Coverage(json.coverage[i]);
 				impresslist.addCoverage(coverage, fromInit);
 			}
-			if (fromInit) { impresslist.refreshFilter(); }
+			if (fromInit) {
+				impresslist.loading.onCategoryItemLoaded('project');
+				//impresslist.refreshFilter();
+			}
 			impresslist.loading.set('coverage', false);
 		})
 		.fail(function() {
@@ -488,7 +540,10 @@ API.listWatchedGames = function(fromInit) {
 				var watchedgame = new WatchedGame(json.watchedgames[i]);
 				impresslist.addWatchedGame(watchedgame, fromInit);
 			}
-			if (fromInit) { impresslist.refreshFilter(); }
+			if (fromInit) {
+				impresslist.loading.onCategoryItemLoaded('project');
+				//impresslist.refreshFilter();
+			}
 			impresslist.loading.set('watchedgames', false);
 		})
 		.fail(function() {
@@ -684,6 +739,10 @@ API.listSimpleMailouts = function(fromInit) {
 			for(var i = 0; i < json.mailouts.length; ++i) {
 				var mailout = new SimpleMailout(json.mailouts[i]);
 				impresslist.addSimpleMailout(mailout, fromInit);
+			}
+
+			if (fromInit) {
+				impresslist.loading.onCategoryItemLoaded('mailout');
 			}
 
 		})
@@ -1818,6 +1877,27 @@ API.userChangePassword = function(user, currentPassword, newPassword) {
 			API.errorMessage("Could not change Password.");
 		});
 }
+API.userChangeAudience = function(user, audience, successFunc) {
+	var url = "api.php?endpoint=/user/change-audience/&id=" + encodeURIComponent(user.id) + "&audience=" + encodeURIComponent(audience);
+	console.log(url);
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Audience changed.");
+			if (successFunc) successFunc();
+		})
+		.fail(function() {
+			API.errorMessage("Could not change Audience.");
+		});
+}
 API.queryOAuthFacebookPages = function(callbackFunction) {
 	var url = "api.php?endpoint=/social/account/facebook-page/query/";
 	$.ajax( url )
@@ -1845,6 +1925,9 @@ API.listOAuthFacebookPages = function(fromInit) {
 			for(var i = 0; i < json.facebookpages.length; ++i) {
 				var acc = new OAuthFacebookPage(json.facebookpages[i]);
 				impresslist.addOAuthFacebookPage(acc, false);
+			}
+			if (fromInit) {
+				impresslist.loading.onCategoryItemLoaded('social');
 			}
 		})
 		.fail(function() {
@@ -1925,6 +2008,9 @@ API.listOAuthFacebookAccounts = function(fromInit) {
 			if (json.facebookaccs.length == 0) {
 				$('#social-homepage-facebookacc-list-none').show();
 			}
+			if (fromInit) {
+				impresslist.loading.onCategoryItemLoaded('social');
+			}
 
 		})
 		.fail(function() {
@@ -1967,7 +2053,9 @@ API.listOAuthTwitterAccounts = function(fromInit) {
 			if (json.twitteraccs.length == 0) {
 				$('#social-homepage-twitteracc-list-none').show();
 			}
-
+			if (fromInit) {
+				impresslist.loading.onCategoryItemLoaded('social');
+			}
 		})
 		.fail(function() {
 			API.errorMessage("Could not list OAuth Twitter Accounts.");

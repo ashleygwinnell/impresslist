@@ -11,46 +11,24 @@
 <title>impress[]</title>
 
 <!-- bower'd javascripts -->
-<script type="text/javascript" src="js/vendor/jquery/dist/jquery.min.js"></script>
-<script type="text/javascript" src="js/vendor/moment/min/moment.min.js"></script>
-<script type="text/javascript" src="js/vendor/bootstrap/dist/js/bootstrap.min.js"></script>
-<script type="text/javascript" src="js/vendor/bootstrap-table/dist/bootstrap-table.min.js"></script>
-<script type="text/javascript" src="js/vendor/bootstrap-sortable/Scripts/bootstrap-sortable.js"></script>
-<script type="text/javascript" src="js/vendor/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js"></script>
-<script type="text/javascript" src="js/vendor/bootstrap-multiselect/dist/js/bootstrap-multiselect.js"></script>
-<script type="text/javascript" src="js/vendor/bootstrap-growl/jquery.bootstrap-growl.min.js"></script>
-<script type="text/javascript" src="js/vendor/markdown/lib/markdown.js"></script>
-<script type="text/javascript" src="js/vendor/bootstrap-fileinput/js/fileinput.min.js"></script>
-<script type="text/javascript" src="js/vendor/bootstrap-tagsinput/bootstrap-tagsinput.js"></script>
-<script type="text/javascript" src="js/vendor/twitter-text-js/js/twitter-text.js"></script>
-<script type="text/javascript" src="js/vendor/typeahead/typeahead.bundle.js"></script>
-<!-- <script type="text/javascript" src="js/vendor/bootstrap3-typeahead/bootstrap3-typeahead.js"></script> -->
+<script type="text/javascript" src="js/compiled.all.min.js"></script>
+<link href="css/compiled.all.min.css" rel="stylesheet" />
 
-<script type="text/javascript" src="js/impresslist.js"></script>
-<script type="text/javascript" src="js/impresslist_api.js"></script>
-
-<!-- bower'd stylesheets -->
-<link href="js/vendor/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="js/vendor/bootstrap-table/dist/bootstrap-table.min.css" rel="stylesheet">
-<link href="js/vendor/bootstrap-sortable/Contents/bootstrap-sortable.css" rel="stylesheet">
-<link href="js/vendor/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css" rel="stylesheet" />
-<link href="js/vendor/bootstrap-multiselect/dist/css/bootstrap-multiselect.css" rel="stylesheet" />
-<link href="js/vendor/bootstrap-fileinput/css/fileinput.min.css" rel="stylesheet">
-<link href="js/vendor/bootstrap-tagsinput/bootstrap-tagsinput.css" rel="stylesheet">
-
-<link href="css/bootstrap-timeline-responsive.css" rel="stylesheet" />
-<link href="css/sticky-footer.css" rel="stylesheet">
-<link href="css/impresslist.css" rel="stylesheet">
 <style>
 	.bootstrap-datetimepicker-widget {
 		z-index: 10;
+	}
+	.superadmin-container {
+		display:none;
+		<?php if ($user_superadmin) { echo "display:block;"; } ?>
 	}
 </style>
 <style>
 <?php
 	$tags = listtags();
 	foreach($tags as $name => $data) {
-		echo ".tag.tag-" . $name . " { background-color: " . $data['color'] . "; }\n";
+		echo ".tag.tag-" . $name . ", .tag-lg.tag-" . $name . " { background-color: " . $data['color'] . "; }\n";
+		echo ".tag.tag-" . $name . " .badge, .tag-lg.tag-" . $name . " .badge { color:" . $data['color'] . "; }";
 	}
 ?>
 </style>

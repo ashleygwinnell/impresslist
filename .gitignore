@@ -10,3 +10,5 @@ includes/config/config.php
 includes/config/config.backup.php
 js/vendor
 vendor
+_dev
+error_log

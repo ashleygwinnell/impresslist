@@ -1,6 +1,10 @@
 {
   "devDependencies": {
     "grunt": "^1.0.3",
+    "grunt-contrib-cssmin": "^3.0.0",
+    "grunt-contrib-uglify": "^4.0.1",
+    "grunt-contrib-watch": "^1.1.0",
+    "grunt-css": "^0.5.4",
     "grunt-ftp-deploy": "^0.2.0",
     "grunt-sftp-deploy": "^0.2.5"
   },

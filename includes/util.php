@@ -104,6 +104,11 @@ function util_isValidSubplatform($platform, $subplatform) {
 		}
 		return false;
 	}
+	else if ($platform == "steam") {
+		if (strlen($subplatform) > 0) {
+			return false;
+		}
+	}
 	return true;
 }
 function util_isValidKeyFormat($platform, $key, &$result) {
@@ -969,10 +974,10 @@ function get_impress_email_template($include_footer = false, $include_trackingpi
 
 	return $message;
 }
-function email_new_coverage($fromName, $url, $time) {
+function email_new_coverage($companyId, $fromName, $url, $time) {
 	return email_new_youtube_coverage($fromName, $url, $time);
 }
-function email_new_youtube_coverage($youtuberName, $url, $time) {
+function email_new_youtube_coverage($companyId, $youtuberName, $url, $time) {
 	global $impresslist_emailAddress;
 	global $db;
 
@@ -996,7 +1001,9 @@ function email_new_youtube_coverage($youtuberName, $url, $time) {
 	$message = str_replace("{{EMAIL_CONTENTS_HTML}}", $contents, $message);
 
 	// Get users who have coverage alerts on.
-	$users = $db->query("SELECT * FROM user WHERE coverageNotifications = 1;");
+	$stmt = $db->prepare("SELECT * FROM user WHERE coverageNotifications = 1 AND company = :company;");
+	$stmt->bindValue(":company", $companyId, Database::VARTYPE_INTEGER);
+	$users = $stmt->query();
 	for($i = 0; $i < count($users); $i++)
 	{
 		// insert into e-mail queue.
@@ -1053,13 +1060,8 @@ function mail_attachment($filename, $path, $mailto, $from_mail, $from_name, $rep
     }
 }
 
-function discord_webhook($data, $decode = false) {
-	global $discord_enabled;
-	global $discord_webhookId;
-	global $discord_webhookToken;
+function discord_webhook($discord_webhookId, $discord_webhookToken, $data, $decode = false) {
 	$discord_webhookUrl = "https://discordapp.com/api/webhooks/{$discord_webhookId}/{$discord_webhookToken}";
-
-	if (!$discord_enabled) { return ""; }
 
 	$fields;
 	if ($decode) {
@@ -1083,18 +1085,18 @@ function discord_webhook($data, $decode = false) {
 	$result = curl_exec($ch);
 	return $result;
 }
-function discord_coverageAlert($fromName, $coverageTitle, $url) {
+function discord_coverageAlert($companyId, $fromName, $coverageTitle, $url) {
+	global $db;
+	$company = db_singlecompany($db, $companyId, array('discord_enabled', 'discord_webhookId', 'discord_webhookToken'));
+	if (!$company['discord_enabled']) { return ""; }
+
 	$data = array(
 		"content" => "*{$fromName}* - {$coverageTitle}: \n{$url}"
 	);
-	return discord_webhook($data);
+	return discord_webhook($company['discord_webhookId'], $company['discord_webhookToken'], $data);
 }
 
-function slack_incomingWebhook($data) {
-	global $slack_enabled;
-	global $slack_apiUrl;
-
-	if (!$slack_enabled) { return ""; }
+function slack_incomingWebhook($slack_apiUrl, $data) {
 
 	$fields = array("payload" => urlencode(json_encode($data)));
 	foreach($fields as $key => $value) {
@@ -1114,9 +1116,11 @@ function slack_incomingWebhook($data) {
 	return $result;
 }
 
-function slack_coverageAlert($fromName, $coverageTitle, $url) {
-	global $slack_enabled;
-	if (!$slack_enabled) { return ""; }
+function slack_coverageAlert($companyId, $fromName, $coverageTitle, $url) {
+
+	global $db;
+	$company = db_singlecompany($db, $companyId, array('slack_enabled', 'slack_apiUrl'));
+	if (!$company || !$company['slack_enabled']) { return ""; }
 
 	$data = array(
 		"text" => "*Coverage Alert!*",
@@ -1138,11 +1142,12 @@ function slack_coverageAlert($fromName, $coverageTitle, $url) {
 			)
 		)
 	);
-	return slack_incomingWebhook($data);
+	return slack_incomingWebhook($company['slack_apiUrl'], $data);
 }
-function slack_jobsChanged($arr, $fromUser) {
-	global $slack_enabled;
-	if (!$slack_enabled) { return ""; }
+function slack_jobsChanged($companyId, $arr, $fromUser) {
+	global $db;
+	$company = db_singlecompany($db, $companyId, array('slack_enabled', 'slack_apiUrl'));
+	if (!$company || !$company['slack_enabled']) { return ""; }
 
 	$str = implode("\n", $arr);
 
@@ -1166,7 +1171,7 @@ function slack_jobsChanged($arr, $fromUser) {
 			)
 		)
 	);
-	return slack_incomingWebhook($data);
+	return slack_incomingWebhook($company['slack_apiUrl'], $data);
 }
 
 function user_updateActivity($user_id) {
@@ -1178,29 +1183,59 @@ function user_updateActivity($user_id) {
 	$stmt->execute();
 }
 
+function listtagsbycategory() {
+	$tags = listtags();
+	$categorytags = array(
+		"platform" => array(
+			"name" => "Platform",
+			"list" => array()
+		),
+		"persontype" => array(
+			"name" => "Type",
+			"list" => array()
+		),
+		"genre" => array(
+			"name" => "Genre",
+			"list" => array()
+		),
+		"misc" => array(
+			"name" => "Misc",
+			"list" => array()
+		)
+	);
+	//for($i = 0; $i < count($tags); $i++) {
+	foreach($tags as $key => $val) {
+		$categorytags[$tags[$key]['category']]['list'][$key] = $tags[$key];
+	}
+	return $categorytags;
+}
 function listtags() {
 	$tags = array(
-		"todo" => array( "name" => "Todo", "color" => "#ff0066", "autokeywords" => array("to do") ),
-		"ood" => array( "name" => "Out Of Date", "color" => "#aaaa00", "autokeywords" => array("outofdate") ),
-		"press" => array( "name" => "Press", "color" => "#770077", "autokeywords" => array("press") ),
-		"industry" => array( "name" => "Biz Press", "color" => "#770077", "autokeywords" => array("industry") ),
-		"xbox" => array( "name" => "Xbox", "color" => "#9bc848", "autokeywords" => array("xbox", "microsoft", "xbone") ),
-		"playstation" => array( "name" => "PlayStation", "color" => "#2E6DB4", "autokeywords" => array("playstationn", "ps3", "ps4", "sony") ),
-		"switch" => array( "name" => "Nintendo Switch", "color" => "#ff0000", "autokeywords" => array("switch", "nintendo", "nindie") ),
-		"ios" => array( "name" => "iOS", "color" => "#3498DB", "autokeywords" => array("ios", "iphone", "itunes", "ipad") ),
-		"android" => array( "name" => "Android", "color" => "#009900", "autokeywords" => array("android", "google play", "play store") ),
+		"todo" => array( "name" => "Todo", "color" => "#ff0066", "autokeywords" => array("to do"), "category" => "misc" ),
+		"ood" => array( "name" => "Out Of Date", "color" => "#aaaa00", "autokeywords" => array("outofdate"),"category" => "misc" ),
+		"press" => array( "name" => "Press", "color" => "#770077", "autokeywords" => array("press"),"category" => "persontype" ),
+		"industry" => array( "name" => "Biz Press", "color" => "#770077", "autokeywords" => array("industry"),"category" => "persontype" ),
+		"developer" => array( "name" => "Developer", "color" => "#880088", "autokeywords" => array("developer"),"category" => "persontype" ),
+		"publisher" => array( "name" => "Publisher", "color" => "#880088", "autokeywords" => array("publisher"),"category" => "persontype" ),
+		"xbox" => array( "name" => "Xbox", "color" => "#9bc848", "autokeywords" => array("xbox", "microsoft", "xbone"),"category" => "platform" ),
+		"playstation" => array( "name" => "PlayStation", "color" => "#2E6DB4", "autokeywords" => array("playstationn", "ps3", "ps4", "sony"),"category" => "platform" ),
+		"switch" => array( "name" => "Nintendo Switch", "color" => "#ff0000", "autokeywords" => array("switch", "nintendo", "nindie"),"category" => "platform" ),
+		"ios" => array( "name" => "iOS", "color" => "#3498DB", "autokeywords" => array("ios", "iphone", "itunes", "ipad"),"category" => "platform" ),
+		"android" => array( "name" => "Android", "color" => "#009900", "autokeywords" => array("android", "google play", "play store"),"category" => "platform" ),
 
-		"pc" => array( "name" => "PC", "color" => "#999999", "autokeywords" => array("pc") ),
-		"mac" => array( "name" => "Mac", "color" => "#999999", "autokeywords" => array("mac", "macos", "osx") ),
-		"linux" => array( "name" => "Linux", "color" => "#999999", "autokeywords" => array("linux", "ubuntu", "debian") ),
-		"mobile" => array( "name" => "Mobile", "color" => "#999999", "autokeywords" => array("mobile", "pocket", "app") ),
-		"console" => array( "name" => "Console", "color" => "#999999", "autokeywords" => array("console") ),
-		"kids" => array( "name" => "Kids", "color" => "#999999", "autokeywords" => array("kids") ),
-		"retro" => array( "name" => "Retro", "color" => "#999999", "autokeywords" => array("commodore", "spectrum", "c64", "amstrad", "sinclair", "8bit", "8-bit", "16bit", "16-bit", "snes", "super nintendo", "nes", "master system", "sega", "atari", "pixel") ),
-		"localmulti" => array( "name" => "Local Multiplayer", "color" => "#999999", "autokeywords" => array("couch", "co-op", "co op", "local multi", "local-multi", "4 player", "2 player") ),
-		"indie" => array( "name" => "Indie", "color" => "#999999", "autokeywords" => array("indie") ),
-		"blog" => array( "name" => "Blog", "color" => "#999999", "autokeywords" => array("blog") ),
-		"freelance" => array( "name" => "Freelance", "color" => "#777777", "autokeywords" => array("freelance", "freelancer", "contract", "contractor") )
+		"pc" => array( "name" => "PC", "color" => "#999999", "autokeywords" => array("pc"),"category" => "platform" ),
+		"mac" => array( "name" => "Mac", "color" => "#999999", "autokeywords" => array("mac", "macos", "osx"),"category" => "platform" ),
+		"linux" => array( "name" => "Linux", "color" => "#999999", "autokeywords" => array("linux", "ubuntu", "debian"),"category" => "platform" ),
+		"mobile" => array( "name" => "Mobile", "color" => "#999999", "autokeywords" => array("mobile", "pocket", "app"),"category" => "platform" ),
+		"console" => array( "name" => "Console", "color" => "#999999", "autokeywords" => array("console"),"category" => "platform" ),
+		"kids" => array( "name" => "Kids", "color" => "#999999", "autokeywords" => array("kids"),"category" => "genre" ),
+		"retro" => array( "name" => "Retro", "color" => "#999999", "autokeywords" => array("commodore", "spectrum", "c64", "amstrad", "sinclair", "8bit", "8-bit", "16bit", "16-bit", "snes", "super nintendo", "nes", "master system", "sega", "atari", "pixel"),"category" => "genre" ),
+		"localmulti" => array( "name" => "Local Multiplayer", "color" => "#999999", "autokeywords" => array("couch", "co-op", "co op", "local multi", "local-multi", "4 player", "2 player"),"category" => "genre" ),
+		"indie" => array( "name" => "Indie", "color" => "#999999", "autokeywords" => array("indie"),"category" => "genre" ),
+		"blog" => array( "name" => "Blog", "color" => "#999999", "autokeywords" => array("blog"),"category" => "persontype" ),
+		"freelance" => array( "name" => "Freelance", "color" => "#777777", "autokeywords" => array("freelance", "freelancer", "contract", "contractor"),"category" => "persontype" ),
+		"friend" => array("name" => "Friend", "color" => "#ff6600", "autokeywords" => array("friend"), "category" => "persontype"),
+		"vip" => array("name" => "VIP", "color" => "#9900ff", "autokeywords" => array("vip", "important"), "category" => "persontype")
 
 	);
 	return $tags;

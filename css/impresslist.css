@@ -1,10 +1,12 @@
 /* Sticky footer styles
 -------------------------------------------------- */
 .mycontainer {
-  width: 800px;
+  /*width: 900px;*/
+  width: 900px;
 }
 .mywidecontainer {
-  width: 900px;
+  /*width: 1000px;*/
+  width: 1000px;
 }
 
 .pady {
@@ -23,6 +25,7 @@ h3 {
 .fl { float:left; }
 .fr { float:right; }
 .oa { overflow: auto; }
+.cb { clear:both; }
 
 .table-list {
 	cursor:pointer;
@@ -32,8 +35,9 @@ h3 {
 	float:right;
 	text-align: right;
 }
-.filters .filter-item {
+.filters .filter-item, .filter-item {
 	padding-bottom:6px;
+	font-weight:normal;
 }
 .filters .filter-item:last-child {
 	padding-bottom:0px;
@@ -44,6 +48,7 @@ h3 {
 #home-page { display:block; }
 #social-page { display:none; }
 #coverage-page { display:none; }
+#project-page { display:none; }
 #watchedgames-page { display:none; }
 #keys-page { display:none; }
 #mailout-page { display:none; }
@@ -89,6 +94,17 @@ h3 {
 	font-weight:bold;
 }
 .tag a { color:white; }
+.tag-lg, .tag-lg a {
+	font-size:100%;
+	color:white;
+	font-weight:bold;
+	padding:8px;
+	border-radius:5px;
+}
+.tag-md {
+	font-size:80%;
+	padding:5px;
+}
 
 /* Mailout bits */
 #mailout-homepage { display:inherit; }
@@ -164,8 +180,57 @@ h3 {
 	cursor:pointer;
 }
 
-.social-account-list-item {
+.social-account-list-item, .coverage-row {
 	clear:both;
-	/* overflow:auto;*/
+	overflow:auto;
 	padding:8px;
+}
+
+
+
+.advanced-filters-container  {
+	/*position:absolute;
+	z-index:2;
+	left:16%;
+	width:68%;*/
+
+	display:none;
+	margin-bottom:10px;
+}
+.advanced-filters-inner {
+	padding:15px;
+	background:white;
+	border:1px solid lightgrey;
+	border-radius:3px;
+	min-height:200px;
+}
+
+
+/* Hiding the checkbox, but allowing it to be focused */
+.badgebox {
+    opacity: 0;
+}
+.badgebox + .badge {
+    /* Move the check mark away when unchecked */
+    text-indent: -999999px;
+    /* Makes the badge's width stay the same checked and unchecked */
+	width: 27px;
+}
+.badgebox:focus + .badge {
+    /* Set something to make the badge looks focused */
+    /* This really depends on the application, in my case it was: */
+    /* Adding a light border */
+    box-shadow: inset 0px 0px 5px;
+    /* Taking the difference out of the padding */
+}
+.badgebox:checked + .badge {
+    /* Move the check mark back when checked */
+	text-indent: 0;
+	color:black;
+}
+.badge {
+	background-color:white;
+}
+.bg-g {
+	background-color:#aaa;
 }

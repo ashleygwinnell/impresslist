@@ -20,13 +20,15 @@ include_once("init.php");
 //die();
 
 // Users
-$users = $db->query("SELECT user.id, company, forename, surname, email, color, lastactivity, count(email.id) as num_emails, admin, superadmin FROM user LEFT JOIN email on email.user_id = user.id WHERE user.removed = 0 group by user.id;");
+$stmt = $db->prepare("SELECT user.id, company, forename, surname, email, color, lastactivity, count(email.id) as num_emails, admin, superadmin FROM user LEFT JOIN email on email.user_id = user.id WHERE user.removed = 0 AND user.company = :company group by user.id;");
+$stmt->bindValue(":company", $user_company, Database::VARTYPE_INTEGER);
+$users = $stmt->query();
 $num_users = count($users);
 
 // Games
 $games = $cache->get("games");
 if ($games == NULL) {
-	$stmt = $db->prepare("SELECT * FROM game WHERE company = :company;");
+	$stmt = $db->prepare("SELECT * FROM game WHERE company = :company AND removed = 0;");
 	$stmt->bindValue(":company", $user_company, Database::VARTYPE_INTEGER);
 	$games = $stmt->query();
 	$cache->set("games", $games, 3600);
@@ -46,7 +48,9 @@ $num_audiences = count($audiences);
 
 // Settings
 $settings = array();
-$settings_resultset = $db->query("SELECT * FROM settings;");
+$stmt = $db->prepare("SELECT * FROM settings WHERE company = :company OR company IS NULL;");
+$stmt->bindValue(":company", $user_company, Database::VARTYPE_INTEGER);
+$settings_resultset = $stmt->query();
 foreach ($settings_resultset as $row) { $settings[$row['key']] = $row['value']; }
 $num_settings = count($settings);
 //print_r($settings);

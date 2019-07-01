@@ -166,6 +166,8 @@ if (!isset($_GET['endpoint'])) {
 		"/install/youtube-settings/",
 		"/install/complete/",
 
+		// Search
+		"/search/",
 		// People
 		"/person/list/",
 		"/person/add/",
@@ -301,6 +303,9 @@ if (!isset($_GET['endpoint'])) {
 		"/social/account/facebook-page/list/",
 
 		"/social/account/twitch/add-callback/",
+
+		// Subscription API
+		//"/audience/subscription/add/",
 
 		// Chat
 		"/chat/online-users/",
@@ -1853,7 +1858,7 @@ if (!isset($_GET['endpoint'])) {
 				$result = new stdClass();
 				$result->success = true;
 			}*/
-			$db->query("UPDATE settings SET `value` = " . time() . " WHERE `key` = 'manual_backup_lastbackedupon'; ");
+			$db->exec("UPDATE settings SET `value` = " . time() . " WHERE `key` = 'manual_backup_lastbackedupon'; ");
 
 			$filename = $impresslist_sqliteDatabaseName;
 			$filename2 = $_SERVER['DOCUMENT_ROOT'] . "/" . $filename;
@@ -2052,7 +2057,7 @@ if (!isset($_GET['endpoint'])) {
 						// Validate all people, personPublications, etc.
 						// [{"type":"person","person_id":333,"sent":true,"read":false},{"type":"personPublication","personPublication_id":221,"sent":true,"read":false}]
 
-						$games = $db->query("SELECT * FROM game WHERE company = '" . $user_company . "';"); // TODO: prepare-ise
+						$games = $db->query("SELECT * FROM game WHERE company = '" . $user_company . "' AND removed = 0;"); // TODO: prepare-ise
 						// Validate for all games... bah
 						// Validate all countries.
 						// Validate there are enough codes based on region.
@@ -2398,12 +2403,22 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once('init.php');
 
-			$importData = $_GET['data'];
+			$importAudience = $_GET['audience'];
 			$importType = $_GET['type'];
 			$importOrder = $_GET['order'];
 			$importOrderLength = count(explode(",", $importOrder));
 
-			if (strlen($importData) == 0) {
+			$importData = $_POST['data'];
+
+			//echo $importData;
+			//echo strlen($importData);
+
+			if ($importAudience != $user_currentAudience) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = "You can only import for current audience. Close multiple windows/tabs.";
+			}
+			else if (strlen($importData) == 0) {
 				$result = new stdClass();
 				$result->success = false;
 				$result->message = "Import data was empty.";
@@ -2421,6 +2436,18 @@ if (!isset($_GET['endpoint'])) {
 					$result->success = false;
 					$result->message = "No import lines found.";
 				} else {
+
+					function util_import_singular_bindvalues_string($keys) {
+						$keys = array_keys($keys);
+						$vals = "";
+						for($j = 0; $j < count($keys); $j++) {
+							$vals .= ":" . $keys[$j];
+							if ($j < count($keys) - 1) {
+								$vals .= ",";
+							}
+						}
+						return $vals;
+					}
 
 					$importerror = false;
 					$importerrorint = -1;
@@ -2459,6 +2486,119 @@ if (!isset($_GET['endpoint'])) {
 						$order = explode(",", $importOrder);
 						if (strpos($order[0], "person") === 0) {
 							$result->type = "person";
+
+							// Build data
+							$map = [
+								"person_firstname" => "firstname",
+								"person_surname" => "surnames",
+								"person_twitter" => "twitter",
+								"person_email" => "email",
+								"person_notes" => "notes",
+								"person_country" => "country",
+								"person_created_on_timestamp" => "createdOn",
+								"person_created_on_yyyy_mm_dd_hh_mm_ss" => "createdOn"
+							];
+
+							$countImports = 0;
+							$countSkips = 0;
+							$skips = [];
+
+							$tableName = "person";
+							for($i = 0; $i < count($list); $i++) {
+								$data = [
+									'audience' => $importAudience,
+									'firstname' => 'Subscriber',
+									'surnames' => '',
+									'email' => '',
+									'priorities' => '',
+									'twitter' => '',
+									'twitter_followers' => 0,
+									'twitter_updatedon' => 0,
+									'notes' => '',
+									'lang' => DEFAULT_LANG,
+									'country' => '',
+									'tags' => '',
+									'createdOn' => time(),
+									'lastcontacted' => 0,
+									'lastcontactedby' => 0,
+									'assigned' => 0,
+									'outofdate' => 0,
+									'removed' => 0
+								];
+
+								$thisEmail = "";
+								$intoHeaders = [];
+								$intoKeys = [];
+								$intoVals = [];
+								$existing = false;
+								for($j = 0; $j < count($order); $j++) {
+									if ($map[$order[$j]] == "") { continue; }
+									$h = $map[$order[$j]];
+									$v = $list[$i][$j];
+
+									if ($v == "") { continue; }
+
+									$intoHeaders[] = $h;
+									$intoVals[] = $v;
+
+									$data[$h] = $v;
+
+									if ($h == "email") {
+										$thisEmail = $v;
+										$existingItem = db_singlepersonByEmail($db, $v);
+										if ($existingItem != null) {
+											$existing = true;
+										}
+									}
+									if ($order[$j] == "person_created_on_yyyy_mm_dd_hh_mm_ss") {
+										$newv = strtotime($v);
+										if ($newv !== FALSE) {
+											$data[$h] = $newv;
+										}
+									}
+								}
+								if ($existing) {
+									$skips[] = $thisEmail;
+									$countSkips++;
+									continue;
+								}
+
+								// Overrride first name with email part.
+								if ($data['firstname'] == "Subscriber") {
+									$data['firstname'] = substr($data['email'], 0, strpos($data['email'], "@"));
+								}
+								// Reset country if it is not valid.
+								$data['country'] = strtolower($data['country']);
+								if ($data['country'] == "uk") { $data['country'] = "gb"; }
+								$countries = array_shift(array_values(listcountries()));
+								if (!in_array($data['country'], $countries)) {
+									$data['country'] = "";
+								}
+
+								$keys = array_keys($data);
+								$keysStr = implode(",", array_keys($data));
+								$vals = util_import_singular_bindvalues_string($data);
+
+								$queryString = " INSERT INTO {$tableName}  (id, " . $keysStr . ") VALUES (NULL, " . $vals . ");";
+								$stmt = $db->prepare($queryString);
+								for($j = 0; $j < count($keys); $j++) {
+									$stmt->bindValue(":" . $keys[$j], $data[$keys[$j]], (is_numeric($data[$keys[$j]])? Database::VARTYPE_INTEGER : Database::VARTYPE_STRING));
+								}
+								$res = $stmt->execute();
+								if (!$res) {
+									$result = api_error("mysqli error" . $stmt->error);
+									print_r($result);
+									echo "imports:" . $countImports . "<br/>";
+									echo "skips:" . $countSkips . "<br/>";
+									echo "q:" . $queryString . "<br/>";
+									die();
+								} else {
+									$countImports++;
+								}
+							}
+
+							$result->message = count($list);
+
 						}
 						else if (strpos($order[0], "publication") === 0) {
 							$result->type = "publication";
@@ -2480,9 +2620,8 @@ if (!isset($_GET['endpoint'])) {
 							$skips = [];
 							for($i = 0; $i < count($list); $i++) {
 
-
 								$data = [
-									'audience' => $user_currentAudience,
+									'audience' => $importAudience,
 									'twitchId' => '',
 									'twitchDescription' => '',
 									'twitchBroadcasterType' => '',
@@ -2611,6 +2750,83 @@ if (!isset($_GET['endpoint'])) {
 
 		}
 
+		else if ($endpoint == "/search/")
+		{
+			$require_login = true;
+			include_once("init.php");
+
+			if (!isset($_GET['q']) || strlen($_GET['q']) == 0) {
+				$result = api_error("Empty search query");
+			} else {
+				$doSearch = true;
+				$q = $_GET['q'];
+				$audience = $user_currentAudience;
+				if (isset($_GET['a']) && strlen($_GET['a']) > 0) {
+					$audienceObj = db_singleaudience($db, $_GET['a']);
+					if ($audienceObj['company'] != $user_company) {
+						$doSearch = false;
+					}
+					else {
+						$audience = $audienceObj['id'];
+					}
+				}
+				if (!$doSearch) {
+					$result = api_error("Audience does not belong to you.");
+				}
+				else {
+
+					$limit = 6;
+					// People
+					$stmt = $db->prepare("SELECT * FROM person
+											WHERE CONCAT_WS('', firstname, ' ', surnames, ',', email, ',', twitter, ',', tags) LIKE CONCAT('%',:q,'%')
+											AND audience = :audience
+											AND removed = 0
+											LIMIT {$limit};");
+					$stmt->bindValue(":q", $q, Database::VARTYPE_STRING);
+					$stmt->bindValue(":audience", $audience, Database::VARTYPE_INTEGER);
+					$people = $stmt->query();
+
+					// Publications
+					$stmt = $db->prepare("SELECT * FROM publication
+											WHERE CONCAT_WS('', name, ',', url, ',', email, ',', twitter, ',', notes, ',', tags) LIKE CONCAT('%',:q,'%')
+											AND audience = :audience
+											AND removed = 0
+											LIMIT {$limit};");
+					$stmt->bindValue(":q", $q, Database::VARTYPE_STRING);
+					$stmt->bindValue(":audience", $audience, Database::VARTYPE_INTEGER);
+					$publications = $stmt->query();
+
+					// Youtubers
+					$stmt = $db->prepare("SELECT * FROM youtuber
+											WHERE CONCAT_WS('', name, ',', name_override, ',', email, ',', description, ',', twitter, ',', notes, ',', tags) LIKE CONCAT('%',:q,'%')
+											AND audience = :audience
+											AND removed = 0
+											LIMIT {$limit};");
+					$stmt->bindValue(":q", $q, Database::VARTYPE_STRING);
+					$stmt->bindValue(":audience", $audience, Database::VARTYPE_INTEGER);
+					$youtubers = $stmt->query();
+
+					// Twitch Channels
+					$stmt = $db->prepare("SELECT * FROM twitchchannel
+											WHERE CONCAT_WS('', ',', name, ',', email, ',', twitter, ',', notes, ',', tags) LIKE CONCAT('%',:q,'%')
+											AND audience = :audience
+											AND removed = 0
+											LIMIT {$limit};");
+					$stmt->bindValue(":q", $q, Database::VARTYPE_STRING);
+					$stmt->bindValue(":audience", $audience, Database::VARTYPE_INTEGER);
+					$twitchchannels = $stmt->query();
+
+					$result = new stdClass();
+					$result->success = true;
+					$result->people = $people;
+					$result->publications = $publications;
+					$result->youtubers = $youtubers;
+					$result->twitchchannels = $twitchchannels;
+				}
+
+			}
+
+		}
 		else if ($endpoint == "/person/list/")
 		{
 			$require_login = true;
@@ -3583,8 +3799,8 @@ if (!isset($_GET['endpoint'])) {
 			if (!$error) {
 				// TODO: pass in audience id
 				// TODO: verify audience id once it is passed in.
-				$stmt = $db->prepare(" INSERT INTO person  (id,   audience, firstname, surnames,  email, priorities,   twitter, twitter_followers,   twitter_updatedon, lang, tags, notes, lastcontacted, lastcontactedby, removed)
-													VALUES (NULL, :audience, :firstname, :surnames, :email, :priorities, :twitter, :twitter_followers, :twitter_updatedon, :lang, :tags, :notes, :lastcontacted, :lastcontactedby, :removed); ");
+				$stmt = $db->prepare(" INSERT INTO person  (id,   audience, firstname, surnames,  email, priorities,   twitter, twitter_followers,   twitter_updatedon, lang, tags, notes, createdOn, lastcontacted, lastcontactedby, removed)
+													VALUES (NULL, :audience, :firstname, :surnames, :email, :priorities, :twitter, :twitter_followers, :twitter_updatedon, :lang, :tags, :notes, :createdOn, :lastcontacted, :lastcontactedby, :removed); ");
 				$stmt->bindValue(":audience", $user_currentAudience, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":firstname", $_GET['firstname'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":surnames", $_GET['surnames'], Database::VARTYPE_STRING);
@@ -3596,6 +3812,7 @@ if (!isset($_GET['endpoint'])) {
 				$stmt->bindValue(":tags", DEFAULT_TAGS, Database::VARTYPE_STRING);
 				$stmt->bindValue(":priorities", db_defaultPrioritiesString($db), Database::VARTYPE_STRING);
 				$stmt->bindValue(":notes", "", Database::VARTYPE_STRING);
+				$stmt->bindValue(":createdOn", time(), Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":lastcontacted", 0, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":lastcontactedby", 0, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
@@ -3841,7 +4058,7 @@ if (!isset($_GET['endpoint'])) {
 			if (!$error)
 			{
 				// check person id belongs to company audience.
-				$person = db_singleperson($_GET['person']);
+				$person = db_singleperson($db, $_GET['person']);
 				if (!$person) {
 					$result = api_error("Invalid person.");
 				} else if ($person['company'] != $user_company) {
@@ -3849,7 +4066,7 @@ if (!isset($_GET['endpoint'])) {
 				} else {
 
 					// check twitch id belongs to company audience.
-					$tc = db_singletwitchchannel($_GET['twitchchannel']);
+					$tc = db_singletwitchchannel($db, $_GET['twitchchannel']);
 					if (!$tc) {
 						$result = api_error("Invalid twitchchannel.");
 					} else if ($tc['company'] != $user_company) {
@@ -3938,7 +4155,7 @@ if (!isset($_GET['endpoint'])) {
 					$result = api_error("Invalid person. (Does not belong to you.)");
 				}
 				else {
-					$user = db_singleuser($assigned);
+					$user = db_singleuser($db, $assigned);
 					if (!$user) {
 						$result = api_error("Invalid assigned/user.");
 					} else if ($user['company'] != $user_company) {
@@ -3978,7 +4195,7 @@ if (!isset($_GET['endpoint'])) {
 				}
 				else {
 
-					$game = db_singlegame($_GET['game']);
+					$game = db_singlegame($db, $_GET['game']);
 					if (!$game) {
 						$result = api_error("Invalid game id.");
 					} else if ($game['company'] != $user_company) {
@@ -4072,7 +4289,7 @@ if (!isset($_GET['endpoint'])) {
 				}
 				else {
 
-					$game = db_singlegame($_GET['game']);
+					$game = db_singlegame($db, $_GET['game']);
 					if (!$game) {
 						$result = api_error("Invalid game id.");
 					} else if ($game['company'] != $user_company){
@@ -4782,15 +4999,17 @@ if (!isset($_GET['endpoint'])) {
 			else {
 				$data = $_GET;
 
-				$stmt = $db->prepare(" INSERT INTO user (id, forename, surname, email, password, color, admin, currentGame, coverageNotifications)
-												VALUES (NULL, :forename, :surname, :email, :password, :color, :admin, :currentGame, :coverageNotifications ) ");
+				$stmt = $db->prepare(" INSERT INTO user (id, forename, surname, email, password, color, admin, currentAudience, currentGame, coverageNotifications)
+												VALUES (NULL, :forename, :surname, :email, :password, :color, :admin, :superadmin, :currentAudience, :currentGame, :coverageNotifications ) ");
 				$stmt->bindValue(":forename", 'Firstname', Database::VARTYPE_STRING);
 				$stmt->bindValue(":surname", 'Surname', Database::VARTYPE_STRING);
 				$stmt->bindValue(":email", 'test@gmail.com', Database::VARTYPE_STRING);
 				$stmt->bindValue(":password", md5('password'), Database::VARTYPE_STRING);
 				$stmt->bindValue(":color", 'black', Database::VARTYPE_STRING);
 				$stmt->bindValue(":admin", 0, Database::VARTYPE_INTEGER);
-				$stmt->bindValue(":currentGame", 1, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":superadmin", 0, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":currentAudience", $user['currentAudience'], Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":currentGame", $user['currentGame'], Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":coverageNotifications", 0, Database::VARTYPE_INTEGER);
 				$rs = $stmt->execute();
 
@@ -5088,7 +5307,7 @@ if (!isset($_GET['endpoint'])) {
 
 					$newProject = $_GET['newProject'];
 
-					$singleGame = db_singlegame($newProject);
+					$singleGame = db_singlegame($db, $newProject);
 					if (!$singleGame) {
 						$result = api_error("Game/project does not exist.");
 					} else if ($singleGame['company'] != $user_company) {
@@ -5128,7 +5347,7 @@ if (!isset($_GET['endpoint'])) {
 
 					$audience = $_GET['audience'];
 
-					$singleAudience = db_singleaudience($audience);
+					$singleAudience = db_singleaudience($db, $audience);
 					if (!$singleAudience) {
 						$result = api_error("Audience does not exist.");
 					} else if ($singleAudience['company'] != $user_company) {

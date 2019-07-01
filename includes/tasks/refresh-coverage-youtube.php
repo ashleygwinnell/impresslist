@@ -18,18 +18,18 @@ $youtubers = $db->query("SELECT * FROM youtuber WHERE lastscrapedon < " . (time(
 $num_youtubers = count($youtubers);
 
 // Games
-$games = $db->query("SELECT * FROM game;");
+$games = $db->query("SELECT * FROM game WHERE removed = 0;");
 $num_games = count($games);
 
 // Watched Games
-$watchedgames = $db->query("SELECT * FROM watchedgame;");
+$watchedgames = $db->query("SELECT * FROM watchedgame WHERE removed = 0;");
 $num_watchedgames = count($watchedgames);
 
 //print_r($games);
 //print_r($watchedgames);
 
 
-function tryAddYoutubeCoverage($youtuberId, $youtuberName, $gameId, $watchedGameId, $title, $url, $thumbnail, $time) {
+function tryAddYoutubeCoverage($companyId, $youtuberId, $youtuberName, $gameId, $watchedGameId, $title, $url, $thumbnail, $time) {
 	global $db;
 	// YES! We got coverage.
 	// ... but we need to make sure we don't have it saved already!
@@ -61,10 +61,11 @@ function tryAddYoutubeCoverage($youtuberId, $youtuberName, $gameId, $watchedGame
 		$stmt->bindValue(":utime", $time, Database::VARTYPE_INTEGER);
 		$stmt->execute();
 
-		if ($watchedGameId == 0) {
-			@email_new_youtube_coverage($youtuberName, $url, $time);
-			@slack_coverageAlert($youtuberName, $title, $url);
-			@discord_coverageAlert($youtuberName, $title, $url);
+		// not one of the watched games so much be a proper user-owned game.
+		if ($watchedGameId == 0 && $companyId != 0) {
+			@email_new_youtube_coverage($companyId, $youtuberName, $url, $time);
+			@slack_coverageAlert($companyId, $youtuberName, $title, $url);
+			@discord_coverageAlert($companyId, $youtuberName, $title, $url);
 		}
 
 	} else {
@@ -76,7 +77,7 @@ function tryAddYoutubeCoverage($youtuberId, $youtuberName, $gameId, $watchedGame
 
 
 
-// for each publication
+// for each youtuber
 for($i = 0; $i < $num_youtubers; ++$i)
 {
 	echo "<b>" . $youtubers[$i]['name'] . "</b>!<br/>\n";
@@ -118,6 +119,7 @@ for($i = 0; $i < $num_youtubers; ++$i)
 					{
 						echo "<h4>Found Coverage!</h4>";
 						tryAddYoutubeCoverage(
+							$game['company'],
 							$youtubers[$i]['id'],
 							$youtubers[$i]['name'],
 							$game['id'],
@@ -138,6 +140,7 @@ for($i = 0; $i < $num_youtubers; ++$i)
 					{
 						echo "<h4>Found Coverage!</h4>";
 						tryAddYoutubeCoverage(
+							0,
 							$youtubers[$i]['id'],
 							$youtubers[$i]['name'],
 							0,
@@ -185,6 +188,7 @@ for($i = 0; $i < $num_youtubers; ++$i)
 						echo "<br/>";
 
 						tryAddYoutubeCoverage(
+							0
 							$youtubers[$i]['id'],
 							$youtubers[$i]['name'],
 							$game['id'],

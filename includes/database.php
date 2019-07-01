@@ -19,7 +19,7 @@
 		if (strlen($extrasString) > 0) {
 			$extrasString = ', '.$extrasString;
 		}
-		$q = "SELECT company.id, name $extrasString FROM company where removed = 0 and company.id = :company_id group by company.id ;";
+		$q = "SELECT id, name {$extrasString} FROM company WHERE removed = 0 AND id = :company_id group by id ;";
 		$stmt = $db->prepare($q);
 		$stmt->bindValue(":company_id", $companyId, Database::VARTYPE_INTEGER);
 		$results = $stmt->query();
@@ -52,6 +52,18 @@
 								WHERE person.id = :person_id
 								LIMIT 1;");
 		$stmt->bindValue(":person_id", $personId, Database::VARTYPE_INTEGER);
+		$rs = $stmt->query();
+		return $rs[0];
+	}
+	function db_singlepersonByEmail($db, $emailAddress) {
+		$lastcontacted = ", strftime('%s', lastcontacted) as lastcontacted_timestamp ";
+		if ($db->type == Database::TYPE_MYSQL) { $lastcontacted = ""; }
+		$stmt = $db->prepare("SELECT person.*, audience.company " . $lastcontacted . "
+								FROM person
+								JOIN audience on person.audience = audience.id
+								WHERE person.email = :email
+								LIMIT 1;");
+		$stmt->bindValue(":email", $emailAddress, Database::VARTYPE_STRING);
 		$rs = $stmt->query();
 		return $rs[0];
 	}
@@ -154,7 +166,7 @@
 	}
 	function db_singlegame($db, $gameId) {
 		if (!is_numeric($gameId)) { return false; }
-		$stmt = $db->prepare("SELECT game.* FROM game WHERE game.id = :game_id LIMIT 1;");
+		$stmt = $db->prepare("SELECT * FROM game WHERE id = :game_id and removed = 0 LIMIT 1;");
 		$stmt->bindValue(":game_id", $gameId, Database::VARTYPE_INTEGER);
 		$rs = $stmt->query();
 		return $rs[0];
@@ -219,8 +231,9 @@
 	}
 	function db_singleSocialQueueItem($db, $id) {
 		if (!is_numeric($id)) { return false; }
-		$rs = $db->prepare("SELECT * FROM socialqueue WHERE id = :id LIMIT 1;");
+		$stmt = $db->prepare("SELECT * FROM socialqueue WHERE id = :id LIMIT 1;");
 		$stmt->bindValue(":id", $id, Database::VARTYPE_INTEGER);
+		$rs = $stmt->query();
 		return $rs[0];
 	}
 	function db_keysassignedtotype($db, $gameid, $platform, $subplatform, $type, $typeid) {
@@ -246,7 +259,7 @@
 	function db_defaultPrioritiesString($db) {
 		$string = "";
 		$count = 0;
-		$results = $db->query("SELECT * FROM game;");
+		$results = $db->query("SELECT * FROM game WHERE removed=0;");
 		foreach ($results as $result) {
 			if ($count > 0) {
 				$string .= ",";
@@ -379,12 +392,15 @@
 					`discord_enabled` {$tinyint} NOT NULL DEFAULT 0,
 					`discord_webhookId` varchar(255) NOT NULL,
 					`discord_webhookToken` varchar(255) NOT NULL,
+					`slack_enabled` {$tinyint} NOT NULL DEFAULT 0,
+					`slack_apiUrl` TEXT NOT NULL,
 					`createdon` INTEGER NOT NULL,
 					`removed` {$tinyint} NOT NULL DEFAULT 0
 				) {$sqlEngineAndCharset} ;";
 		$db->exec($sql);
-		$db->exec("INSERT IGNORE INTO `company` (`id`, `name`, `keywords`, `address`, `email`, `twitter`, `facebook`, `discord_enabled`, `discord_webhookId`, `discord_webhookToken`, `createdon`, `removed`) VALUES
-												 (1, 'Company Name', 'Company Name', 'Your full address line.', 'hello@yourdomain.com', 'twitter', 'facebook', 0, '', '', 0, 0);");
+		$db->exec("INSERT IGNORE INTO `company` (
+						`id`, 	`name`, 		`keywords`, 	`address`, 					`email`, 				`twitter`, `facebook`, `discord_enabled`, 	`discord_webhookId`, 	`discord_webhookToken`, `slack_enabled`, `slack_apiUrl`, `createdon`, 	`removed`) VALUES
+						(1, 	'Company Name', 'Company Name', 'Your full address line.',	'hello@yourdomain.com', 'twitter', 'facebook', 0, 					'', 					'', 					0, 				 '', 			 0, 			0);");
 
 		// Emails
 		$sql = "CREATE TABLE IF NOT EXISTS email (
@@ -522,6 +538,7 @@
 					lang VARCHAR(30) NOT NULL,
 					country VARCHAR(2) NOT NULL DEFAULT '',
 					tags TEXT NOT NULL,
+					createdOn INT NOT NULL DEFAULT 0,
 					lastcontacted INTEGER NOT NULL,
 					lastcontactedby INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0,
@@ -599,7 +616,7 @@
 		$db->exec($sql);
 
 		$sql = "CREATE TABLE IF NOT EXISTS settings (
-					`company` INTEGER NOT NULL DEFAULT 1,
+					`company` INTEGER NULL DEFAULT NULL,
 					`key` VARCHAR(255) PRIMARY KEY NOT NULL,
 					`value` TEXT
 				) {$sqlEngineAndCharset} ;";
@@ -771,42 +788,38 @@
 
 
 		// Settings
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'company_name', 'Company Name'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'company_addressLine', 'Company Name, 1 Tree Hill, City, Country.'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'company_emailAddress', 'contact@yourwebdomain.com'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'company_twitter', 'http://twitter.com/company_name'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'company_facebook', 'http://facebook.com/company_name'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'company_name', 'Company Name'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'company_addressLine', 'Company Name, 1 Tree Hill, City, Country.'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'company_emailAddress', 'contact@yourwebdomain.com'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'company_twitter', 'http://twitter.com/company_name'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'company_facebook', 'http://facebook.com/company_name'); ");
 
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'cacheType', '" . Cache::TYPE_NONE . "'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'memcacheServer', 'localhost'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'memcachePort', '11211'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'cacheType', '" . Cache::TYPE_NONE . "'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'memcacheServer', 'localhost'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'memcachePort', '11211'); ");
 
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'auto_backup_email', ''); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'auto_backup_frequency', 0); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'manual_backup_lastbackedupon', 0); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'todolist', ''); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'auto_backup_email', ''); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'auto_backup_frequency', 0); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'manual_backup_lastbackedupon', 0); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'todolist', ''); ");
 
 		global $impresslist_version;
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'version', '" . $impresslist_version . "'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'version', '" . $impresslist_version . "'); ");
 
 		// Youtube settings
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'youtube_apiKey', 'youtube_api_key'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'youtube_apiKey', 'youtube_api_key'); ");
 
 		// Twitter API settings
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'twitter_configuration', '{}'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'twitter_consumerKey', 'consumer_key'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'twitter_consumerSecret', 'consumer_secret'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'twitter_oauthToken', 'oauth_token'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'twitter_oauthSecret', 'oauth_secret'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'twitter_configuration', '{}'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'twitter_consumerKey', 'consumer_key'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'twitter_consumerSecret', 'consumer_secret'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'twitter_oauthToken', 'oauth_token'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'twitter_oauthSecret', 'oauth_secret'); ");
 
 		// Facebook API settings - https://developers.facebook.com
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'facebook_appId', 'app_id'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'facebook_appSecret', 'app_secret'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'facebook_apiVersion', 'api_version'); ");
-
-		// Slack integration settings
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'slack_enabled', 'false'); ");
-		$db->exec("INSERT IGNORE INTO settings VALUES (1, 'slack_apiUrl', 'https://hooks.slack.com/services/GENERATE/THIS/URL'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'facebook_appId', 'app_id'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'facebook_appSecret', 'app_secret'); ");
+		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'facebook_apiVersion', 'api_version'); ");
 
 		return true;
 	}
@@ -819,7 +832,7 @@
 		if ($db == null) { return array(); }
 
 		$keyedSettings = array();
-		$settings = $db->query("SELECT * FROM settings;");
+		$settings = $db->query("SELECT * FROM settings WHERE company IS NULL;");
 		foreach($settings as $setting) {
 			$keyedSettings[$setting['key']] = $setting['value'];
 		}

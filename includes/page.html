@@ -76,73 +76,33 @@
 			&nbsp;
 		</div>
 
+		<div class='container mycontainer' style='width:795px;'>
+			<div id='full-search-results-container' class='advanced-filters-container' style='width:500px;position:fixed;top:40px;z-index:1040;'>
+				<div class='advanced-filters-inner oa' style='border-top-left-radius:0px;min-height:0px'>
+					<!-- <h3>Results</h3> -->
+					<div id='full-search-results-loading'>Loading...</div>
+					<div id='full-search-results-error'>Error!</div>
+					<div id='full-search-results'></div>
+				</div>
+			</div>
+		</div>
 
 
 		<!-- Home page -->
 		<div id='home-page' data-type-page='true' data-page='home'>
 
-
-
-			<div id='current-project' class='container mycontainer'>
-				<div class='filters'>
-					<div class='filter-item'><b>Filters:</b></div>
-					<div style='display:none;'>
-						<input id='filter-recent-contact' type='checkbox'/>
-						<input id='filter-high-priority' type='checkbox'/>
-						<input id='filter-personal-contact' type='checkbox'/>
-						<input id='filter-email-attached' type='checkbox'/>
-						<input id='filter-assigned-self' type='checkbox'/>
-						<input id='filter-show-outofdate' type='checkbox'/>
-					</div>
-					<select id="filters-select" multiple="multiple">
-					    <option data-id='filter-recent-contact' value="filter-recent-contact">Not recently contacted (1 week)</option>
-					    <option data-id='filter-high-priority' value="filter-high-priority">High Priority</option>
-					    <option data-id='filter-personal-contact' value="filter-personal-contact">People I've contacted</option>
-					    <option data-id='filter-email-attached' value="filter-email-attached">People with Email Addresses</option>
-					    <option data-id='filter-assigned-self' value="filter-assigned-self">People assigned to me</option>
-					    <option data-id='filter-show-outofdate' value="filter-show-outofdate">People who are out-of-date</option>
-					</select>
-					<script type="text/javascript">
-					    $(document).ready(function() {
-					        $('#filters-select').multiselect({
-					        	includeResetOption: true,
-					        	buttonWidth: '200px',
-					        	dropRight: true,
-					        	templates: {
-					        		li: "<li style='font-size:12pt'><a href=\"javascript:void(0);\"><label></label></a></li>"
-					        	},
-					        	onChange: function(option, checked, select) {
-					        		console.log(option, checked, select);
-					        		$('#' + option.attr('data-id')).prop("checked", checked);
-					        		impresslist.refreshFilter();
-					        	}
-					        });
-					    });
-					</script>
-				</div>
-				<!-- <div class='filters' style='clear:both;'>
-					<div class='filter-item'><b>Tags:</b></div>
-					<div id='filter-tag-list'>
-
-					</div>
-					<script type="text/javascript">
-						$(document).ready(function() {
-							for(var key in impresslist.config.tags) {
-								var n = impresslist.config.tags[key].name;
-								var c = impresslist.config.tags[key].color;
-								$('#filter-tag-list').append("<span class='label label-default' style='background-color:" + c + "'>" + n + "</span> ");
-							}
-						});
-					</script>
-
-				</div> -->
-
-
-
-			</div><br/>
-
 			<div class='container mycontainer'>
-				<h3>Audience</h3>
+				<div class='oa'>
+					<h3 class='fl'><?php
+						$currentAudience = null;
+						for($i = 0; $i < count($audiences);$i++) {
+							if ($audiences[$i]['id'] == $user_currentAudience) {
+								$currentAudience = $audiences[$i];
+							}
+						}
+						echo $currentAudience['name']; ?></h3>
+					<button id='nav-user-changeaudience' data-toggle='modal' data-target='.changeaudience_modal' class='btn btn-link btn-sm fl'>&#9998;</button>
+				</div>
 				<ul class="nav nav-pills" role='tablist'>
 					<li role="presentation"><a id='jobs-pill-link' href="#jobs-pill" aria-controls="jobs-pill" role="tab" data-toggle="pill" style='display:none;'>Jobs</a></li>
 					<li role="presentation" class="active"><a href="#people-pill" aria-controls="people-pill" role="tab" data-toggle="pill">People</a></li>
@@ -151,7 +111,60 @@
 					<li role="presentation"><a href="#twitchchannels-pill" aria-controls="twitchchannels-pill" role="tab" data-toggle="pill">Twitch Channels</a></li>
 					<li role="presentation"><a href="#podcasts-pill" aria-controls="podcasts-pill" role="tab" data-toggle="pill">Podcasts</a></li>
 					<li role="presentation"><a id='chat-pill-link' href="#chat-pill" aria-controls="chat-pill" role="tab" data-toggle="pill" style='display:none;'>Chat</a></li>
+
+
+					<div class='fr'>
+						<button onclick="$('#advanced-filters-container').toggle();" class='btn btn-info'>Filters <span class='caret'></span></button>
+					</div>
+
+					<div class='dropdown fr' style='margin-right:5px;'>
+						<button class='btn btn-primary dropdown-toggle' type='button' id='audience-add-button' data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Add <span class='caret'></span></button>
+
+						<ul class='dropdown-menu dropdown-menu-right'>
+							<li><a id='nav-add-person' href="javascript:;">Person</a></li>
+			    			<li><a id='nav-add-publication' href="javascript:;">Publication</a></li>
+			    			<li><a id='nav-add-youtuber' href="javascript:;">YouTuber</a></li>
+			    			<li><a id='nav-add-youtuber-search-batch' href="javascript:;">YouTuber (Search)</a></li>
+			    			<li><a id='nav-add-twitchchannel' href="javascript:;">Twitch Channel</a></li>
+			    			<li class="divider"></li>
+							<li><a id='nav-importtool' data-nav-page="importtool" href="javascript:;">Import Tool</a></li>
+						</ul>
+
+					</div>
+
+
+
 				</ul><br/>
+				<div id='advanced-filters-container' class='advanced-filters-container'>
+					<div class='advanced-filters-inner oa'>
+						<div class='fl' style='width:40%;'>
+							<h3>Filters</h3>
+							<input id='filter-search' type="text" class="form-control" placeholder="Search" style='width:250px;'/><br/>
+							<label class='filter-item'><input id='filter-recent-contact' class='filter-tag' type='checkbox'/> Not recently contacted (1 week) </label><Br/>
+							<label class='filter-item'><input id='filter-high-priority' class='filter-tag' type='checkbox'/> High Priority </label><Br/>
+							<label class='filter-item'><input id='filter-personal-contact' class='filter-tag' type='checkbox'/> People I've contacted</label><Br/>
+							<label class='filter-item'><input id='filter-email-attached' class='filter-tag' type='checkbox'/> With Email Addresses</label><Br/>
+							<label class='filter-item'><input id='filter-assigned-self' class='filter-tag' type='checkbox'/> Assigned to me</label><Br/>
+							<label class='filter-item'><input id='filter-show-outofdate' class='filter-tag' type='checkbox'/> Marked out-of-date</label><Br/>
+							<br/>
+						</div>
+						<div class='fl' style='width:60%;'>
+							<h3>Filter by Tags</h3>
+							<?php
+							    $categories = listtagsbycategory();
+								foreach($categories as $key => $cat) {
+			      					echo "<div>";
+			      					echo "<b>" . $cat['name'] . ":</b><br/>";
+			      					foreach($cat['list'] as $name => $data) {
+			      						echo "<label class='tag-lg tag-md tag-" . $name . "'>" . $data['name'] . "<input type='checkbox' class='badgebox filter-tag' data-tag='" . $name . "' id='filter-tag-" . $name . "'/><span class='badge'>&check;</span></label> ";
+			      					}
+			      					echo "</div>";
+
+			      				}
+						    ?>
+						</div>
+					</div>
+				</div>
 
 				<div class="tab-content">
 					<div role="tabpanel" class="tab-pane active" id="people-pill">
@@ -189,6 +202,7 @@
 											<th>Priority</th>
 											<th>Twitter</th>
 											<th>Last Contacted</th>
+											<th>Tags</th>
 										</tr>
 									</thead>
 									<tbody id='people'>
@@ -450,14 +464,14 @@
 		<!-- Help panel -->
 		<div id='help-page' data-type-page='true' data-page='help'>
 			<div class='container mycontainer'>
-				<p><b>Help:</b></p>
+				<h3>Help</h3>
 				<!-- <p>Everybody knows by now that you can't just carpet-bomb the entire games press with a single non-personalised email, especially so if you're not part of the infamous (and totally fictional) indie elite. That is why this tool was created, and why it doesn't include an "email all" feature.</p>
 
 
 
 				<p><b>Tips</b></p>-->
-				<hr/>
-				<p><b>Mailout Tips:</b></p>
+
+				<h3><b>Mailout Tips:</b></h3>
 				<p><b>For press releases:</b> A surprising number of people use Gmail inbox. Your best effort should be made to get out of the 'promotions' tab. You can do this by:
 				<ul>
 					<li>Using only one image.</li>
@@ -468,11 +482,12 @@
 				<ul>
 					<li>Give, give, give, ask -- don't always sell your game, give them something nice. </li>
 					<li>Write your emails like you're writing to your best friend. Treat your list like your own fan club.</li>
-					<li>See more useful info from <a href='http://howtomarketagame.com/2018/02/02/how-to-build-your-marketing-system/' target='new'>howtomarketyourgame.com</a></li>
+					<li>See more useful info from <a href='http://howtomarketagame.com/2018/02/02/how-to-build-your-marketing-system/' target='new'>howtomarketyourgame.com</a>.</li>
+					<li>How to write a good subject line? - <a href='https://mailchimp.com/help/best-practices-for-email-subject-lines/' target='new'>Mailchimp</a></li>
 				</ul>
-				<hr/>
 
-				<p><b>Other tips:</b></p>
+
+				<h3><b>Other tips:</b></h3>
 				<p>Using this tool is hopefully pretty self-explanatory, so instead we decided it would be better of us to list a bunch of really useful articles that help you hone your story, and make you think a bit more about how you approach your PR and Marketing.</p><p> As below:</p>
 				<ul>
 					<li><a href='http://indiegames.com/2013/07/five_pr_tips_indies_really_nee.html' target='new'>Five PR tips indies really need</a> - Leigh Alexander, indiegames.com</li>
@@ -489,262 +504,262 @@
 						tinyBuild big list of Twitch streamers.
 						http://tinybuild.com/twitch
 					-->
+				</ul><br/><br/>
+			</div>
 
+		</div>
 
+		<!-- Project page -->
+		<div id='project-page' data-type-page='true' data-page='project'>
+			<div class='container mycontainer'>
+				<div class='oa'>
+					<h3 class='fl current-project-name'>Loading...</h3>
+					<button id='nav-user-changeproject' data-toggle='modal' data-target='.changeproject_modal' class='btn btn-link btn-sm fl'>&#9998;</button>
+				</div>
 
+				<ul class="nav nav-pills" role='tablist'>
+					<li role="presentation" class="active"><a href="#coverage-pill" aria-controls="coverage-pill" role="tab" data-toggle="pill">Coverage</a></li>
+					<li role="presentation"><a id='nav-keys' href="#keys-pill" aria-controls="keys-pill" role="tab" data-toggle="pill">Keys</a></li>
+					<li role="presentation" ><a href="#watchedgames-pill" aria-controls="watchedgames-pill" role="tab" data-toggle="pill">Watched Games</a></li>
 				</ul>
 			</div>
-
-		</div>
-
-
-		<!-- Keys -->
-		<div id='keys-page' data-type-page='true' data-page='keys'>
+			<br/>
 			<div class='container mycontainer'>
-				<p><b><span class='current-project-name'>{project name}</span></b></p>
-				<p><b>Project Keys</b></p>
 
-				<!-- <div id='keys-loading-true'>
-					<div class="alert alert-info" role="alert">
-						<span class="glyphicon glyphicon-loading" aria-hidden="true"></span>
-						<span class="sr-only"></span>
-						Loading...
-					</div>
-				</div>
-				<div id='keys-loading-false'>
-				</div> -->
-
-
-				<p><b>Steam:</b></p>
-				<p>Assigned: <span id='steam_keys_assigned_count'>loading...</span></p>
-				<p>Available: <span id='steam_keys_available_count'>loading...</span></p>
-
-				<p><b>Nintendo Switch:</b></p>
-				<p>Assigned EU: <span id='switch_eu_keys_assigned_count'>loading...</span></p>
-				<p>Available EU: <span id='switch_eu_keys_available_count'>loading...</span></p>
-				<p>Assigned US: <span id='switch_us_keys_assigned_count'>loading...</span></p>
-				<p>Available US: <span id='switch_us_keys_available_count'>loading...</span></p>
-				<p>Assigned AU: <span id='switch_au_keys_assigned_count'>loading...</span></p>
-				<p>Available AU: <span id='switch_au_keys_available_count'>loading...</span></p>
-				<p>Assigned JP: <span id='switch_jp_keys_assigned_count'>loading...</span></p>
-				<p>Available JP: <span id='switch_jp_keys_available_count'>loading...</span></p>
-
-				<hr/>
-				<p><b>Add Keys</b></p>
-				<div class='row'>
-					<div class='col-sm-3'>
-						<p><b>Platform:</b></p>
-					</div>
-					<div class='col-sm-9'>
-						<select id='keys-add-platform' class='form-control'>
-							<option value='---'>---</option>
-							<option value='steam'>Steam</option>
-							<option value='switch'>Nintendo Switch</option>
-							<!-- <option value='gamejolt'>Game Jolt</option> -->
-							<!-- <option value='ios'>iOS App Store</option> -->
-							<!-- <option value='windows'>Windows Store</option> -->
-							<!-- <option value='mac'>Mac App Store</option> -->
-							<!-- <option value='xboxone'>Xbox One</option> -->
-							<!-- <option value='ps4'>PS4</option> -->
-							<!-- <option value='wiiu'>Wii U</option> -->
-						</select>
-					</div>
-				</div>
-				<div class='row' style='margin-top:7px;'>
-					<div class='col-sm-3'>
-						<p><b>Subplatform / Region:</b></p>
-					</div>
-					<div class='col-sm-9'>
-						<select id='keys-add-subplatform' class='form-control'>
-							<option value='---'>---</option>
-							<?php
-								$regions = util_listNintendoRegions();
-								foreach($regions as $code => $name) {
-									echo "<option value='{$code}'>{$name}</option>\n";
-								}
-							?>
-
-						</select>
-					</div>
-				</div>
-				<div class='row'>
-					<div class='col-sm-3'>
-						<p><b>Keys:</b></p>
-					</div>
-					<div class='col-sm-9'>
-						<textarea id='keys-add-textfield' class='form-control' style='margin-top:10px;min-height:100px; overflow:scroll;' placeholder="Enter one key per line..."></textarea>
-					</div>
-				</div>
-				<div class='row'>
-					<div class='col-sm-3'>
-						<p><b>Expiry:</b></p>
-					</div>
-					<div class='col-sm-9' style='margin-top:7px;'>
-						<p>
-							<label class='radio-inline'><input id='keys-radio-expiry-never' type='radio' name='keys-expiry-radio' value='never' checked/>Never</label>
-							<label class='radio-inline'><input id='keys-radio-expiry-time' type='radio' name='keys-expiry-radio' value='time'/>Time</label>
-						</p>
-
-
-						<div class='input-group date' id='keys-timepicker'>
-							<input id='keys-edit-timestamp' type='text' class='form-control' />
-							<span class='input-group-addon'>
-								<span class='glyphicon glyphicon-calendar'></span>
-							</span>
+				<div class="tab-content">
+		    		<!-- Coverage -->
+					<div role="tabpanel" id='coverage-pill' class='tab-pane active'>
+						<div id='coverage-loading-true'>
+							<div class="alert alert-info" role="alert">
+								<span class="glyphicon glyphicon-loading" aria-hidden="true"></span>
+								<span class="sr-only"></span>
+								Loading...
+							</div>
 						</div>
+						<div id='coverage-loading-false'>
+							<div class='oa'>
+								<h4 class='fl'>Coverage</h4>
 
-					</div>
-					<button id='keys-add-submit' class='btn btn-primary fr'>Add Keys</button>
-				</div>
-				<hr/>
-
-
-
-				<div id='keys-remove-form' style='display:none;' >
-					<p><b>Remove Keys:</b></p>
-					<div class='row'>
-						<div class='col-sm-2'>
-							<p><b>Platform:</b></p>
-						</div>
-						<div class='col-sm-10'>
-							<select id='keys-remove-platform' class='form-control' style='margin-bottom:10px;'>
-								<option value='---'>---</option>
-								<option value='steam'>Steam</option>
-								<option value='switch'>Nintendo Switch</option>
-								<!-- <option value='gamejolt'>Game Jolt</option> -->
-								<!-- <option value='ios'>iOS App Store</option> -->
-								<!-- <option value='windows'>Windows Store</option> -->
-								<!-- <option value='mac'>Mac App Store</option> -->
-								<!-- <option value='xboxone'>Xbox One</option> -->
-								<!-- <option value='ps4'>PS4</option> -->
-								<!-- <option value='wiiu'>Wii U</option> -->
-							</select>
-						</div>
-					</div>
-					<div class='row' style='margin-top:7px;'>
-						<div class='col-sm-2'>
-							<p><b>Subplatform / Region:</b></p>
-						</div>
-						<div class='col-sm-10'>
-							<select id='keys-remove-subplatform' class='form-control'>
-								<option value='---'>---</option>
-								<?php
-									$regions = util_listNintendoRegions();
-									foreach($regions as $code => $name) {
-										echo "<option value='{$code}'>{$name}</option>\n";
-									}
-								?>
-
-							</select>
-						</div>
-					</div>
-					<div class='row'>
-						<div class='col-sm-2'>
-							<p><b>Amount:</b></p>
-						</div>
-						<div class='col-sm-8'>
-							<input id='keys-remove-amount' class='form-control'  />
-						</div>
-						<button id='keys-remove-submit' class='btn btn-primary fr'>Remove Keys</button>
-					</div>
-					<br/>
-
-
-					<div id='keys-removed-container' style='display:none;' >
-						<p><b>Removed Keys:</b></p>
-						<p>Copy these to somewhere safe as they are no longer stored within impress[].</p>
-						<ul id='keys-removed-list'></ul>
-					</div>
-				</div>
-				<br/><br/>
-
-			</div>
-		</div>
-
-		<!-- Coverage -->
-		<div id='coverage-page' data-type-page='true' data-page='coverage'>
-			<div class='container mycontainer'>
-				<div class='filters' style='float:left;text-align:left;'>
-					<p><b><span class='current-project-name'>{project name}</span></b></p>
-					<div class='filter-item'><b>Project Coverage</b></div>
-				</div>
-			</div><br/>
-
-			<div class='container mycontainer'>
-				<div id='coverage-loading-true'>
-					<div class="alert alert-info" role="alert">
-						<span class="glyphicon glyphicon-loading" aria-hidden="true"></span>
-						<span class="sr-only"></span>
-						Loading...
-					</div>
-				</div>
-				<div id='coverage-loading-false'>
-					<div id='coverage'>
-
-					</div>
-					<div id='coverage-footer'>
-						<div class="alert alert-info" role="alert">
-							<span class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
-							<span class="sr-only">Error:</span>
-							Dang! There is currently no coverage for your project.
-						</div>
-						<!--
-							<div class='row'>
-								<div class='col-sm-3 fr'>
-									<button class='btn btn-primary add-coverage' style='width:100%'>Add Coverage</button>
+								<div class='dropdown fr' style='margin-right:5px;'>
+									<button class='btn btn-sm btn-primary dropdown-toggle' type='button' data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Add <span class='caret'></span></button>
+									<ul class='dropdown-menu dropdown-menu-right'>
+										<li><a id='nav-add-coverage-publication' href="javascript:;">Coverage (Publication)</a></li>
+										<li><a id='nav-add-coverage-youtuber' href="javascript:;">Coverage (Youtuber)</a></li>
+									</ul>
 								</div>
 							</div>
-						-->
-					</div>
-				</div>
 
+							<div id='coverage'>
 
-			</div>
-			<br/><br/>
-
-		</div>
-
-		<!-- Watched Games -->
-		<div id='watchedgames-page' data-type-page='true' data-page='watchedgames'>
-			<div class='container mycontainer'>
-				<div class='filters' style='float:left;text-align:left;'>
-					<p><b><span class='current-project-name'>{project name}</span></b></p>
-					<div class='filter-item'><b>Watched Games (Coverage)</b></div>
-				</div>
-			</div><br/>
-
-			<div class='container mycontainer'>
-				<div id='watchedgames-loading-true'>
-					<div class="alert alert-info" role="alert">
-						<span class="glyphicon glyphicon-loading" aria-hidden="true"></span>
-						<span class="sr-only"></span>
-						Loading...
-					</div>
-				</div>
-				<div id='watchedgames-loading-false'>
-					<div id='watchedgames'>
-
-					</div>
-					<div id='watchedgames-footer'>
-						<div class="alert alert-info" role="alert">
-							<span class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
-							<span class="sr-only">Error:</span>
-							Dang! There is currently no coverage for your project's Watched Games.
-						</div>
-						<!--
-							<div class='row'>
-								<div class='col-sm-3 fr'>
-									<button class='btn btn-primary add-coverage' style='width:100%'>Add Coverage</button>
+							</div>
+							<div id='coverage-footer'>
+								<div class="alert alert-info" role="alert">
+									<span class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
+									<span class="sr-only">Error:</span>
+									Dang! There is currently no coverage for your project.
 								</div>
 							</div>
-						-->
+						</div>
 					</div>
+
+					<!-- Watched games -->
+					<div role="tabpanel" id='watchedgames-pill' class='tab-pane'>
+						<div id='watchedgames-loading-true'>
+							<div class="alert alert-info" role="alert">
+								<span class="glyphicon glyphicon-loading" aria-hidden="true"></span>
+								<span class="sr-only"></span>
+								Loading...
+							</div>
+						</div>
+						<div id='watchedgames-loading-false'>
+							<h4>Watched Games</h4>
+							<div id='watchedgames'>
+
+							</div>
+							<div id='watchedgames-footer'>
+								<div class="alert alert-info" role="alert">
+									<span class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
+									<span class="sr-only">Error:</span>
+									Dang! There is currently no coverage for your project's Watched Games.
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Keys -->
+					<div role="tabpanel" id='keys-pill' class='tab-pane'>
+						<h4>Keys</h4>
+						<table class="table" style='border-radius:4px;'>
+							<thead class="thead-light" style='background-color:#f6f6f6'>
+								<tr>
+									<th>Platform</th>
+									<!--<th>App Store</th>-->
+									<th>Steam</th>
+									<th colspan='4'>Nintendo Switch</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<th>Region</th>
+									<!--<th>-</th>-->
+									<th>-</th>
+									<th>EU</th>
+									<th>US</th>
+									<th>AU</th>
+									<th>JP</th>
+								</tr>
+								<tr>
+									<th scope="row">Assigned</th>
+									<!-- <td><span id='appstore_keys_assigned_count'>todo...</span></td> -->
+									<td><span id='steam_keys_assigned_count'>loading...</span></td>
+									<td><span id='switch_eu_keys_assigned_count'>loading...</span></td>
+									<td><span id='switch_us_keys_assigned_count'>loading...</span></td>
+									<td><span id='switch_au_keys_assigned_count'>loading...</span></td>
+									<td><span id='switch_jp_keys_assigned_count'>loading...</span></td>
+								</tr>
+								<tr>
+									<th scope="row">Available</th>
+									<!-- <td><span id='appstore_keys_available_count'>todo...</span></td> -->
+									<td><span id='steam_keys_available_count'>loading...</span></td>
+									<td><span id='switch_eu_keys_available_count'>loading...</span></td>
+									<td><span id='switch_us_keys_available_count'>loading...</span></td>
+									<td><span id='switch_au_keys_available_count'>loading...</span></td>
+									<td><span id='switch_jp_keys_available_count'>loading...</span></td>
+								</tr>
+							</tbody>
+						</table>
+						<br/>
+
+						<h4>Add Keys</h4>
+						<div class='row'>
+							<div class='col-sm-3'>
+								<p><b>Platform:</b></p>
+							</div>
+							<div class='col-sm-9'>
+								<select id='keys-add-platform' class='form-control'>
+									<option value='---'>---</option>
+									<option value='steam'>Steam</option>
+									<option value='switch'>Nintendo Switch</option>
+									<!-- <option value='gamejolt'>Game Jolt</option> -->
+									<!-- <option value='ios'>iOS App Store</option> -->
+									<!-- <option value='windows'>Windows Store</option> -->
+									<!-- <option value='mac'>Mac App Store</option> -->
+									<!-- <option value='xboxone'>Xbox One</option> -->
+									<!-- <option value='ps4'>PS4</option> -->
+									<!-- <option value='wiiu'>Wii U</option> -->
+								</select>
+							</div>
+						</div>
+						<div class='row' id='keys-add-subplatform-row' style='display:none;margin-top:7px;'>
+							<div class='col-sm-3'>
+								<p><b>Subplatform / Region:</b></p>
+							</div>
+							<div class='col-sm-9'>
+								<select id='keys-add-subplatform' class='form-control'>
+									<option value='---'>---</option>
+									<?php
+										$regions = util_listNintendoRegions();
+										foreach($regions as $code => $name) {
+											echo "<option value='{$code}'>{$name}</option>\n";
+										}
+									?>
+								</select>
+							</div>
+						</div>
+						<div class='row'>
+							<div class='col-sm-3'>
+								<p><b>Keys:</b></p>
+							</div>
+							<div class='col-sm-9'>
+								<textarea id='keys-add-textfield' class='form-control' style='margin-top:10px;min-height:100px; overflow:scroll;' placeholder="Enter one key per line..."></textarea>
+							</div>
+						</div>
+						<div class='row'>
+							<div class='col-sm-3'>
+								<p><b>Expiry:</b></p>
+							</div>
+							<div class='col-sm-9' style='margin-top:7px;'>
+								<p>
+									<label class='radio-inline'><input id='keys-radio-expiry-never' type='radio' name='keys-expiry-radio' value='never' checked/>Never</label>
+									<label class='radio-inline'><input id='keys-radio-expiry-time' type='radio' name='keys-expiry-radio' value='time'/>Time</label>
+								</p>
+
+
+								<div class='input-group date' id='keys-timepicker'>
+									<input id='keys-edit-timestamp' type='text' class='form-control' />
+									<span class='input-group-addon'>
+										<span class='glyphicon glyphicon-calendar'></span>
+									</span>
+								</div>
+
+							</div>
+							<button id='keys-add-submit' class='btn btn-primary fr'>Add Keys</button>
+						</div>
+						<br/>
+
+						<div id='keys-remove-form' style='display:none;' >
+
+							<h4>Remove Keys</b></h4>
+							<div class='row'>
+								<div class='col-sm-2'>
+									<p><b>Platform:</b></p>
+								</div>
+								<div class='col-sm-10'>
+									<select id='keys-remove-platform' class='form-control' style='margin-bottom:10px;'>
+										<option value='---'>---</option>
+										<option value='steam'>Steam</option>
+										<option value='switch'>Nintendo Switch</option>
+										<!-- <option value='gamejolt'>Game Jolt</option> -->
+										<!-- <option value='ios'>iOS App Store</option> -->
+										<!-- <option value='windows'>Windows Store</option> -->
+										<!-- <option value='mac'>Mac App Store</option> -->
+										<!-- <option value='xboxone'>Xbox One</option> -->
+										<!-- <option value='ps4'>PS4</option> -->
+										<!-- <option value='wiiu'>Wii U</option> -->
+									</select>
+								</div>
+							</div>
+							<div class='row' id='keys-remove-subplatform-row' style='display:none;margin-top:7px;'>
+								<div class='col-sm-2'>
+									<p><b>Subplatform / Region:</b></p>
+								</div>
+								<div class='col-sm-10'>
+									<select id='keys-remove-subplatform' class='form-control'>
+										<option value='---'>---</option>
+										<?php
+											$regions = util_listNintendoRegions();
+											foreach($regions as $code => $name) {
+												echo "<option value='{$code}'>{$name}</option>\n";
+											}
+										?>
+
+									</select>
+								</div>
+							</div>
+							<div class='row'>
+								<div class='col-sm-2'>
+									<p><b>Amount:</b></p>
+								</div>
+								<div class='col-sm-8'>
+									<input id='keys-remove-amount' class='form-control'  />
+								</div>
+								<button id='keys-remove-submit' class='btn btn-primary fr'>Remove Keys</button>
+							</div>
+							<br/>
+
+
+							<div id='keys-removed-container' style='display:none;' >
+								<p><b>Removed Keys:</b></p>
+								<p>Copy these to somewhere safe as they are no longer stored within impress[].</p>
+								<ul id='keys-removed-list'></ul>
+							</div>
+						</div>
+						<br/><br/>
+
+					</div>
+
 				</div>
-
-
 			</div>
-			<br/><br/>
-
 		</div>
 
 		<!-- Social -->
@@ -778,25 +793,22 @@
 
 				<div id='social-homepage' class='row'>
 					<div class='col-sm-9'>
-						<p><b>Social</b></p>
-
+						<h3>Social</h3>
 						<ul class="nav nav-pills" role='tablist'>
 							<li role="presentation" class="active"><a href="#accounts-pill" aria-controls="accounts-pill" role="tab" data-toggle="pill">Accounts</a></li>
 							<li role="presentation" ><a href="#timeline-pill" aria-controls="timeline-pill" role="tab" data-toggle="pill">Timeline</a></li>
 							<li role="presentation"><a href="#uploads-pill" aria-controls="uploads-pill" role="tab" data-toggle="pill">Uploads</a></li>
-
 						</ul>
-
-
 					</div>
 
 				</div>
-				<hr/>
+				<br/>
+
 				<div class="tab-content">
 					<div role="tabpanel" id='timeline-pill' class='tab-pane'>
 						<div class='row'>
 							<div class='col-sm-3'>
-								<p><b>Timeline</b></p>
+								<h4><b>Timeline</b></h4>
 								<p>Schedule tweets &amp; retweets, Facebook posts/shares.</p>
 								<button id='social-timeline-add' class='btn btn-primary'>Add</button>
 							</div>
@@ -814,7 +826,7 @@
 					<div role="tabpanel" id='uploads-pill' class='tab-pane'>
 						<div class='row'>
 							<div class='col-sm-12'>
-								<p><b>Upload</b></p>
+								<h4><b>Upload</b></h4>
 								<form id="social-uploadimage" action="" method="post" enctype="multipart/form-data">
 									<div id="selectImage">
 										<input id='input-id' type="file" name="file" id="file" class='file' data-show-preview="false" required />
@@ -852,7 +864,7 @@
 						<div class='row'>
 
 							<div class='col-sm-12'>
-								<p><b>Twitter Accounts</b></p>
+								<h4>Twitter Accounts</h4>
 								<div id='social-homepage-twitteracc-list'>
 								</div>
 								<div id='social-homepage-twitteracc-list-none' style='display:none;'>
@@ -861,8 +873,12 @@
 								<div id='social-homepage-twitteracc-list-loading'>
 									<p>Loading...</p>
 								</div>
-
-								<br/><p><b>Facebook Accounts/Pages</b></p>
+							</div>
+						</div>
+						<div class='row'>
+							<div class='col-sm-12'>
+								<br/>
+								<h4>Facebook Accounts/Pages</h4>
 								<div id='social-homepage-facebookacc-list'>
 								</div>
 								<div id='social-homepage-facebookacc-list-none' style='display:none;'>
@@ -876,9 +892,12 @@
 								<!-- <p><img src='images/email-facebook.png' /> Force Of Habit (page)</p>-->
 							</div>
 						</div>
-						<hr/>
+						<br/>
+
+						<h4>Actions</h4>
 						<div class='row'>
 							<div class='col-sm-3'>
+
 								<p><b>Add</b></p>
 								<?php
 									$connection = new Abraham\TwitterOAuth\TwitterOAuth($twitter_consumerKey, $twitter_consumerSecret);
@@ -941,7 +960,7 @@
 
 				<div id='mailout-homepage' class='row'>
 					<div class='col-sm-3'>
-						<p><b>Simple Mailouts</b></p>
+						<h3>Simple Mailouts</h3>
 						<p>Send an email out to multiple contacts.</p>
 						<button id='nav-add-simplemailout' class='btn btn-primary'>Add</button>
 
@@ -1058,9 +1077,6 @@
 						</div><br/>
 					</div>
 				</div>
-
-
-
 			</div>
 			<br/>
 			<br/>
@@ -1070,7 +1086,12 @@
 		<!-- Import tool -->
 		<div id='importtool-page' data-type-page='true' data-page='importtool'>
 			<div class='container mycontainer'>
-				<p><b>Import</b></p>
+				<h3>Import Tool</h3>
+				<div class="alert alert-warning" role="alert">
+					<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+					<span class="sr-only">Warn:</span>
+					Consider making a backup before using the import tool.
+				</div>
 				<div id='importtool-type-container'>
 					<!-- <input type='radio' name='importtype' value='imp'/> SQL (impress[] export) &nbsp; -->
 					<input id='importtool-type-csv' type='radio' name='importtool-type' value='csv'/> CSV (Comma separated values) &nbsp;
@@ -1086,13 +1107,18 @@
 					<option value='person_email'>Person - Email</option>
 					<option value='person_twitter'>Person - Twitter</option>
 					<option value='person_notes'>Person - Notes</option>
+					<option value='person_country'>Person - Country Code</option>
+					<option value='person_created_on_timestamp'>Person - Created On (timestamp)</option>
+					<option value='person_created_on_yyyy_mm_dd_hh_mm_ss'>Person - Created On (yyyy-mm-dd hh:mm:ss)</option>
 					<option value='person_unknown'>Person - Unlisted field (discard)</option>
+
 					<option value='publication_name'>Publication - Name</option>
 					<option value='publication_website'>Publication - Website</option>
 					<option value='publication_rssfeed'>Publication - RSS URL</option>
 					<option value='publication_twitter'>Publication - Twitter</option>
 					<option value='publication_notes'>Publication - Notes</option>
 					<option value='publication_unknown'>Publication - Unlisted field (discard)</option>
+
 					<option value='twitchchannel_name'>Twitch Channel - Name</option>
 					<option value='twitchchannel_url'>Twitch Channel - URL</option>
 					<option value='twitchchannel_twitter'>Twitch Channel - Twitter</option>
@@ -1118,163 +1144,163 @@
 		<div id='admin-page' data-type-page='true' data-page='admin'>
 			<div id='current-project' class='container mycontainer'>
 				<div class='filters' style='float:left;text-align:left;'>
-					<div class='filter-item'><b>Admin Panel</b></div>
-				</div>
-			</div><br/>
-
-			<div class='container mycontainer'>
-				<div class="panel panel-default">
-					<div class="panel-heading">Users:</div>
-					<div class='padx pady oa'>
-						<div id='admin-users-list'>
-
-						</div>
-						<button id='nav-add-user' class='fr btn btn-success'>Add User</button>
-
-					</div>
-
-					<div id='admin-edit-user-password-form' class='padx pady oa' style='display:none;'>
-						<p><b>Edit User Password:</b><p>
-						<div class='form-group'>
-							<label>New Password:</label>
-							<input id='edit-user-password' type='password' class='form-control' />
-						</div>
-						<div class='form-group'>
-							<label>Confirm New Password:</label>
-							<input id='edit-user-password-confirm' type='password' class='form-control' />
-						</div>
-						<button id='nav-save-user-password' class='btn btn-success'>Save</button>
-						<button id='nav-close-user-password' class='btn btn-default'>Close</button>
-					</div>
-
-					<div id='admin-edit-user-form' class='padx pady oa' style='display:none;'>
-						<p><b>Edit User</b></p>
-						<div class='form-group'>
-							<label>Forename:</label>
-							<input id='edit-user-forename' type='text' class='form-control' />
-						</div>
-						<div class='form-group'>
-							<label>Surname:</label>
-							<input id='edit-user-surname' type='text' class='form-control' />
-						</div>
-						<div class='form-group'>
-							<label>Email:</label>
-							<input id='edit-user-email' type='text' class='form-control' />
-						</div>
-						<div class='form-group'>
-							<label>Color:</label>
-							<input id='edit-user-color' type='text' class='form-control' />
-						</div>
-						<div class='form-group'>
-							<label>Admin:</label>
-							<input id='edit-user-admin' type='checkbox' />
-						</div>
-
-						<button id='nav-save-user' class='btn btn-success'>Save</button>
-						<button id='nav-close-user' class='btn btn-default'>Close</button>
-						<button id='nav-delete-user' class='btn btn-danger'>Remove</button>
-					</div>
-
-
+					<div class='filter-item'><h3>Admin Panel</h3></div>
 				</div>
 			</div>
 
 			<div class='container mycontainer'>
-				<div class="panel panel-default">
-					<div class="panel-heading">Projects:</div>
-					<div class='padx pady oa'>
-						<div id='admin-projects-list'>
+				<div class='row'>
+					<div class='col-sm-2'>
+						<ul class="nav nav-pills" role='tablist'>
+							<li role="presentation" class="active"><a href="#audiences-pill" aria-controls="audiences-pill" role="tab" data-toggle="pill">Audiences</a></li>
+							<li role="presentation"><a href="#projects-pill" aria-controls="projects-pill" role="tab" data-toggle="pill">Projects</a></li>
+							<li role="presentation"><a href="#users-pill" aria-controls="users-pill" role="tab" data-toggle="pill">Users</a></li>
+							<li role="presentation" class='superadmin-container'><a href="#superadmin-pill" aria-controls="superadmin-pill" role="tab" data-toggle="pill">Superdmin</a></li>
 
-						</div>
-						<hr/>
-						<p><b>Add Project</b></p>
-						<input id='nav-add-project-name' type='text' class='fl form-control' placeholder='Name' style='width:40%;margin-right:10px'/>
-						<input id='nav-add-project-iconurl' type='text' class='fl form-control' placeholder='Icon URL' style='width:40%'/>
-						<button id='nav-add-project' class='fr btn btn-success'>Add Project</button>
-
+						</ul>
 					</div>
-
-				</div>
-			</div>
-			<div class='container mycontainer'>
-				<div class="panel panel-default">
-					<div class="panel-heading">Audiences:</div>
-					<div class='padx pady oa'>
-						<div id='admin-audiences-list'>
-
-						</div>
-						<hr/>
-						<p><b>Add Audience</b></p>
-						<input id='nav-add-audience-name' type='text' class='fl form-control' placeholder='Name' style='width:100%;'/>
-						<button id='nav-add-audience' class='fr btn btn-success'>Add Audience</button>
-
-					</div>
-
-				</div>
-			</div>
-
-			<div class='container mycontainer'>
-				<div class="panel panel-default">
-					<div class="panel-heading">Manual Tasks:</div>
-					<div class='pady padx'>
-						<p>These should all be set up as Cron jobs.</p>
-						<a href='includes/tasks/refresh-email.php' target='new'><button class='btn btn-primary'>Refresh Emails</button></a>
-						<a href='includes/tasks/refresh-rss.php' target='new'><button class='btn btn-primary'>Refresh RSS Feeds</button></a>
-						<a href='includes/tasks/refresh-twitter.php' target='new'><button class='btn btn-primary'>Refresh Twitter Data</button></a>
-
-						<a href='includes/tasks/refresh-youtubers.php' target='new'><button class='btn btn-primary'>Refresh Youtube Data</button></a>
-
-						<a href='includes/tasks/refresh-coverage.php' target='new'><button class='btn btn-primary'>Refresh Coverage</button></a>
-						<a href='includes/tasks/refresh-coverage-youtube.php' target='new'><button class='btn btn-primary'>Refresh Coverage (Youtube)</button></a>
-						<a href='includes/tasks/refresh-email-latests.php' target='new'><button class='btn btn-primary'>Refresh Email (Latests)</button></a>
-
-						<a href='includes/tasks/refresh-email-queue.php' target='new'><button class='btn btn-primary'>Refresh Email Queue</button></a>
-
-						<a href='includes/tasks/refresh-favicons.php' target='new'><button class='btn btn-primary'>Refresh Favicons</button></a>
-
-						<a href='includes/tasks/refresh-socialqueue.php' target='new'><button class='btn btn-primary'>Refresh Social Queue</button></a>
-
-						<a href='includes/tasks/refresh-twitter-configuration.php' target='new'><button class='btn btn-primary'>Refresh Twitter Configuration</button></a>
-
-
-
-
-					</div>
-				</div>
-			</div>
-
-			<div class='container mycontainer'>
-				<div class="panel panel-default">
-					<div class="panel-heading">Backup Settings:</div>
-					<div class='pady padx'>
-						<!-- <div class='form-group'>
-							<label>Email Backups:</label><input type='checkbox' class='form-control'/>
-						</div> -->
-						<!-- impresslist.config.system.backups.lastmanual -->
-						<p><i>TODO: Automatic email backups.</i></p>
-						<p><b>Last Backup On: </b><span data-last-backup='true'></p>
-						<p><a href='/api.php?endpoint=/backup/'><button id='save-backup-submit' type='submit' class='btn btn-primary'>Save Backup Now!</button></a></p>
-						<p><a href='/api.php?endpoint=/backup-sql/'><button id='save-backup-submit' type='submit' class='btn btn-primary'>Save Backup (SQL) Now!</button></a></p>
-						<p><a href='includes/tasks/backup-email.php' target='new'><button class='btn btn-primary'>Email Backup Now!</button></a></p>
-
-					</div>
-				</div>
-			</div>
-
-			<div class='container mycontainer'>
-				<div class="panel panel-default">
-					<div class="panel-heading">SQL Query:</div>
-					<div class='pady padx'>
-						<form role='form' onsubmit='return false;'>
-							<div class='form-group'>
-								<p>You must use double-quotes.</p>
-								<textarea id='sql-query-text' class='form-control' style='min-height:75px;'></textarea>
+					<div class='tab-content col-sm-10'>
+						<!-- Users -->
+						<div id='users-pill' role="tabpanel" class="tab-pane panel panel-default">
+							<div class="panel-heading">Users:</div>
+							<div class='padx pady oa'>
+								<div id='admin-users-list'></div>
+								<button id='nav-add-user' class='fr btn btn-success'>Add User</button>
 							</div>
-						</form>
-						<button id='sql-query-submit' type='submit' class='btn btn-danger'>Live Dangerously</button>
+
+							<div id='admin-edit-user-password-form' class='padx pady oa' style='display:none;'>
+								<p><b>Edit User Password:</b><p>
+								<form>
+									<input id='edit-user-username' autocomplete="username" name='username' type='text' style='display:none;'/>
+									<div class='form-group'>
+										<label>New Password:</label>
+										<input id='edit-user-password' autocomplete="new-password" type='password' placeholder='' class='form-control' />
+									</div>
+									<div class='form-group'>
+										<label>Confirm New Password:</label>
+										<input id='edit-user-password-confirm' autocomplete="new-password" type='password' placeholder='' class='form-control' />
+									</div>
+									<button id='nav-save-user-password' class='btn btn-success'>Save</button>
+									<button id='nav-close-user-password' class='btn btn-default'>Close</button>
+								</form>
+							</div>
+
+							<div id='admin-edit-user-form' class='padx pady oa' style='display:none;'>
+								<p><b>Edit User</b></p>
+								<div class='form-group'>
+									<label>Forename:</label>
+									<input id='edit-user-forename' type='text' class='form-control' />
+								</div>
+								<div class='form-group'>
+									<label>Surname:</label>
+									<input id='edit-user-surname' type='text' class='form-control' />
+								</div>
+								<div class='form-group'>
+									<label>Email:</label>
+									<input id='edit-user-email' type='text' class='form-control' />
+								</div>
+								<div class='form-group'>
+									<label>Color:</label>
+									<input id='edit-user-color' type='text' class='form-control' />
+								</div>
+								<div class='form-group'>
+									<label>Admin:</label>
+									<input id='edit-user-admin' type='checkbox' />
+								</div>
+
+								<button id='nav-save-user' class='btn btn-success'>Save</button>
+								<button id='nav-close-user' class='btn btn-default'>Close</button>
+								<button id='nav-delete-user' class='btn btn-danger'>Remove</button>
+							</div>
+						</div>
+
+						<!-- Projects -->
+						<div id='projects-pill' role="tabpanel" class="tab-pane panel panel-default">
+							<div class="panel-heading">Projects:</div>
+							<div class='padx pady oa'>
+								<div id='admin-projects-list'></div>
+								<hr/>
+								<p><b>Add Project</b></p>
+								<input id='nav-add-project-name' type='text' class='fl form-control' placeholder='Name' style='width:40%;margin-right:10px'/>
+								<input id='nav-add-project-iconurl' type='text' class='fl form-control' placeholder='Icon URL' style='width:40%'/>
+								<button id='nav-add-project' class='fr btn btn-success'>Add Project</button>
+							</div>
+						</div>
+
+						<!-- Audiences -->
+						<div id='audiences-pill' role="tabpanel" class="tab-pane active panel panel-default">
+							<div class="panel-heading">Audiences:</div>
+							<div class='padx pady oa'>
+								<div id='admin-audiences-list'></div>
+								<hr/>
+								<p><b>Add Audience</b></p>
+								<input id='nav-add-audience-name' type='text' class='fl form-control' placeholder='Name' style='width:100%;'/>
+								<button id='nav-add-audience' class='fr btn btn-success'>Add Audience</button>
+							</div>
+						</div>
+
+						<!-- Super admin bits -->
+						<div id='superadmin-pill' role="tabpanel" class='tab-pane superadmin-container'>
+							<!-- Cron tasks -->
+							<div class="panel panel-default superadmin-container">
+								<div class="panel-heading">Manual Tasks:</div>
+								<div class='pady padx'>
+									<p>These should all be set up as Cron jobs.</p>
+									<a href='includes/tasks/refresh-email.php' target='new'><button class='btn btn-primary'>Refresh Emails</button></a>
+									<a href='includes/tasks/refresh-rss.php' target='new'><button class='btn btn-primary'>Refresh RSS Feeds</button></a>
+									<a href='includes/tasks/refresh-twitter.php' target='new'><button class='btn btn-primary'>Refresh Twitter Data</button></a>
+
+									<a href='includes/tasks/refresh-youtubers.php' target='new'><button class='btn btn-primary'>Refresh Youtube Data</button></a>
+
+									<a href='includes/tasks/refresh-coverage.php' target='new'><button class='btn btn-primary'>Refresh Coverage</button></a>
+									<a href='includes/tasks/refresh-coverage-youtube.php' target='new'><button class='btn btn-primary'>Refresh Coverage (Youtube)</button></a>
+									<a href='includes/tasks/refresh-email-latests.php' target='new'><button class='btn btn-primary'>Refresh Email (Latests)</button></a>
+
+									<a href='includes/tasks/refresh-email-queue.php' target='new'><button class='btn btn-primary'>Refresh Email Queue</button></a>
+
+									<a href='includes/tasks/refresh-favicons.php' target='new'><button class='btn btn-primary'>Refresh Favicons</button></a>
+
+									<a href='includes/tasks/refresh-socialqueue.php' target='new'><button class='btn btn-primary'>Refresh Social Queue</button></a>
+
+									<a href='includes/tasks/refresh-twitter-configuration.php' target='new'><button class='btn btn-primary'>Refresh Twitter Configuration</button></a>
+								</div>
+							</div>
+							<!-- Backups -->
+							<div class="panel panel-default superadmin-container">
+								<div class="panel-heading">Backup Settings:</div>
+								<div class='pady padx'>
+									<!-- <div class='form-group'>
+										<label>Email Backups:</label><input type='checkbox' class='form-control'/>
+									</div> -->
+									<!-- impresslist.config.system.backups.lastmanual -->
+									<p><i>TODO: Automatic email backups.</i></p>
+									<p><b>Last Backup On: </b><span data-last-backup='true'></p>
+									<p><a href='/api.php?endpoint=/backup/'><button id='save-backup-submit' type='submit' class='btn btn-primary'>Save Backup Now!</button></a></p>
+									<p><a href='/api.php?endpoint=/backup-sql/'><button id='save-backup-submit' type='submit' class='btn btn-primary'>Save Backup (SQL) Now!</button></a></p>
+									<p><a href='includes/tasks/backup-email.php' target='new'><button class='btn btn-primary'>Email Backup Now!</button></a></p>
+
+								</div>
+							</div>
+							<!-- raw sql -->
+							<div class="panel panel-default">
+								<div class="panel-heading">SQL Query:</div>
+								<div class='pady padx'>
+									<form role='form' onsubmit='return false;'>
+										<div class='form-group'>
+											<p>You must use double-quotes.</p>
+											<textarea id='sql-query-text' class='form-control' style='min-height:75px;'></textarea>
+										</div>
+									</form>
+									<button id='sql-query-submit' type='submit' class='btn btn-danger'>Live Dangerously</button>
+								</div>
+							</div>
+
+						</div>
 					</div>
 				</div>
 			</div>
+
+
 
 		</div>
 

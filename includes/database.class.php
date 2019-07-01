@@ -199,7 +199,7 @@ class MysqliDatabase extends Database {
 	{
 		$results = array();
 		$rs = $this->db->query($sql);
-		if (!$rs) {
+		if (!$rs || $this->db->error) {
 			global $impresslist_verbose;
 			if ($impresslist_verbose) {
 				echo "mysqli error: " . $this->db->error . "<br/><br/>";
@@ -207,6 +207,10 @@ class MysqliDatabase extends Database {
 				echo $sql;
 			}
 			die();
+		}
+		//print_r(debug_backtrace());
+		if (!is_object($rs)) {
+			return [];
 		}
 		while ($row = $rs->fetch_assoc()) {
 			$results[] = $row;
@@ -428,8 +432,6 @@ class Database
 
 
 		} else if ($this->type == Database::TYPE_MYSQL) {
-
-
 
 			$tables = $this->query("SHOW TABLES;");
 

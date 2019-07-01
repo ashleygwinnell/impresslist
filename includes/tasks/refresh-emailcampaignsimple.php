@@ -14,7 +14,7 @@ $queue = $db->query("SELECT * FROM emailcampaignsimple WHERE ready = 1 AND sent 
 
 $Parsedown = new Parsedown();
 
-$games = $db->query("SELECT * FROM game;");
+$games = $db->query("SELECT * FROM game WHERE removed = 0;");
 
 for ($i = 0; $i < count($queue); $i++)
 {

@@ -42,8 +42,8 @@ $facebook_apiVersion = $settings['facebook_apiVersion'];
 
 $youtube_apiKey = $settings['youtube_apiKey'];
 
-$slack_enabled = $settings['slack_enabled'];
-$slack_apiUrl = $settings['slack_apiUrl'];
+$slack_enabled = false; //$settings['slack_enabled'];
+//$slack_apiUrl = $settings['slack_apiUrl'];
 
 $impresslist_backupEmail = $settings['auto_backup_email'];
 

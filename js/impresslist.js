@@ -18,6 +18,7 @@ DBO = function(data) {
 	DBO.prototype.constructor = DBO;
 	DBO.prototype.init = function(data) {
 	 	this.fields = data;
+	 	this.rowSelector = null;
 	}
 	DBO.prototype.initPriorities = function(field) {
 		// Priorities:
@@ -73,6 +74,47 @@ DBO = function(data) {
 		}
 		return str;
 	}
+	DBO.prototype.filterTags = function(tagsArray) {
+		if (tagsArray.length == 0) {
+			this.show();
+			return true;
+		}
+
+		var tags = this.field('tags');
+
+		// doesnn't have tags field.
+		if (typeof tags == 'undefined') {
+			this.show();
+			return true;
+		}
+
+		// has tags field and has no tags
+		if (typeof tags == 'string' && tags.length == 0) {
+			this.hide();
+			return false;
+		}
+
+		var containsAll = true;
+		for(var i = 0; i < tagsArray.length; i++) {
+			if (tags.indexOf(tagsArray[i]) == -1) {
+				containsAll = false;
+				break;
+			}
+		}
+		if (containsAll) {
+			this.show();
+			return true;
+		} else {
+			this.hide();
+			return false;
+		}
+	}
+	DBO.prototype.show = function() {
+		if (this.rowSelector) $(this.rowSelector).show();
+	}
+	DBO.prototype.hide = function() {
+		if (this.rowSelector) $(this.rowSelector).hide();
+	}
 
 
 Email = function(data) {
@@ -97,14 +139,14 @@ WatchedGame = function(data) {
 		DBO.prototype.init.call(this, data);
 		this.id = parseInt(this.field('id'));
 		this.coverage = this.field('coverage');
+		this.rowSelector = "#watchedgames [data-watchedgame-id='" + this.id + "']";
 	}
 	WatchedGame.prototype.filter = function(text) {
-		var element = $("#watchedgames [data-watchedgame-id='" + this.id + "']");
 		if (this.search(text)) {
-			element.show();
+			this.show();
 			return true;
 		} else {
-			element.hide();
+			this.hide();
 			return false;
 		}
 	}
@@ -117,21 +159,22 @@ WatchedGame = function(data) {
 		var url = "";
 		var iconurl = "images/favicon.png";
 		var html = "";
-		html += "<div data-watchedgame-id='" + this.field('id') + "' class='media'>	\
+		html += "<br/> \
+				<div data-watchedgame-id='" + this.field('id') + "' class='media'>	\
 					<div class='oa'>\
 						<div class='fl'>\
-							<h3 data-watchedgame-id='" + this.id + "' data-field='name'>" + this.field('name') + "</h3>\
+							<h4 data-watchedgame-id='" + this.id + "' data-field='name'>" + this.field('name') + "</h4>\
 							<!-- <p data-watchedgame-id='" + this.id + "' data-field='keywords' style='font-style:italic'>" + this.field('keywords') + "</p><br/> -->\
 						</div>\
 						<div class='fr'>\
 							<button id='edit-watchedgame' class='fr btn btn-default btn-sm' data-watchedgame-id='" + this.field('id') + "'  data-toggle='modal' data-target='.watchedgame_modal' ><span class='glyphicon glyphicon-pencil'></span></button> \
 						</div>\
 					</div>\
-					<h4>Coverage:</h4>\
+					<h5>Coverage:</h5>\
 					<div data-watchedgame-id='" + this.id + "' data-field='items'>\
 					</div>\
 				</div>\
-				<hr/>";
+				";
 		if (fromInit) {
 			$('#watchedgames').append(html);
 		} else {
@@ -234,14 +277,14 @@ Coverage = function(data) {
 	Coverage.prototype.init = function(data) {
 		DBO.prototype.init.call(this, data);
 		this.id = parseInt(this.field('id'));
+		this.rowSelector = "#coverage [data-coverage-id='" + this.id + "']";
 	}
 	Coverage.prototype.filter = function(text) {
-		var element = $("#coverage [data-coverage-id='" + this.id + "']");
 		if (this.search(text)) {
-			element.show();
+			this.show();
 			return true;
 		} else {
-			element.hide();
+			this.hide();
 			return false;
 		}
 	}
@@ -305,7 +348,7 @@ Coverage = function(data) {
 		var html;
 		var type = this.field('type');
 		if (type == "publication") {
-			html = "		<div data-coverage-id='" + this.field('id') + "' data-coverage-type='" + this.field('type') + "' class='media'>	\
+			html = "		<div class='coverage-row' data-coverage-id='" + this.field('id') + "' data-coverage-type='" + this.field('type') + "'>	\
 								<div class='media-left' style='min-width:50px; width:50px;'> \
 									<img class='media-object fl' style='width:50px;text-align:right;' src='/images/icon-web.png' alt='Image'></a> \
 								</div> \
@@ -330,7 +373,7 @@ Coverage = function(data) {
 			iconurl = this.field('thumbnail');
 			//url = youtuber.field('url');;
 
-			html = "		<div data-youtube-coverage-id='" + this.field('id') + "' data-coverage-type='" + this.field('type') + "' class='media'>	\
+			html = "		<div class='coverage-row' data-youtube-coverage-id='" + this.field('id') + "' data-coverage-type='" + this.field('type') + "'>	\
 								<div class='media-left' style='min-width:50px; width:50px;'> \
 									<img class='media-object fl' style='width:50px;text-align:right;' src='/images/icon-youtube.png' alt='Image'></a> \
 								</div> \
@@ -729,7 +772,12 @@ Coverage = function(data) {
 		var selector = "data-coverage-id";
 		var publicationName = "Unknown Publication";
 		if (this.fields['publication'] > 0) {
-			publicationName = impresslist.findPublicationById(this.fields['publication']).name;
+			var pub = impresslist.findPublicationById(this.fields['publication']);
+			if (!pub) {
+				publicationName = "Unknown";
+			} else {
+				publicationName = pub.name;
+			}
 		}
 
 		if (this.field('type') == 'youtuber') {
@@ -866,8 +914,11 @@ Audience = function(data) {
 	}
 	Audience.prototype.onAdded = function() {
 		var html = "<div data-audience-container data-audience-id='" + this.id + "' style='padding:5px;'> \
-						<span data-field='name'>" + this.name + "</span> \
-					</div>";
+						<p><b><span data-field='name'>" + this.name + "</span></b></p> \
+						<p>Automations:</p>\
+						<p>No automations set.</p>\
+						<button class='btn btn-primary'>Add Automation</button>\
+					</div><hr/>";
 		$('#admin-audiences-list').append(html);
 	}
 
@@ -904,7 +955,6 @@ User = function(data) {
 	User.prototype = Object.create(DBO.prototype)
 	User.prototype.constructor = User;
 	User.prototype.init = function(data) {
-		console.log(data);
 		DBO.prototype.init.call(this, data);
 		this.id = parseInt(this.field('id'));
 	}
@@ -942,7 +992,7 @@ User = function(data) {
 			var newProject = $('#user-change-project-new').val();
 			console.log(newProject);
 			API.userChangeProject(thiz, newProject, function(){
-				window.location.href = window.location.href;
+				window.location.href = "/";
 			});
 
 			$('.changeproject_modal').modal("hide");
@@ -2287,6 +2337,7 @@ Person = function(data) {
 
 		this.id = parseInt(this.field('id'));
 		this.name = this.field('firstname');
+		this.rowSelector = "#people [data-person-tablerow='true'][data-person-id='" + this.id + "']";
 		//this.publications = [];
 
 		this.initPriorities('priorities');
@@ -2296,6 +2347,7 @@ Person = function(data) {
 		$("[data-person-id='" + this.id + "'][data-field='name']").html(this.fullname());
 		$("[data-person-id='" + this.id + "'][data-field='priority']").html(Priority.name(this.priority()));
 		$("[data-person-id='" + this.id + "'][data-field='twitter_followers']").html( this.twitterCell() );
+		$("[data-person-id='" + this.id + "'][data-field='tags']").html( impresslist.util.buildTags(this.field('tags')) );
 	},
 	Person.prototype.save = function() {
 		var firstname = $("[data-person-id=" + this.id + "][data-input-field='firstname']").val();
@@ -2927,7 +2979,8 @@ Person = function(data) {
 							</td> \
 							<td data-person-id='" + this.field('id') + "' data-field='priority' data-value='" + this.priority() + "'>" + Priority.name(this.priority()) + "</td> \
 							<td data-person-id='" + this.field('id') + "' data-field='twitter_followers' data-value='" + this.field('twitter_followers') + "'>" + this.twitterCell() + "</td> \
-							<td data-person-id='" + this.field('id') + "' data-field='last_contacted' data-value='" + this.field('lastcontacted') + "'>" + impresslist.util.relativetime_contact(this.field('lastcontacted')) + " " + lastcontactedbystring + "</td>";
+							<td data-person-id='" + this.field('id') + "' data-field='last_contacted' data-value='" + this.field('lastcontacted') + "'>" + impresslist.util.relativetime_contact(this.field('lastcontacted')) + " " + lastcontactedbystring + "</td>\
+							<td data-person-id='" + this.field('id') + "' data-field='tags' data-value='" + this.field('tags') + "'>" + impresslist.util.buildTags(this.field('tags')) + "</td>";
 		html += "		</tr>";
 		$('#people').append(html);
 
@@ -3003,19 +3056,21 @@ Person = function(data) {
 
 	}
 
+	Person.prototype.filterTags = function(tagsArray) {
+		return DBO.prototype.filterTags.call(this, tagsArray);
+	}
 	Person.prototype.filter = function(text) {
 		var elementExtras = $("#people [data-person-extra-tablerow='true'][data-person-id='" + this.id + "']");
 		elementExtras.hide();
 
-		var element = $("#people [data-person-tablerow='true'][data-person-id='" + this.id + "']");
 		if (this.search(text) && this.filter_isContactedByMe() && this.filter_isRecentlyContacted() && this.filter_isHighPriority() && this.filter_hasEmail() && this.filter_isAssignedToMe() && this.filter_isOutOfDate()) {
-			element.show();
+			this.show();
 			if (impresslist.selectModeIsOpen) {
 				elementExtras.show();
 			}
 			return true;
 		} else {
-			element.hide();
+			this.hide();
 			return false;
 		}
 	}
@@ -3445,8 +3500,8 @@ OAuthTwitterAccount = function(data) {
 		try { followers = JSON.parse(this.field('twitter_followers')).length; } catch(e) {}
 		try { following = JSON.parse(this.field('twitter_friends')).length; } catch(e) {}
 
-		console.log(followers);
-		console.log(following);
+		//console.log(followers);
+		//console.log(following);
 		var html = "";
 		html += "<div class='social-account-list-item' id='social-twitteracc-" + this.id + "'>";
 		html += "	<div class='fl'><img src='" + this.field("twitter_image") + "' style='width:60px;'/></div>";
@@ -3891,7 +3946,7 @@ SocialTimelineItem = function(data) {
 		html += "	<div class='form-group'> \
 						<label for='timepicker'>Date &amp; Time:</label>\
 						<div class='input-group date' id='social-modal-timepicker'>\
-							<input id='social-modal-edit-timestamp' type='text' class='form-control' />\
+							<input id='social-modal-edit-timestamp' type='text' class='form-control' value=''/>\
 							<span class='input-group-addon'>\
 								<span class='glyphicon glyphicon-calendar'></span>\
 							</span>\
@@ -4024,7 +4079,7 @@ SocialTimelineItem = function(data) {
 		// time
 		var utime = this.field('timestamp');
 		if (utime == 0) {
-			//utime = Date.now() / 1000;
+			utime = Date.now() / 1000;
 		}
 		$('#social-modal-timepicker').datetimepicker();
 		$('#social-modal-timepicker').data("DateTimePicker").defaultDate(moment(utime, "X"));
@@ -4420,26 +4475,97 @@ var impresslist = {
 		},
 		isLoading: function(t) {
 			return impresslist.loading[t];
+		},
+		category: {
+			home: 0,
+			home_loaded: false,
+			social: 0,
+			social_loaded: false,
+			mailout: 0,
+			mailout_loaded: false,
+			project: 0,
+			project_loaded: false
+		},
+		onPageChanged: function(page) {
+			console.log('Page changed to:', page);
+
+			if (page == "home" && !this.category.home_loaded) {
+				this.load_home();
+			}
+			else if (page == "social" && !this.category.social_loaded) {
+				this.load_social();
+			}
+			else if (page == "mailout" && !this.category.mailout_loaded) {
+				this.load_mailout();
+			}
+			else if (page == "project" && !this.category.project_loaded) {
+				this.load_project();
+			}
+		},
+		onCategoryItemLoaded: function(category) {
+			impresslist.loading.category[category] -= 1;
+			if (impresslist.loading.category[category] == 0) {
+				impresslist.loading.category[category + "_loaded"] = true;
+				this.onCategoryFullyLoaded(category);
+				impresslist.refreshTotals();
+			}
+		},
+		onCategoryFullyLoaded: function(category) {
+			if (category == "project") {
+				if (impresslist.coverage.length == 0) { $('#coverage-footer').show(); } else { $('#coverage-footer').hide(); }
+				if (impresslist.watchedgames.length == 0) { $('#watchedgames-footer').show(); } else { $('#watchedgames-footer').hide(); }
+			}
+		},
+		load_home: function() {
+			if (impresslist.loading.category.home_loaded || impresslist.loading.category.home > 0) { return; }
+			console.log("Loading Home...");
+			// Audience
+			impresslist.loading.category.home += 8;
+			//API.listJobs();
+			API.listPeople();
+			API.listPublications();
+			API.listPersonPublications();
+			API.listPersonYoutubeChannels();
+			API.listPersonTwitchChannels();
+			API.listYoutubeChannels();
+			API.listTwitchChannels();
+			API.listEmails();
+		},
+		load_social:function() {
+			if (impresslist.loading.category.social_loaded || impresslist.loading.category.social > 0) { return; }
+			// Social
+			console.log("Loading Social...");
+			impresslist.loading.category.social += 5;
+			API.listOAuthTwitterAccounts();
+			API.listOAuthFacebookAccounts();
+			API.listOAuthFacebookPages();
+			setTimeout(function(){ // TODO: Fix this properly - there's a race condition.
+				impresslist.loading.load_social_timeline();
+			},1000);
+		},
+		load_social_timeline: function() {
+			API.listSocialTimeline();
+			API.listSocialUploads();
+		},
+		load_mailout:function() {
+			if (impresslist.loading.category.mailout_loaded || impresslist.loading.category.mailout > 0) { return; }
+			// Mailouts
+			console.log("Loading Mailouts");
+			impresslist.loading.category.mailout += 1;
+			API.listSimpleMailouts();
+		},
+		load_project:function() {
+			if (impresslist.loading.category.project_loaded || impresslist.loading.category.project > 0) { return; }
+
+			console.log("Loading Project");
+			impresslist.loading.category.project += 2;
+			API.listCoverage();
+			API.listWatchedGames();
 		}
 	},
+
 	init: function() {
-		//API.listJobs();
-		API.listOAuthTwitterAccounts();
-		API.listOAuthFacebookAccounts();
-		API.listOAuthFacebookPages();
-
-		API.listPeople();
-		API.listPublications();
-		API.listPersonPublications();
-		API.listPersonYoutubeChannels();
-		API.listPersonTwitchChannels();
-		API.listYoutubeChannels();
-		API.listTwitchChannels();
-		API.listEmails();
-		API.listSimpleMailouts();
-		API.listSocialTimeline();
-		API.listSocialUploads();
-
+		this.loading.onPageChanged('home');
 
 		// Navigation links
 		var thiz = this;
@@ -4459,13 +4585,11 @@ var impresslist = {
 		$('#nav-user-changeimapsettings').click(function() { thiz.findUserById(thiz.config.user.id).openChangeIMAPSettings(); });
 		$('.nav-user-changeimapsettings').click(function() { $('#nav-user-changeimapsettings').click(); });
 		$('#nav-home').click(this.changePage);
-		$('#nav-coverage').click(this.changePage);
-		$('#nav-keys').click(this.changePage);
-		$('#nav-watchedgames').click(this.changePage);
 		$('#nav-social').click(this.changePage);
 		$('#nav-mailout').click(this.changePage);
 		$('#nav-mailout-addrecipients').click(this.changePage);
 		$('#nav-mailout-tips').click(this.changePage);
+		$('#nav-project').click(this.changePage);
 		$('#nav-admin').click(this.changePage);
 		$('#nav-importtool').click(this.changePage);
 		$('#nav-help').click(this.changePage);
@@ -4493,9 +4617,121 @@ var impresslist = {
 		$('#current-project-name').html(this.findGameById(this.config.user.game).field('name'));
 		$("[data-last-backup='true']").html(new Date(this.config.system.backups.lastmanual*1000).toUTCString());
 
+		// Full Search.
+		var fullsearchKeyUpTimeout = null;
+		$('#full-search').keyup(function(key){
+			if (impresslist.util.cancellableKeys.indexOf(key.keyCode) >= 0) { return; }
+			if (fullsearchKeyUpTimeout != null) { clearTimeout(fullsearchKeyUpTimeout); fullsearchKeyUpTimeout = null; }
+			fullsearchKeyUpTimeout = setTimeout(function() {
+				if (fullsearchKeyUpTimeout != null) {
+					//impresslist.refreshFilter();//
+					var q = $('#full-search').val();
+					if (q.length > 0) {
+
+						$('#full-search-results-container').show();
+						$('#full-search-results-loading').show();
+						$('#full-search-results').hide();
+						$('#full-search-results-error').hide();
+						API.search(q, function(results) {
+							$('#full-search-results-loading').hide();
+
+							// populate with results
+							var html = "";
+
+							// People
+							html += "<h4 style='margin-top:0px;font-weight:bold;'>People:</h4>";
+							if (results.people.length > 0) {
+								html += "<table class='table'>";
+								for(var i = 0; i < results.people.length; i++) {
+									var p = results.people[i];
+									html += "	<tr onclick=\"impresslist.findPersonById(" + p.id + ").open();\" data-person-id='" + p.id + "' data-person-tablerow='true' data-toggle='modal' data-target='.person_modal' style='cursor:pointer;'>\
+													<td data-value='" + p.forename + " " + p.surnames + "'><span data-person-id='" + p.id + "' data-field='name'>" + p.firstname + " " + p.surnames + "</span></td> \
+													<td data-person-id='" + p.id + "'><a href='http://twitter.com/" + p.twitter + "' target='new'>" + p.twitter + "</a></td> \
+													<td data-person-id='" + p.id + "'data-value='" + p.tags + "'>" + impresslist.util.buildTags(p.tags) + "</td> \
+												</tr>";
+								}
+								html += "</table>";
+							} else {
+								html += "<p style='margin-bottom:20px;font-weight:bold;'>None</h3>";
+							}
+
+							// Publications
+							html += "<h4 style='margin-top:0px;font-weight:bold;'>Publications:</h4>";
+							if (results.publications.length > 0) {
+								html += "<table class='table'>";
+								for(var i = 0; i < results.publications.length; i++) {
+									var p = results.publications[i];
+									html += "	<tr onclick=\"impresslist.findPublicationById(" + p.id + ").open();\" data-publication-id='" + p.id + "' data-publication-tablerow='true' data-toggle='modal' data-target='.publication_modal' style='cursor:pointer;'>\
+													<td data-value='" + p.name + "'><span data-publication-id='" + p.id + "' data-field='name'>" + p.name + "</span></td> \
+													<td data-publication-id='" + p.id + "'><a href='http://twitter.com/" + p.twitter + "' target='new'>" + p.twitter + "</a></td> \
+													<td data-publication-id='" + p.id + "'data-value='" + p.tags + "'>" + impresslist.util.buildTags(p.tags) + "</td> \
+												</tr>";
+								}
+								html += "</table>";
+							} else {
+								html += "<p style='margin-bottom:20px;font-weight:bold;'>None</h3>";
+							}
+
+							// YouTubers
+							html += "<h4 style='margin-top:0px;font-weight:bold;'>YouTubers:</h4>";
+							if (results.youtubers.length > 0) {
+								html += "<table class='table'>";
+								for(var i = 0; i < results.youtubers.length; i++) {
+									var p = results.youtubers[i];
+									html += "	<tr onclick=\"impresslist.findYoutuberById(" + p.id + ").open();\" data-youtuber-id='" + p.id + "' data-youtuber-tablerow='true' data-toggle='modal' data-target='.youtuber_modal' style='cursor:pointer;'>\
+													<td data-value='" + p.name + "'><span data-youtuber-id='" + p.id + "' data-field='name'>" + p.name + "</span></td> \
+													<td data-youtuber-id='" + p.id + "'><a href='http://twitter.com/" + p.twitter + "' target='new'>" + p.twitter + "</a></td> \
+													<td data-youtuber-id='" + p.id + "'data-value='" + p.tags + "'>" + impresslist.util.buildTags(p.tags) + "</td> \
+												</tr>";
+								}
+								html += "</table>";
+							} else {
+								html += "<p style='margin-bottom:20px;font-weight:bold;'>None</h3>";
+							}
+
+							// Twitch Channels
+							html += "<h4 style='margin-top:0px;font-weight:bold;'>Twitch Channels:</h4>";
+							if (results.twitchchannels.length > 0) {
+								html += "<table class='table'>";
+								for(var i = 0; i < results.twitchchannels.length; i++) {
+									var p = results.twitchchannels[i];
+									html += "	<tr onclick=\"impresslist.findTwitchChannelById(" + p.id + ").open();\" data-twitchchannel-id='" + p.id + "' data-twitchchannel-tablerow='true' data-toggle='modal' data-target='.twitchchannel_modal' style='cursor:pointer;'>\
+													<td data-value='" + p.name + "'><span data-twitchchannel-id='" + p.id + "' data-field='name'>" + p.name + "</span></td> \
+													<td data-twitchchannel-id='" + p.id + "'><a href='http://twitter.com/" + p.twitter + "' target='new'>" + p.twitter + "</a></td> \
+													<td data-twitchchannel-id='" + p.id + "'data-value='" + p.tags + "'>" + impresslist.util.buildTags(p.tags) + "</td> \
+												</tr>";
+								}
+								html += "</table>";
+							} else {
+								html += "<p style='margin-bottom:0px;margin-bottom:0px;font-weight:bold;'>None</h3>";
+							}
+
+
+							$('#full-search-results').html(html);
+							$('#full-search-results').show();
+
+						}, function(){
+							$('#full-search-results-loading').hide();
+							$('#full-search-results').show();
+							// populate with error message.
+							$('#full-search-results-error').html("There was an error in the request?");
+							$('#full-search-results-error').show();
+						});
+					} else {
+						$('#full-search-results-container').hide();
+						$('#full-search-results-error').hide();
+						$('#full-search-results').hide();
+					}
+				}
+				fullsearchKeyUpTimeout = null;
+			}, 300);
+		});
+
+
 		// Set up search / filter
 		var searchKeyUpTimeout = null;
-		$('#filter').keyup(function(){
+		$('#filter-search').keyup(function(key){
+			if (impresslist.util.cancellableKeys.indexOf(key.keyCode) >= 0) { return; }
 			if (searchKeyUpTimeout != null) { clearTimeout(searchKeyUpTimeout); searchKeyUpTimeout = null; }
 			searchKeyUpTimeout = setTimeout(function() {
 				if (searchKeyUpTimeout != null) { impresslist.refreshFilter(); }
@@ -4508,6 +4744,7 @@ var impresslist = {
 		$('#filter-email-attached').change(this.refreshFilter);
 		$('#filter-assigned-self').change(this.refreshFilter);
 		$('#filter-show-outofdate').change(this.refreshFilter);
+		$('.filter-tag').change(this.refreshTagFilter);
 
 		// Import tool
 		$('#importtool-fieldselect').change(function() {
@@ -4551,12 +4788,22 @@ var impresslist = {
 			}
 			console.log(importOrder);
 
+
+			var formData = new FormData();
+			formData.append("data", importString);
 			var url = "api.php?endpoint=/import/";
-			url += "&data=" + encodeURIComponent(importString);
+			//url += "&data=" + encodeURIComponent(importString);
+			url += "&audience=" + encodeURIComponent(impresslist.config.user.audience);
 			url += "&type=" + encodeURIComponent(importType);
 			url += "&order=" + encodeURIComponent(importOrder.join());
-			$.ajax( url )
-				.done(function(result) {
+			$.ajax({
+				url: url,
+				type: "POST",
+				data: formData,
+				contentType:false,
+				cache:false,
+				processData:false,
+				success: function(result) {
 					importtool_disableForm(false);
 					if (result.substr(0, 1) != '{') {
 						API.errorMessage(result);
@@ -4568,12 +4815,12 @@ var impresslist = {
 						return;
 					}
 					alert(result);
-
-				})
-				.fail(function() {
+				},
+				error: function(e, e2, e3) {
 					API.errorMessage("Could not import list.");
 					importtool_disableForm(false);
-				});
+				}
+			});
 
 		});
 
@@ -4647,21 +4894,29 @@ var impresslist = {
 		});
 
 		// Keys functions
-		$('#nav-keys,#nav-coverage,#nav-watchedgames').click(function() {
+		$('#nav-project').click(function() {
 			$('.current-project-name').html(impresslist.findGameById(impresslist.config.user.game).field('name'));
 		});
 		$('#nav-keys').click(function() {
 
-
-
 			var addremovekeysform = function(datacount){
 				// remove keys form
 				$('#keys-remove-submit').unbind('click');
+				$('#keys-remove-platform').change(function(){
+					var val = $('#keys-remove-platform').val();
+					$('#keys-remove-subplatform-row').hide();
+					if (val == "steam") {
+						$('#keys-remove-subplatform').val("---");
+					} else if (val == "switch") {
+						$('#keys-remove-subplatform-row').show();
+					}
+				});
 				$('#keys-remove-submit').click(function(){
 					var submitGame = impresslist.config.user.game;
 					var platform = $('#keys-remove-platform').val();
 					var subplatform = $('#keys-remove-subplatform').val();
 					var amount = $('#keys-remove-amount').val();
+					if (subplatform == "---") { subplatform = ''; }
 
 					API.popKeys(submitGame, platform, subplatform, amount, function(data) {
 
@@ -4680,7 +4935,6 @@ var impresslist = {
 
 				$('#keys-remove-form').show();
 			}
-
 
 			API.listKeys(impresslist.config.user.game, 'steam', '', true, function(data) {
 				$('#steam_keys_assigned_count').html(data.count);
@@ -4727,6 +4981,15 @@ var impresslist = {
 			$('#keys-timepicker').hide();
 			$('#keys-radio-expiry-never').prop("checked", "true");
 		});
+		$('#keys-add-platform').change(function(){
+			var val = $('#keys-add-platform').val();
+			$('#keys-add-subplatform-row').hide();
+			if (val == "steam") {
+				$('#keys-add-subplatform').val("---");
+			} else if (val == "switch") {
+				$('#keys-add-subplatform-row').show();
+			}
+		});
 		$('#keys-add-submit').click(function(){
 			var keys_setFormEnabled = function(boo) {
 				boo = !boo;
@@ -4750,6 +5013,7 @@ var impresslist = {
 			}
 
 			var submitSubplatform = $('#keys-add-subplatform').val();
+			if (submitSubplatform == "---") { submitSubplatform = ""; }
 
 			var whichtime = $('input[name="keys-expiry-radio"]:checked').val();
 			if (whichtime == undefined) {
@@ -4870,7 +5134,7 @@ var impresslist = {
 		// TODO functionality
 		this.jobs.init();
 
-		this.refreshFilter();
+		//this.refreshFilter();
 	},
 	selectModeIsOpen: false,
 	openSelectMode: function() {
@@ -4927,22 +5191,21 @@ var impresslist = {
 		var page = $(this).attr('data-nav-page');
 		$("[data-type-page='true']").hide();
 		$("[data-type-page='true'][data-page='" + page + "']").show();
+		impresslist.loading.onPageChanged(page);
 	},
 
 	refreshFilter: function() {
-		impresslist.applyFilter($('#filter').val().toLowerCase());
+		impresslist.applyFilter($('#filter-search').val().toLowerCase());
 	},
 	applyFilter: function(text) {
 		var countPeopleVisible = 0;
 		for(var i = 0; i < impresslist.people.length; i++) {
 			if (impresslist.people[i].filter(text)) { countPeopleVisible++; }
 		}
-
 		var countPublicationsVisible = 0;
 		for(var i = 0; i < impresslist.publications.length; i++) {
 			if (impresslist.publications[i].filter(text)) { countPublicationsVisible++; }
 		}
-
 		var countYoutubeChannelsVisible = 0;
 		for(var i = 0; i < impresslist.youtubers.length; i++) {
 			if (impresslist.youtubers[i].filter(text)) { countYoutubeChannelsVisible++; }
@@ -4952,27 +5215,15 @@ var impresslist = {
 			if (impresslist.twitchchannels[i].filter(text)) { countTwitchChannelsVisible++; }
 		}
 
-		var countCoverageVisible = 0;
-		for(var i = 0; i < impresslist.coverage.length; i++) {
-			if (impresslist.coverage[i].filter(text)) { countCoverageVisible++; }
-		}
-		var countWatchedGamesVisible = 0;
-		for(var i = 0; i < impresslist.watchedgames.length; i++) {
-			if (impresslist.watchedgames[i].filter(text)) { countWatchedGamesVisible++; }
-		}
-
 		if (countPeopleVisible == 0) { $('#people-footer').show(); } else { $('#people-footer').hide(); }
 		if (countPublicationsVisible == 0) { $('#publications-footer').show(); } else { $('#publications-footer').hide(); }
 		if (countYoutubeChannelsVisible == 0) { $('#youtubers-footer').show(); } else { $('#youtubers-footer').hide(); }
 		if (countTwitchChannelsVisible == 0) { $('#twitchchannels-footer').show(); } else { $('#twitchchannels-footer').hide(); }
-		if (countCoverageVisible == 0) { $('#coverage-footer').show(); } else { $('#coverage-footer').hide(); }
-		if (countWatchedGamesVisible == 0) { $('#watchedgames-footer').show(); } else { $('#watchedgames-footer').hide(); }
 
 		if (impresslist.people.length > 0 && countPeopleVisible == 0) { $('#people-container').hide(); } else { $('#people-container').show(); }
 		if (impresslist.publications.length > 0 && countPublicationsVisible == 0) { $('#publications-container').hide(); } else { $('#publications-container').show(); }
 		if (impresslist.youtubers.length > 0 && countYoutubeChannelsVisible == 0) { $('#youtubers-container').hide(); } else { $('#youtubers-container').show(); }
 		if (impresslist.twitchchannels.length > 0 && countTwitchChannelsVisible == 0) { $('#twitchchannels-container').hide(); } else { $('#twitchchannels-container').show(); }
-		if (impresslist.coverage.length > 0 && countCoverageVisible == 0) { $('#coverage-container').hide(); } else { $('#coverage-container').show(); }
 
 		$('#people-count').html("(" + countPeopleVisible + ")");
 		$('#publication-count').html("(" + countPublicationsVisible + ")");
@@ -4980,7 +5231,59 @@ var impresslist = {
 		$('#twitchchannel-count').html("(" + countTwitchChannelsVisible + ")");
 
 		if (text.length > 0) { $('#chat-container').hide(); } else { $('#chat-container').show(); }
+	},
+	refreshTotals: function() {
+		$('#people-count').html("(" + impresslist.people.length + ")");
+		$('#publication-count').html("(" + impresslist.publications.length + ")");
+		$('#youtuber-count').html("(" + impresslist.youtubers.length + ")");
+		$('#twitchchannel-count').html("(" + impresslist.twitchchannels.length + ")");
+	},
+	refreshTagFilter: function() {
+		var tagsEnabled = [];
+		$('.filter-tag').each(function(r, e) {
+			if ($(e).prop("checked")) {
+				tagsEnabled.push($(e).attr('data-tag'));
+			}
+		});
+		impresslist.applyTagFilter(tagsEnabled);
+	},
+	applyTagFilter: function(tags) {
+		var countPeopleVisible = 0;
+		for(var i = 0; i < impresslist.people.length; i++) {
+			if (impresslist.people[i].filterTags(tags)) { countPeopleVisible++; }
+		}
+		var countPublicationsVisible = 0;
+		for(var i = 0; i < impresslist.publications.length; i++) {
+			if (impresslist.publications[i].filterTags(tags)) { countPublicationsVisible++; }
+		}
+		var countYoutubeChannelsVisible = 0;
+		for(var i = 0; i < impresslist.youtubers.length; i++) {
+			if (impresslist.youtubers[i].filterTags(tags)) { countYoutubeChannelsVisible++; }
+		}
+		var countTwitchChannelsVisible = 0;
+		for(var i = 0; i < impresslist.twitchchannels.length; i++) {
+			if (impresslist.twitchchannels[i].filterTags(tags)) { countTwitchChannelsVisible++; }
+		}
 
+		if (countPeopleVisible == 0) { $('#people-footer').show(); } else { $('#people-footer').hide(); }
+		if (countPublicationsVisible == 0) { $('#publications-footer').show(); } else { $('#publications-footer').hide(); }
+		if (countYoutubeChannelsVisible == 0) { $('#youtubers-footer').show(); } else { $('#youtubers-footer').hide(); }
+		if (countTwitchChannelsVisible == 0) { $('#twitchchannels-footer').show(); } else { $('#twitchchannels-footer').hide(); }
+
+		if (impresslist.people.length > 0 && countPeopleVisible == 0) { $('#people-container').hide(); } else { $('#people-container').show(); }
+		if (impresslist.publications.length > 0 && countPublicationsVisible == 0) { $('#publications-container').hide(); } else { $('#publications-container').show(); }
+		if (impresslist.youtubers.length > 0 && countYoutubeChannelsVisible == 0) { $('#youtubers-container').hide(); } else { $('#youtubers-container').show(); }
+		if (impresslist.twitchchannels.length > 0 && countTwitchChannelsVisible == 0) { $('#twitchchannels-container').hide(); } else { $('#twitchchannels-container').show(); }
+
+		console.log('countPeopleVisible', countPeopleVisible);
+		console.log('countPublicationsVisible', countPublicationsVisible);
+		console.log('countYoutubeChannelsVisible', countYoutubeChannelsVisible);
+		console.log('countTwitchChannelsVisible', countTwitchChannelsVisible);
+
+		$('#people-count').html("(" + countPeopleVisible + ")");
+		$('#publication-count').html("(" + countPublicationsVisible + ")");
+		$('#youtuber-count').html("(" + countYoutubeChannelsVisible + ")");
+		$('#twitchchannel-count').html("(" + countTwitchChannelsVisible + ")");
 	},
 	refreshMailoutRecipients: function() {
 		var peopleSelected = $('input[data-type="person"][data-checkbox="true"]:checked');
@@ -5710,6 +6013,14 @@ impresslist.chat = {
 
 
 impresslist.util = {
+	cancellableKeys: [
+		37, 38, 39, 40, // arrows
+		16, // shift
+		17, // ctrl
+		18, // alt
+		20, // capslock
+		91 // cmd
+	],
 	iframe: function(url, title) {
 		var height = Math.round(window.innerHeight * 0.8);
 		var html = "";
@@ -5766,6 +6077,15 @@ impresslist.util = {
 			}
 		}
 		return str;
+	},
+	buildTags: function(tagsString) {
+		var html = "";
+		if (tagsString.length == 0) { return "None"; }
+		var tags = tagsString.split(",");
+		for(var i = 0; i < tags.length; i++) {
+			html += "<span class='tag tag-" + tags[i]+ "'>" + impresslist.config.tags[tags[i]].name + "</span>";
+		}
+		return html;
 	},
 
 	relativetime_contact: function(previous) {
