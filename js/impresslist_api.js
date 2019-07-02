@@ -4,9 +4,10 @@ API = function() {
 API.prototype = {
 
 }
+API.root = "";
 
 API.search = function(q, successCallback, failCallback) {
-	var url = "api.php?endpoint=/search/&q=" + encodeURIComponent(q);
+	var url = API.root + "api.php?endpoint=/search/&q=" + encodeURIComponent(q);
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') {
@@ -34,7 +35,7 @@ API.listSocialTimeline = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
 	impresslist.loading.set('socialTimelineItem', true);
-	var url = "api.php?endpoint=/social/timeline/";
+	var url = API.root + "api.php?endpoint=/social/timeline/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') {
@@ -65,7 +66,7 @@ API.listSocialTimeline = function(fromInit) {
 		});
 }
 API.addSocialTimelineItem = function() {
-	var url = "api.php?endpoint=/social/timeline/item/add/";
+	var url = API.root + "api.php?endpoint=/social/timeline/item/add/";
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -89,7 +90,7 @@ API.addSocialTimelineItem = function() {
 		});
 }
 API.addSocialTimelineItemRetweets = function(obj, accounts, timesep, donecallback) {
-	var url = "api.php?endpoint=/social/timeline/item/add-retweets/" +
+	var url = API.root + "api.php?endpoint=/social/timeline/item/add-retweets/" +
 				"&id=" + encodeURIComponent(obj.id) +
 				"&accounts=" + encodeURIComponent(accounts) +
 				"&timesep=" + encodeURIComponent(timesep);
@@ -123,7 +124,7 @@ API.addSocialTimelineItemRetweets = function(obj, accounts, timesep, donecallbac
 		});
 }
 API.saveSocialTimelineItem = function(obj, type, typedata, timestamp, ready) {
-	var url = "api.php?endpoint=/social/timeline/item/save/" +
+	var url = API.root + "api.php?endpoint=/social/timeline/item/save/" +
 					"&id=" + encodeURIComponent(obj.id) +
 					"&type=" + encodeURIComponent(type) +
 					"&data=" + encodeURIComponent(JSON.stringify(typedata)) +
@@ -154,7 +155,7 @@ API.saveSocialTimelineItem = function(obj, type, typedata, timestamp, ready) {
 		});
 }
 API.removeSocialTimelineItem = function(obj) {
-	var url = "api.php?endpoint=/social/timeline/item/remove/&id=" + encodeURIComponent(obj.id);
+	var url = API.root + "api.php?endpoint=/social/timeline/item/remove/&id=" + encodeURIComponent(obj.id);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -178,7 +179,7 @@ API.listSocialUploads = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
 	impresslist.loading.set('socialUploads', true);
-	var url = "api.php?endpoint=/social/uploads/list/";
+	var url = API.root + "api.php?endpoint=/social/uploads/list/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') {
@@ -205,11 +206,11 @@ API.listSocialUploads = function(fromInit) {
 		});
 }
 API.addSocialUpload = function(d, successCallback) {
-	var url = "api.php?endpoint=/social/uploads/add/";
+	var url = API.root + "api.php?endpoint=/social/uploads/add/";
 	console.log(url);
 
 	$.ajax({
-		url: "api.php?endpoint=/social/uploads/add/",
+		url: API.root + "api.php?endpoint=/social/uploads/add/",
 		type: "POST",
 		data: d,
 		contentType: false,
@@ -244,7 +245,7 @@ API.addSocialUpload = function(d, successCallback) {
 	});
 }
 API.removeSocialUpload = function(acc) {
-	var url = "api.php?endpoint=/social/uploads/remove/&name=" + encodeURIComponent(acc.field("name"));
+	var url = API.root + "api.php?endpoint=/social/uploads/remove/&name=" + encodeURIComponent(acc.field("name"));
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -264,7 +265,7 @@ API.removeSocialUpload = function(acc) {
 API.listPeople = function(fromInit) {//
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
-	var url = "api.php?endpoint=/person/list/";
+	var url = API.root + "api.php?endpoint=/person/list/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') {
@@ -293,7 +294,7 @@ API.listPeople = function(fromInit) {//
 API.listPublications = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
-	var url = "api.php?endpoint=/publication/list/";
+	var url = API.root + "api.php?endpoint=/publication/list/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') {
@@ -322,7 +323,7 @@ API.listPublications = function(fromInit) {
 API.listPersonPublications = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
-	var url = "api.php?endpoint=/person-publication/list/";
+	var url = API.root + "api.php?endpoint=/person-publication/list/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') {
@@ -350,7 +351,7 @@ API.listPersonPublications = function(fromInit) {
 API.listPersonYoutubeChannels = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
-	var url = "api.php?endpoint=/person-youtube-channel/list/";
+	var url = API.root + "api.php?endpoint=/person-youtube-channel/list/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') {
@@ -378,7 +379,7 @@ API.listPersonYoutubeChannels = function(fromInit) {
 API.listPersonTwitchChannels = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
-	var url = "api.php?endpoint=/person-twitchchannel/list/";
+	var url = API.root + "api.php?endpoint=/person-twitchchannel/list/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') {
@@ -407,7 +408,7 @@ API.listYoutubeChannels = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
 	impresslist.loading.set('youtubeChannels', true);
-	var url = "api.php?endpoint=/youtuber/list/";
+	var url = API.root + "api.php?endpoint=/youtuber/list/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') {
@@ -436,7 +437,7 @@ API.listTwitchChannels = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
 	impresslist.loading.set('twitchChannels', true);
-	var url = "api.php?endpoint=/twitchchannel/list/";
+	var url = API.root + "api.php?endpoint=/twitchchannel/list/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') {
@@ -465,7 +466,7 @@ API.listTwitchChannels = function(fromInit) {
 API.listEmails = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
-	var url = "api.php?endpoint=/email/list/";
+	var url = API.root + "api.php?endpoint=/email/list/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') {
@@ -490,11 +491,11 @@ API.listEmails = function(fromInit) {
 			API.errorMessage("Could not list Emails.");
 		});
 }
-API.listCoverage = function(fromInit) {
+API.listCoverage = function(fromInit, successCallback) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
 	impresslist.loading.set('coverage', true);
-	var url = "api.php?endpoint=/coverage/";
+	var url = API.root + "api.php?endpoint=/coverage/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') {
@@ -510,6 +511,7 @@ API.listCoverage = function(fromInit) {
 				var coverage = new Coverage(json.coverage[i]);
 				impresslist.addCoverage(coverage, fromInit);
 			}
+			if (successCallback) successCallback(json);
 			if (fromInit) {
 				impresslist.loading.onCategoryItemLoaded('project');
 				//impresslist.refreshFilter();
@@ -524,7 +526,7 @@ API.listWatchedGames = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
 	impresslist.loading.set('watchedgames', true);
-	var url = "api.php?endpoint=/watchedgame/list/";
+	var url = API.root + "api.php?endpoint=/watchedgame/list/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') {
@@ -551,7 +553,7 @@ API.listWatchedGames = function(fromInit) {
 		});
 }
 API.saveWatchedGame = function(watchedgame, name, keywords, successCallback, failCallback) {
-	var url = "api.php?endpoint=/watchedgame/save/" +
+	var url = API.root + "api.php?endpoint=/watchedgame/save/" +
 					"&id=" + encodeURIComponent(watchedgame.id) +
 					"&name=" + encodeURIComponent(name) +
 					"&keywords=" + encodeURIComponent(keywords);
@@ -583,7 +585,7 @@ API.saveWatchedGame = function(watchedgame, name, keywords, successCallback, fai
 		});
 }
 API.removeWatchedGame = function(watchedgame, successCallback, failCallback) {
-	var url = "api.php?endpoint=/watchedgame/remove/&id=" + encodeURIComponent(watchedgame.id);
+	var url = API.root + "api.php?endpoint=/watchedgame/remove/&id=" + encodeURIComponent(watchedgame.id);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -608,7 +610,7 @@ API.removeWatchedGame = function(watchedgame, successCallback, failCallback) {
 }
 
 API.assignedKeys = function(type, typeId, successCallback, errorCallback) {
-	var url = "api.php?endpoint=/keys/assigned/" +
+	var url = API.root + "api.php?endpoint=/keys/assigned/" +
 				"&type=" + encodeURIComponent(type) +
 				"&type_id=" + encodeURIComponent(typeId);
 	console.log(url);
@@ -637,7 +639,7 @@ API.assignedKeys = function(type, typeId, successCallback, errorCallback) {
 }
 
 API.listKeys = function(game, platform, subplatform, assigned, callbackfunction) {
-	var url = "api.php?endpoint=/keys/list/" +
+	var url = API.root + "api.php?endpoint=/keys/list/" +
 				"&game=" + encodeURIComponent(game) +
 				"&platform=" + encodeURIComponent(platform) +
 				"&subplatform=" + encodeURIComponent(subplatform) +
@@ -658,7 +660,7 @@ API.listKeys = function(game, platform, subplatform, assigned, callbackfunction)
 		});
 }
 API.addKeys = function(keys, game, platform, subplatform, expiresOn, callbackfunction, failCallback) {
-	var url = "api.php?endpoint=/keys/add/" +
+	var url = API.root + "api.php?endpoint=/keys/add/" +
 					"&keys=" + encodeURIComponent(keys) +
 					"&game=" + encodeURIComponent(game) +
 					"&platform=" + encodeURIComponent(platform) +
@@ -692,7 +694,7 @@ API.addKeys = function(keys, game, platform, subplatform, expiresOn, callbackfun
 		});
 }
 API.popKeys = function(game, platform, subplatform, amount, successCallback) {
-	var url = "api.php?endpoint=/keys/pop/" +
+	var url = API.root + "api.php?endpoint=/keys/pop/" +
 					"&game=" + encodeURIComponent(game) +
 					"&platform=" + encodeURIComponent(platform) +
 					"&subplatform=" + encodeURIComponent(subplatform) +
@@ -723,7 +725,7 @@ API.popKeys = function(game, platform, subplatform, amount, successCallback) {
 API.listSimpleMailouts = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
-	var url = "api.php?endpoint=/mailout/simple/list/";
+	var url = API.root + "api.php?endpoint=/mailout/simple/list/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') {
@@ -751,7 +753,7 @@ API.listSimpleMailouts = function(fromInit) {
 		});
 }
 API.addSimpleMailout = function() {
-	var url = "api.php?endpoint=/mailout/simple/add/";
+	var url = API.root + "api.php?endpoint=/mailout/simple/add/";
 	console.log(url);
 
 	$.ajax( url )
@@ -776,7 +778,7 @@ API.addSimpleMailout = function() {
 		});
 }
 API.duplicateSimpleMailout = function(obj, successCallback, errorCallback) {
-	var url = "api.php?endpoint=/mailout/simple/duplicate/" +
+	var url = API.root + "api.php?endpoint=/mailout/simple/duplicate/" +
 					"&id=" + encodeURIComponent(obj.id);
 	console.log(url);
 
@@ -806,7 +808,7 @@ API.duplicateSimpleMailout = function(obj, successCallback, errorCallback) {
 }
 API.saveSimpleMailout = function(obj, name, subject, recipients, markdown, timestamp, successCallback, errorCallback) {
 
-	var url = "api.php?endpoint=/mailout/simple/save/" +
+	var url = API.root + "api.php?endpoint=/mailout/simple/save/" +
 					"&id=" + encodeURIComponent(obj.id) +
 					"&name=" + encodeURIComponent(name) +
 					"&subject=" + encodeURIComponent(subject) +
@@ -843,7 +845,7 @@ API.saveSimpleMailout = function(obj, name, subject, recipients, markdown, times
 		});
 }
 API.sendSimpleMailout = function(obj) {
-	var url = "api.php?endpoint=/mailout/simple/send/" +
+	var url = API.root + "api.php?endpoint=/mailout/simple/send/" +
 					"&id=" + encodeURIComponent(obj.id);
 	console.log(url);
 
@@ -867,7 +869,7 @@ API.sendSimpleMailout = function(obj) {
 		});
 }
 API.cancelSimpleMailout = function(obj) {
-	var url = "api.php?endpoint=/mailout/simple/cancel/" +
+	var url = API.root + "api.php?endpoint=/mailout/simple/cancel/" +
 					"&id=" + encodeURIComponent(obj.id);
 	console.log(url);
 
@@ -891,7 +893,7 @@ API.cancelSimpleMailout = function(obj) {
 		});
 }
 API.removeSimpleMailout = function(simpleMailout) {
-	var url = "api.php?endpoint=/mailout/simple/remove/&id=" + encodeURIComponent(simpleMailout.id);
+	var url = API.root + "api.php?endpoint=/mailout/simple/remove/&id=" + encodeURIComponent(simpleMailout.id);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -918,7 +920,7 @@ API.addPerson = function() {
 	var email = "blank@blank.com";
 	var twitter = "";
 	var notes = "";
-	var url = "api.php?endpoint=/person/add/&firstname=" + encodeURIComponent(firstname) + "&surnames=" + encodeURIComponent(surnames) + "&email=" + encodeURIComponent(email) + "&twitter=" + encodeURIComponent(twitter) + "&notes=" + encodeURIComponent(notes);
+	var url = API.root + "api.php?endpoint=/person/add/&firstname=" + encodeURIComponent(firstname) + "&surnames=" + encodeURIComponent(surnames) + "&email=" + encodeURIComponent(email) + "&twitter=" + encodeURIComponent(twitter) + "&notes=" + encodeURIComponent(notes);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -943,7 +945,7 @@ API.addPerson = function() {
 		});
 }
 API.addPersonPublication = function(personObj, publicationId) {
-	var url = "api.php?endpoint=/person/add-publication/" +
+	var url = API.root + "api.php?endpoint=/person/add-publication/" +
 				"&person=" + encodeURIComponent(personObj.id) +
 				"&publication=" + encodeURIComponent(publicationId);
 	console.log(url);
@@ -968,7 +970,7 @@ API.addPersonPublication = function(personObj, publicationId) {
 		});
 }
 API.addPersonYoutubeChannel = function(personObj, youtubeChannelId) {
-	var url = "api.php?endpoint=/person/add-youtube-channel/" +
+	var url = API.root + "api.php?endpoint=/person/add-youtube-channel/" +
 				"&person=" + encodeURIComponent(personObj.id) +
 				"&youtubeChannel=" + encodeURIComponent(youtubeChannelId);
 	console.log(url);
@@ -993,7 +995,7 @@ API.addPersonYoutubeChannel = function(personObj, youtubeChannelId) {
 		});
 }
 API.removePersonYoutubeChannel = function(personYoutuberObj) {
-	var url = "api.php?endpoint=/person/remove-youtube-channel/" +
+	var url = API.root + "api.php?endpoint=/person/remove-youtube-channel/" +
 				"&personYoutubeChannel=" + encodeURIComponent(personYoutuberObj.id);
 	console.log(url);
 	$.ajax( url )
@@ -1017,7 +1019,7 @@ API.removePersonYoutubeChannel = function(personYoutuberObj) {
 		});
 }
 API.addPersonTwitchChannel = function(personObj, twitchChannelId) {
-	var url = "api.php?endpoint=/person/add-twitchchannel/" +
+	var url = API.root + "api.php?endpoint=/person/add-twitchchannel/" +
 				"&person=" + encodeURIComponent(personObj.id) +
 				"&twitchchannel=" + encodeURIComponent(twitchChannelId);
 	console.log(url);
@@ -1042,7 +1044,7 @@ API.addPersonTwitchChannel = function(personObj, twitchChannelId) {
 		});
 }
 API.removePersonTwitchChannel = function(personTwitchObj) {
-	var url = "api.php?endpoint=/person/remove-twitchchannel/" +
+	var url = API.root + "api.php?endpoint=/person/remove-twitchchannel/" +
 				"&personTwitchChannel=" + encodeURIComponent(personTwitchObj.id);
 	console.log(url);
 	$.ajax( url )
@@ -1066,7 +1068,7 @@ API.removePersonTwitchChannel = function(personTwitchObj) {
 		});
 }
 API.savePersonPublication = function(personPublicationObj, email) {
-	var url = "api.php?endpoint=/person/save-publication/" +
+	var url = API.root + "api.php?endpoint=/person/save-publication/" +
 				"&personPublication=" + encodeURIComponent(personPublicationObj.id) +
 				"&email=" + encodeURIComponent(email);
 	console.log(url);
@@ -1092,7 +1094,7 @@ API.savePersonPublication = function(personPublicationObj, email) {
 		});
 }
 API.removePersonPublication = function(personPublicationObj) {
-	var url = "api.php?endpoint=/person/remove-publication/" +
+	var url = API.root + "api.php?endpoint=/person/remove-publication/" +
 				"&personPublication=" + encodeURIComponent(personPublicationObj.id);
 	console.log(url);
 	$.ajax( url )
@@ -1116,7 +1118,7 @@ API.removePersonPublication = function(personPublicationObj) {
 		});
 }
 API.addPublicationCoverage = function() {
-	var url = "api.php?endpoint=/coverage/publication/add/";
+	var url = API.root + "api.php?endpoint=/coverage/publication/add/";
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1140,7 +1142,7 @@ API.addPublicationCoverage = function() {
 		});
 }
 API.savePublicationCoverage = function(coverage, publication, person, title, url, timestamp, thanked) {
-	var url = "api.php?endpoint=/coverage/publication/save/" +
+	var url = API.root + "api.php?endpoint=/coverage/publication/save/" +
 						"&id=" + encodeURIComponent(coverage.id) +
 						"&publication=" + encodeURIComponent(publication) +
 						"&person=" + encodeURIComponent(person) +
@@ -1171,7 +1173,7 @@ API.savePublicationCoverage = function(coverage, publication, person, title, url
 		});
 }
 API.removePublicationCoverage = function(coverage) {
-	var url = "api.php?endpoint=/coverage/publication/remove/&id=" + encodeURIComponent(coverage.id);
+	var url = API.root + "api.php?endpoint=/coverage/publication/remove/&id=" + encodeURIComponent(coverage.id);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1193,7 +1195,7 @@ API.removePublicationCoverage = function(coverage) {
 		});
 }
 API.addYoutuberCoverage = function() {
-	var url = "api.php?endpoint=/coverage/youtuber/add/";
+	var url = API.root + "api.php?endpoint=/coverage/youtuber/add/";
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1217,7 +1219,7 @@ API.addYoutuberCoverage = function() {
 		});
 }
 API.saveYoutuberCoverage = function(coverage, youtuber, person, title, url, timestamp, thanked) {
-	var url = "api.php?endpoint=/coverage/youtuber/save/" +
+	var url = API.root + "api.php?endpoint=/coverage/youtuber/save/" +
 						"&id=" + encodeURIComponent(coverage.id) +
 						"&youtuber=" + encodeURIComponent(youtuber) +
 						"&person=" + encodeURIComponent(person) +
@@ -1248,7 +1250,7 @@ API.saveYoutuberCoverage = function(coverage, youtuber, person, title, url, time
 		});
 }
 API.removeYoutuberCoverage = function(coverage) {
-	var url = "api.php?endpoint=/coverage/youtuber/remove/&id=" + encodeURIComponent(coverage.id);
+	var url = API.root + "api.php?endpoint=/coverage/youtuber/remove/&id=" + encodeURIComponent(coverage.id);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1270,7 +1272,7 @@ API.removeYoutuberCoverage = function(coverage) {
 		});
 }
 API.addTwitchChannelCoverage = function() {
-	var url = "api.php?endpoint=/coverage/twitchchannel/add/";
+	var url = API.root + "api.php?endpoint=/coverage/twitchchannel/add/";
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1294,7 +1296,7 @@ API.addTwitchChannelCoverage = function() {
 		});
 }
 API.saveTwitchChannelCoverage = function(coverage, twitchchannel, person, title, url, timestamp, thanked) {
-	var url = "api.php?endpoint=/coverage/twitchchannel/save/" +
+	var url = API.root + "api.php?endpoint=/coverage/twitchchannel/save/" +
 						"&id=" + encodeURIComponent(coverage.id) +
 						"&twitchchannel=" + encodeURIComponent(twitchchannel) +
 						"&person=" + encodeURIComponent(person) +
@@ -1325,7 +1327,7 @@ API.saveTwitchChannelCoverage = function(coverage, twitchchannel, person, title,
 		});
 }
 API.removeTwitchChannelCoverage = function(coverage) {
-	var url = "api.php?endpoint=/coverage/twitchchannel/remove/&id=" + encodeURIComponent(coverage.id);
+	var url = API.root + "api.php?endpoint=/coverage/twitchchannel/remove/&id=" + encodeURIComponent(coverage.id);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1347,7 +1349,7 @@ API.removeTwitchChannelCoverage = function(coverage) {
 		});
 }
 API.setPersonPriority = function(person, priority, gameId) {
-	var url = "api.php?endpoint=/person/set-priority/" +
+	var url = API.root + "api.php?endpoint=/person/set-priority/" +
 					"&id=" + encodeURIComponent(person.id) +
 					"&priority=" + encodeURIComponent(priority) +
 					"&game=" + encodeURIComponent(gameId);
@@ -1373,7 +1375,7 @@ API.setPersonPriority = function(person, priority, gameId) {
 		});
 }
 API.setPersonAssignment = function(person, user, gameId) {
-	var url = "api.php?endpoint=/person/set-assignment/" +
+	var url = API.root + "api.php?endpoint=/person/set-assignment/" +
 					"&id=" + encodeURIComponent(person.id) +
 					"&user=" + encodeURIComponent(user);
 	console.log(url);
@@ -1399,7 +1401,7 @@ API.setPersonAssignment = function(person, user, gameId) {
 }
 API.savePerson = function(person, firstname, surnames, email, twitter, notes, country, language, tags, outofdate) {
 
-	var url = "api.php?endpoint=/person/save/" +
+	var url = API.root + "api.php?endpoint=/person/save/" +
 					"&id=" + encodeURIComponent(person.id) +
 					"&firstname=" + encodeURIComponent(firstname) +
 					"&surnames=" + encodeURIComponent(surnames) +
@@ -1432,7 +1434,7 @@ API.savePerson = function(person, firstname, surnames, email, twitter, notes, co
 		});
 }
 API.removePerson = function(person) {
-	var url = "api.php?endpoint=/person/remove/&id=" + encodeURIComponent(person.id);
+	var url = API.root + "api.php?endpoint=/person/remove/&id=" + encodeURIComponent(person.id);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1454,7 +1456,7 @@ API.removePerson = function(person) {
 }
 API.addPublication = function() {
 	var name = "Blank";
-	var url = "api.php?endpoint=/publication/add/&name=" + encodeURIComponent(name);
+	var url = API.root + "api.php?endpoint=/publication/add/&name=" + encodeURIComponent(name);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1479,7 +1481,7 @@ API.addPublication = function() {
 		});
 }
 API.setPublicationPriority = function(publication, priority, gameId) {
-	var url = "api.php?endpoint=/publication/set-priority/" +
+	var url = API.root + "api.php?endpoint=/publication/set-priority/" +
 					"&id=" + encodeURIComponent(publication.id) +
 					"&priority=" + encodeURIComponent(priority) +
 					"&game=" + encodeURIComponent(gameId);
@@ -1506,7 +1508,7 @@ API.setPublicationPriority = function(publication, priority, gameId) {
 }
 API.savePublication = function(publication, name, url, email, rssfeedurl, twitter, notes, country, tags) {
 
-	var url = "api.php?endpoint=/publication/save/" +
+	var url = API.root + "api.php?endpoint=/publication/save/" +
 					"&id=" + encodeURIComponent(publication.id) +
 					"&name=" + encodeURIComponent(name) +
 					"&url=" + encodeURIComponent(url) +
@@ -1539,7 +1541,7 @@ API.savePublication = function(publication, name, url, email, rssfeedurl, twitte
 		});
 }
 API.removePublication = function(publication) {
-	var url = "api.php?endpoint=/publication/remove/&id=" + encodeURIComponent(publication.id);
+	var url = API.root + "api.php?endpoint=/publication/remove/&id=" + encodeURIComponent(publication.id);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1561,7 +1563,7 @@ API.removePublication = function(publication) {
 }
 
 API.searchYouTube = function(search, order, successCallback, failCallback) {
-	var url = "api.php?endpoint=/youtuber/search-youtube/&search=" + encodeURIComponent(search) + "&order=" + encodeURIComponent(order);
+	var url = API.root + "api.php?endpoint=/youtuber/search-youtube/&search=" + encodeURIComponent(search) + "&order=" + encodeURIComponent(order);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1587,7 +1589,7 @@ API.searchYouTube = function(search, order, successCallback, failCallback) {
 API.addYoutuber = function(openImmediately, successCallback, failCallback) {
 	openImmediately = (typeof openImmediately == 'undefined')?true:openImmediately;
 	var name = "Blank";
-	var url = "api.php?endpoint=/youtuber/add/&channel=youtube";
+	var url = API.root + "api.php?endpoint=/youtuber/add/&channel=youtube";
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1619,7 +1621,7 @@ API.addYoutuber = function(openImmediately, successCallback, failCallback) {
 		});
 }
 API.setYoutuberPriority = function(youtuber, priority, gameId) {
-	var url = "api.php?endpoint=/youtuber/set-priority/" +
+	var url = API.root + "api.php?endpoint=/youtuber/set-priority/" +
 					"&id=" + encodeURIComponent(youtuber.id) +
 					"&priority=" + encodeURIComponent(priority) +
 					"&game=" + encodeURIComponent(gameId);
@@ -1646,7 +1648,7 @@ API.setYoutuberPriority = function(youtuber, priority, gameId) {
 }
 API.saveYoutuber = function(youtuber, channel, nameOverride, email, twitter, notes, country, tags) {
 
-	var url = "api.php?endpoint=/youtuber/save/" +
+	var url = API.root + "api.php?endpoint=/youtuber/save/" +
 					"&id=" + encodeURIComponent(youtuber.id) +
 					"&channel=" + encodeURIComponent(channel) +
 					"&name=" + encodeURIComponent(nameOverride) +
@@ -1678,7 +1680,7 @@ API.saveYoutuber = function(youtuber, channel, nameOverride, email, twitter, not
 		});
 }
 API.removeYoutuber = function(youtuber) {
-	var url = "api.php?endpoint=/youtuber/remove/&id=" + encodeURIComponent(youtuber.id);
+	var url = API.root + "api.php?endpoint=/youtuber/remove/&id=" + encodeURIComponent(youtuber.id);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1701,7 +1703,7 @@ API.removeYoutuber = function(youtuber) {
 API.addTwitchChannel = function(openImmediately, successCallback, failCallback) {
 	openImmediately = (typeof openImmediately == 'undefined')?true:openImmediately;
 	var name = "Blank";
-	var url = "api.php?endpoint=/twitchchannel/add/&channel=twitch";
+	var url = API.root + "api.php?endpoint=/twitchchannel/add/&channel=twitch";
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1733,7 +1735,7 @@ API.addTwitchChannel = function(openImmediately, successCallback, failCallback) 
 		});
 }
 API.setTwitchChannelPriority = function(twitchchannel, priority, gameId) {
-	var url = "api.php?endpoint=/twitchchannel/set-priority/" +
+	var url = API.root + "api.php?endpoint=/twitchchannel/set-priority/" +
 					"&id=" + encodeURIComponent(twitchchannel.id) +
 					"&priority=" + encodeURIComponent(priority) +
 					"&game=" + encodeURIComponent(gameId);
@@ -1760,7 +1762,7 @@ API.setTwitchChannelPriority = function(twitchchannel, priority, gameId) {
 }
 API.saveTwitchChannel = function(twitchchannel, channel, email, twitter, notes, tags) {
 
-	var url = "api.php?endpoint=/twitchchannel/save/" +
+	var url = API.root + "api.php?endpoint=/twitchchannel/save/" +
 					"&id=" + encodeURIComponent(twitchchannel.id) +
 					"&channel=" + encodeURIComponent(channel) +
 					"&email=" + encodeURIComponent(email) +
@@ -1790,7 +1792,7 @@ API.saveTwitchChannel = function(twitchchannel, channel, email, twitter, notes, 
 		});
 }
 API.removeTwitchChannel = function(twitchchannel) {
-	var url = "api.php?endpoint=/twitchchannel/remove/&id=" + encodeURIComponent(twitchchannel.id);
+	var url = API.root + "api.php?endpoint=/twitchchannel/remove/&id=" + encodeURIComponent(twitchchannel.id);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1811,7 +1813,7 @@ API.removeTwitchChannel = function(twitchchannel) {
 		});
 }
 API.userChangeIMAPSettings = function(user, smtpServer, imapServer, imapPassword) {
-	var url = "api.php?endpoint=/user/change-imap-settings/";
+	var url = API.root + "api.php?endpoint=/user/change-imap-settings/";
 	url += "&id=" + encodeURIComponent(user.id);
 	url += "&smtpServer=" + encodeURIComponent(smtpServer);
 	url += "&imapServer=" + encodeURIComponent(imapServer);
@@ -1835,7 +1837,7 @@ API.userChangeIMAPSettings = function(user, smtpServer, imapServer, imapPassword
 		});
 }
 API.userChangeProject = function(user, newProject, onSuccess, onFail) {
-	var url = "api.php?endpoint=/user/change-project/&id=" + encodeURIComponent(user.id) + "&newProject=" + encodeURIComponent(newProject);
+	var url = API.root + "api.php?endpoint=/user/change-project/&id=" + encodeURIComponent(user.id) + "&newProject=" + encodeURIComponent(newProject);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1858,7 +1860,7 @@ API.userChangeProject = function(user, newProject, onSuccess, onFail) {
 		});
 }
 API.userChangePassword = function(user, currentPassword, newPassword) {
-	var url = "api.php?endpoint=/user/change-password/&id=" + encodeURIComponent(user.id) + "&currentPassword=" + encodeURIComponent(currentPassword) + "&newPassword=" + encodeURIComponent(newPassword);
+	var url = API.root + "api.php?endpoint=/user/change-password/&id=" + encodeURIComponent(user.id) + "&currentPassword=" + encodeURIComponent(currentPassword) + "&newPassword=" + encodeURIComponent(newPassword);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1878,7 +1880,7 @@ API.userChangePassword = function(user, currentPassword, newPassword) {
 		});
 }
 API.userChangeAudience = function(user, audience, successFunc) {
-	var url = "api.php?endpoint=/user/change-audience/&id=" + encodeURIComponent(user.id) + "&audience=" + encodeURIComponent(audience);
+	var url = API.root + "api.php?endpoint=/user/change-audience/&id=" + encodeURIComponent(user.id) + "&audience=" + encodeURIComponent(audience);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1899,7 +1901,7 @@ API.userChangeAudience = function(user, audience, successFunc) {
 		});
 }
 API.queryOAuthFacebookPages = function(callbackFunction) {
-	var url = "api.php?endpoint=/social/account/facebook-page/query/";
+	var url = API.root + "api.php?endpoint=/social/account/facebook-page/query/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
@@ -1915,7 +1917,7 @@ API.queryOAuthFacebookPages = function(callbackFunction) {
 API.listOAuthFacebookPages = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
-	var url = "api.php?endpoint=/social/account/facebook-page/list/";
+	var url = API.root + "api.php?endpoint=/social/account/facebook-page/list/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
@@ -1935,7 +1937,7 @@ API.listOAuthFacebookPages = function(fromInit) {
 		});
 }
 API.addOAuthFacebookPage = function(page_id, page_name, page_accessToken, page_image, callbackFunction) {
-	var url = "api.php?endpoint=/social/account/facebook-page/add/" +
+	var url = API.root + "api.php?endpoint=/social/account/facebook-page/add/" +
 				"&page_id=" + encodeURIComponent(page_id) +
 				"&page_name=" + encodeURIComponent(page_name) +
 				"&page_accessToken=" + encodeURIComponent(page_accessToken) +
@@ -1973,7 +1975,7 @@ API.addOAuthFacebookPage = function(page_id, page_name, page_accessToken, page_i
 		});
 }
 API.removeOAuthFacebookPage = function(acc) {
-	var url = "api.php?endpoint=/social/account/facebook-page/remove/&id=" + encodeURIComponent(acc.id);
+	var url = API.root + "api.php?endpoint=/social/account/facebook-page/remove/&id=" + encodeURIComponent(acc.id);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -1992,7 +1994,7 @@ API.removeOAuthFacebookPage = function(acc) {
 API.listOAuthFacebookAccounts = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
-	var url = "api.php?endpoint=/social/account/facebook/list/";
+	var url = API.root + "api.php?endpoint=/social/account/facebook/list/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
@@ -2018,7 +2020,7 @@ API.listOAuthFacebookAccounts = function(fromInit) {
 		});
 }
 API.removeOAuthFacebookAccount = function(acc) {
-	var url = "api.php?endpoint=/social/account/facebook/remove/&id=" + encodeURIComponent(acc.id);
+	var url = API.root + "api.php?endpoint=/social/account/facebook/remove/&id=" + encodeURIComponent(acc.id);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -2037,7 +2039,7 @@ API.removeOAuthFacebookAccount = function(acc) {
 API.listOAuthTwitterAccounts = function(fromInit) {
 	if (typeof fromInit == 'undefined') { fromInit = true; }
 
-	var url = "api.php?endpoint=/social/account/twitter/list/";
+	var url = API.root + "api.php?endpoint=/social/account/twitter/list/";
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
@@ -2062,7 +2064,7 @@ API.listOAuthTwitterAccounts = function(fromInit) {
 		});
 }
 API.addOAuthTwitterAccount = function(request_token, request_token_secret, pin) {
-	var url = "api.php?endpoint=/social/account/twitter/add/" +
+	var url = API.root + "api.php?endpoint=/social/account/twitter/add/" +
 				"&request_token=" + encodeURIComponent(request_token) +
 				"&request_token_secret=" + encodeURIComponent(request_token_secret) +
 				"&pin=" + encodeURIComponent(pin);
@@ -2095,7 +2097,7 @@ API.addOAuthTwitterAccount = function(request_token, request_token_secret, pin) 
 		});
 }
 API.removeOAuthTwitterAccount = function(acc) {
-	var url = "api.php?endpoint=/social/account/twitter/remove/&id=" + encodeURIComponent(acc.id);
+	var url = API.root + "api.php?endpoint=/social/account/twitter/remove/&id=" + encodeURIComponent(acc.id);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -2113,7 +2115,7 @@ API.removeOAuthTwitterAccount = function(acc) {
 }
 API.getOAuthTwitterAccountInactiveFollowings = function(handle, years, successCallback, errorCallback) {
 
-	var url = "api.php?endpoint=/social/account/twitter/tools/inactive-followings/&handle=" + encodeURIComponent(handle) + "&years=" + years;
+	var url = API.root + "api.php?endpoint=/social/account/twitter/tools/inactive-followings/&handle=" + encodeURIComponent(handle) + "&years=" + years;
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
@@ -2132,7 +2134,7 @@ API.getOAuthTwitterAccountInactiveFollowings = function(handle, years, successCa
 		});
 }
 API.getOAuthTwitterAccountUnrequitedFollowings = function(handle, successCallback, errorCallback) {
-	var url = "api.php?endpoint=/social/account/twitter/tools/unrequited-followings/&handle=" + encodeURIComponent(handle);
+	var url = API.root + "api.php?endpoint=/social/account/twitter/tools/unrequited-followings/&handle=" + encodeURIComponent(handle);
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
@@ -2154,7 +2156,7 @@ API.getOAuthTwitterAccountUnrequitedFollowings = function(handle, successCallbac
 		});
 }
 API.doOAuthTwitterAccountUnfollow = function(fromId, handle, successCallback, errorCallback) {
-	var url = "api.php?endpoint=/social/account/twitter/tools/unfollow/&id=" + encodeURIComponent(fromId) + "&handle=" + encodeURIComponent(handle);
+	var url = API.root + "api.php?endpoint=/social/account/twitter/tools/unfollow/&id=" + encodeURIComponent(fromId) + "&handle=" + encodeURIComponent(handle);
 	$.ajax( url )
 		.done(function(result) {
 			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
@@ -2176,7 +2178,7 @@ API.doOAuthTwitterAccountUnfollow = function(fromId, handle, successCallback, er
 		});
 }
 API.sqlQuery = function(query) {
-	var url = "api.php?endpoint=/admin/sql-query/&query=" + encodeURIComponent(query);
+	var url = API.root + "api.php?endpoint=/admin/sql-query/&query=" + encodeURIComponent(query);
 	console.log(url);
 	$.ajax( url )
 		.done(function(result) {
@@ -2197,7 +2199,7 @@ API.sqlQuery = function(query) {
 		});
 }
 API.addUser = function() {
-	var url = "api.php?endpoint=/admin/user/add/";
+	var url = API.root + "api.php?endpoint=/admin/user/add/";
 	console.log(url);
 
 	$.ajax( url )
@@ -2222,7 +2224,7 @@ API.addUser = function() {
 		});
 }
 API.saveUser = function(user, forename, surname, email, color, admin, successCallback) {
-	var url = "api.php?endpoint=/admin/user/save/";
+	var url = API.root + "api.php?endpoint=/admin/user/save/";
 	url += "&id=" + encodeURIComponent(user.id);
 	url += "&forename=" + encodeURIComponent(forename);
 	url += "&surname=" + encodeURIComponent(surname);
@@ -2258,7 +2260,7 @@ API.saveUser = function(user, forename, surname, email, color, admin, successCal
 		});
 }
 API.removeUser = function(user) {
-	var url = "api.php?endpoint=/admin/user/remove/";
+	var url = API.root + "api.php?endpoint=/admin/user/remove/";
 	url += "&id=" + encodeURIComponent(user.id);
 	console.log(url);
 
@@ -2277,7 +2279,7 @@ API.removeUser = function(user) {
 		});
 }
 API.saveUserPassword = function(user, password1, password2, successCallback) {
-	var url = "api.php?endpoint=/admin/user/change-password/";
+	var url = API.root + "api.php?endpoint=/admin/user/change-password/";
 	url += "&id=" + encodeURIComponent(user.id);
 	url += "&password1=" + encodeURIComponent(password1);
 	url += "&password2=" + encodeURIComponent(password2);
@@ -2301,7 +2303,7 @@ API.saveUserPassword = function(user, password1, password2, successCallback) {
 		});
 }
 API.request = function(endpoint, data, successCallback, failCallback) {
-	var url = "api.php?endpoint=" + encodeURIComponent(endpoint);
+	var url = API.root + "api.php?endpoint=" + encodeURIComponent(endpoint);
 	for(var field in data) {
 		url += "&" + field + "=" + encodeURIComponent(data[field]);
 	}

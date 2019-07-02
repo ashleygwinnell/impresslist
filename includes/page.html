@@ -208,7 +208,7 @@
 									<tbody id='people'>
 
 									</tbody>
-									<tfoot id='people-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+									<tfoot id='people-footer'><tr><td colspan='5'>No results.</td></tr></tfoot>
 								</table>
 							</div>
 						</div>
@@ -249,12 +249,13 @@
 											<th>Url</th>
 											<th>Twitter</th>
 											<th>Last Posted On</th>
+											<th>Tags</th>
 										</tr>
 									</thead>
 									<tbody id='publications'>
 
 									</tbody>
-									<tfoot id='publications-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+									<tfoot id='publications-footer'><tr><td colspan='6'>No results.</td></tr></tfoot>
 								</table>
 							</div>
 						</div><br/>
@@ -297,12 +298,13 @@
 											<th>Views</th>
 											<th>Twitter</th>
 											<th>Last Uploaded On</th>
+											<th>Tags</th>
 										</tr>
 									</thead>
 									<tbody id='youtubers'>
 
 									</tbody>
-									<tfoot id='youtubers-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+									<tfoot id='youtubers-footer'><tr><td colspan='7'>No results.</td></tr></tfoot>
 								</table>
 							</div>
 						</div><br/>
@@ -343,12 +345,13 @@
 											<th>Views</th>
 											<th>Twitter</th>
 											<th>Last Uploaded On</th>
+											<th>Tags</th>
 										</tr>
 									</thead>
 									<tbody id='twitchchannels'>
 
 									</tbody>
-									<tfoot id='twitchchannels-footer'><tr><td colspan='4'>No results.</td></tr></tfoot>
+									<tfoot id='twitchchannels-footer'><tr><td colspan='7'>No results.</td></tr></tfoot>
 								</table>
 							</div>
 						</div><br/>
@@ -538,8 +541,37 @@
 						</div>
 						<div id='coverage-loading-false'>
 							<div class='oa'>
-								<h4 class='fl'>Coverage</h4>
+								<h4>Coverage</h4>
+							</div>
 
+							<div id='coverage-stats'>
+								<h4>Stats</h4>
+								<table class='table'>
+									<thead class='thead-light'>
+										<th colspan='6'>Youtube</th>
+									</thead>
+									<thead class='thead-light'>
+										<th>Videos</th>
+										<th>Views</th>
+										<th>Likes</th>
+										<th>Dislikes</th>
+										<th>Favourites</th>
+										<th>Comments</th>
+									</thead>
+									<tr>
+										<td id='coverage-stats-youtube-videos'>...</td>
+										<td id='coverage-stats-youtube-views'>...</td>
+										<td id='coverage-stats-youtube-likes'>...</td>
+										<td id='coverage-stats-youtube-dislikes'>...</td>
+										<td id='coverage-stats-youtube-favourites'>...</td>
+										<td id='coverage-stats-youtube-comments'>...</td>
+									</tr>
+
+								</table>
+							</div>
+
+							<div>
+								<h4 class='fl'>List</h4>
 								<div class='dropdown fr' style='margin-right:5px;'>
 									<button class='btn btn-sm btn-primary dropdown-toggle' type='button' data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Add <span class='caret'></span></button>
 									<ul class='dropdown-menu dropdown-menu-right'>
@@ -548,7 +580,6 @@
 									</ul>
 								</div>
 							</div>
-
 							<div id='coverage'>
 
 							</div>
@@ -958,35 +989,105 @@
 					</div>
 				<? endif; ?>
 
-				<div id='mailout-homepage' class='row'>
-					<div class='col-sm-3'>
-						<h3>Simple Mailouts</h3>
-						<p>Send an email out to multiple contacts.</p>
-						<button id='nav-add-simplemailout' class='btn btn-primary'>Add</button>
-
-						<br/><br/>
-
-						<button id='nav-mailout-tips' class='btn btn-info' data-nav-page="help" href='javascript:;'>Tips</button>
-					</div>
-					<div class='col-sm-9'>
-						<div class='panel panel-default'>
-							<div class="panel-heading oa">
-				  				<span class="fl"><b>Mailouts:</b></span>
+				<div id='mailout-homepage'>
+					<div class='row'>
+						<div class='col-sm-12 oa'>
+							<div>
+								<h3>Mailouts</h3>
+								<ul class="nav nav-pills" role='tablist'>
+									<li role="presentation" class="active"><a href="#simplemailout-pill" aria-controls="simplemailout-pill" role="tab" data-toggle="pill">Simple</a></li>
+									<li role="presentation" ><a href="#advancedmailout-pill" aria-controls="advancedmailout-pill" role="tab" data-toggle="pill">Advanced</a></li>
+									<div class='fr'>
+										<button id='nav-mailout-tips' class='btn btn-info fr' data-nav-page="help" href='javascript:;'>Tips</button>
+									</div>
+								</ul>
 							</div>
-							<table class='table table-striped sortable'>
-								<thead>
-									<tr>
-										<th>Name</th>
-										<th># Recipients</th>
-										<th>Open %</th>
-										<th>Status</th>
-									</tr>
-								</thead>
-								<tbody id='mailout-list-tbody'>
+						</div>
+					</div>
+					<br/>
+					<div class='tab-content'>
+						<!-- Simple Mailouts -->
+						<div id='simplemailout-pill' role="tabpanel" class='tab-pane active'>
+							<div class='row'>
+								<div class='col-sm-12'>
+									<h4>Simple Mailouts</h4>
+								</div>
+							</div>
+							<div class='row'>
+								<div class='col-sm-3'>
+									<p>Send simple one-shot emails out to multiple contacts.</p>
+									<button id='nav-add-simplemailout' class='btn btn-primary'>Add</button>
+									<button id='nav-add-simplemailout' class='btn btn-link' onclick="SimpleMailout.showAll();">Show all</button>
+								</div>
+								<div class='col-sm-9'>
+									<div class='panel panel-default'>
+										<div class="panel-heading oa">
+							  				<span class="fl"><b>Simple Mailouts:</b></span>
+										</div>
+										<table class='table table-striped sortable'>
+											<thead>
+												<tr>
+													<th>Name</th>
+													<th># Recipients</th>
+													<th>Open %</th>
+													<th>Status</th>
+												</tr>
+											</thead>
+											<tbody id='mailout-list-tbody'>
 
-								</tbody>
-								<tfoot id='mailout-list-footer'><tr><td colspan='4'>No mailouts.</td></tr></tfoot>
-							</table>
+											</tbody>
+											<tfoot id='mailout-list-footer'><tr><td colspan='4'>No mailouts.</td></tr></tfoot>
+										</table>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<!-- Advanced Mailouts -->
+						<div id='advancedmailout-pill' role="tabpanel" class='tab-pane'>
+							<div class='row'>
+								<div class='col-sm-12'>
+									<h4>Advanced Mailouts</h4>
+								</div>
+							</div>
+							<div class='row'>
+								<div class='col-sm-10'>
+									<p>Compose a whole campaign based on rules, and then hit go! Automate your humanity!</p>
+									<ul>
+										<li>Send follow ups directly in the latest email threads.</li>
+										<li>Schedule follow ups with people if they've not opened your messages or replied (e.g. after 1 week).</li>
+										<li>Schedule follow ups with people through Twitter Direct Messages.</li>
+										<li>Filter and search campaign results.</li>
+									</ul>
+								</div>
+								<div class='col-sm-2'>
+									<button id='nav-add-advancedmailout' class='btn btn-primary fr'>Add</button>
+								</div>
+							</div>
+							<br/>
+							<div class='row'>
+								<div class='col-sm-12'>
+									<div class='panel panel-default'>
+										<div class="panel-heading oa">
+							  				<span class="fl"><b>Advanced Mailouts:</b></span>
+										</div>
+										<table class='table table-striped sortable'>
+											<thead>
+												<tr>
+													<th>Name</th>
+													<th>...</th>
+													<th>...</th>
+													<th>...</th>
+												</tr>
+											</thead>
+											<tbody id='advanced-mailout-list-tbody'>
+
+											</tbody>
+											<tfoot id='advanced-mailout-list-footer'><tr><td colspan='4'>No mailouts.</td></tr></tfoot>
+										</table>
+									</div>
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -1251,6 +1352,7 @@
 									<a href='includes/tasks/refresh-twitter.php' target='new'><button class='btn btn-primary'>Refresh Twitter Data</button></a>
 
 									<a href='includes/tasks/refresh-youtubers.php' target='new'><button class='btn btn-primary'>Refresh Youtube Data</button></a>
+									<a href='includes/tasks/refresh-youtube-coverage-stats.php' target='new'><button class='btn btn-primary'>Refresh Youtube Coverage Stats</button></a>
 
 									<a href='includes/tasks/refresh-coverage.php' target='new'><button class='btn btn-primary'>Refresh Coverage</button></a>
 									<a href='includes/tasks/refresh-coverage-youtube.php' target='new'><button class='btn btn-primary'>Refresh Coverage (Youtube)</button></a>

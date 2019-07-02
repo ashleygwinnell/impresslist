@@ -1300,10 +1300,11 @@ YouTuberBatchModal = function() {
 				$('#youtuber_batch_add_channel_' + results[i].channel.id).click(function(){
 					var channelId = $(this).attr('data-channel-id');
 					var channelName = $(this).attr('data-channel-title');
+					var notes = $('#youtuber_batch_add_modal_search_text').val(); // notes are search terms for now!
 					API.addYoutuber(false, function(yter){
 						//yter.youtubeId = channelId;
 						//yter.name_override = channelName;
-						yter.saveWith(channelId, channelName);
+						yter.saveWith(channelId, channelName, notes);
 					});
 				})
 			}
@@ -1363,6 +1364,7 @@ TwitchChannel = function(data) {
 							<td data-twitchchannel-id='" + this.field('id') + "' data-field='views' data-value='" + this.field('views') + "'>" + new Number(this.field('views')).toLocaleString() + "</td> \
 							<td data-twitchchannel-id='" + this.field('id') + "' data-field='twitter_followers' data-value='" + this.field('twitter_followers') + "'>" + this.twitterCell() + "</td> \
 							<td data-twitchchannel-id='" + this.field('id') + "' data-field='lastpostedon' data-value='" + this.field('lastpostedon') + "'>" + impresslist.util.relativetime_contact(this.field('lastpostedon')) + "</td> \
+							<td data-twitchchannel-id='" + this.field('id') + "' data-field='tags' data-value='" + this.field('tags') + "'>" + impresslist.util.buildTags(this.field('tags')) + "</td> \
 						</tr>";
 		$('#twitchchannels').append(html);
 
@@ -1465,6 +1467,7 @@ TwitchChannel = function(data) {
 		$("[data-twitchchannel-id='" + this.id + "'][data-field='twitter']").html(this.field('twitter'));
 		$("[data-twitchchannel-id='" + this.id + "'][data-field='twitter_followers']").html( this.twitterCell() );
 		$("[data-twitchchannel-id='" + this.id + "'][data-field='lastpostedon']").html( impresslist.util.relativetime_contact(this.field('lastpostedon')) );
+		$("[data-twitchchannel-id='" + this.id + "'][data-field='tags']").html( impresslist.util.buildTags(this.field('tags')) );
 	};
 
 	TwitchChannel.prototype.close = function() {
@@ -1612,6 +1615,7 @@ Youtuber = function(data) {
 							<td data-youtuber-id='" + this.field('id') + "' data-field='views' data-value='" + this.field('views') + "'>" + new Number(this.field('views')).toLocaleString() + "</td> \
 							<td data-youtuber-id='" + this.field('id') + "' data-field='twitter_followers' data-value='" + this.field('twitter_followers') + "'>" + this.twitterCell() + "</td> \
 							<td data-youtuber-id='" + this.field('id') + "' data-field='lastpostedon' data-value='" + this.field('lastpostedon') + "'>" + impresslist.util.relativetime_contact(this.field('lastpostedon')) + "</td> \
+							<td data-youtuber-id='" + this.field('id') + "' data-field='tags' data-value='" + this.field('tags') + "'>" + impresslist.util.buildTags(this.field('tags')) + "</td> \
 						</tr>";
 		$('#youtubers').append(html);
 
@@ -1718,6 +1722,7 @@ Youtuber = function(data) {
 		$("[data-youtuber-id='" + this.id + "'][data-field='twitter']").html(this.field('twitter'));
 		$("[data-youtuber-id='" + this.id + "'][data-field='twitter_followers']").html( this.twitterCell() );
 		$("[data-youtuber-id='" + this.id + "'][data-field='lastpostedon']").html( impresslist.util.relativetime_contact(this.field('lastpostedon')) );
+		$("[data-youtuber-id='" + this.id + "'][data-field='tags']").html( impresslist.util.buildTags(this.field('tags')) );
 	};
 
 	Youtuber.prototype.close = function() {
@@ -1786,8 +1791,8 @@ Youtuber = function(data) {
 
 		API.saveYoutuber(this, channel, nameOverride, email, twitter, notes, country, tags);
 	};
-	Youtuber.prototype.saveWith = function(channel, nameOverride) {
-		API.saveYoutuber(this, channel, nameOverride, "", "", "", "", "");
+	Youtuber.prototype.saveWith = function(channel, nameOverride, notes) {
+		API.saveYoutuber(this, channel, nameOverride, "", "", notes, "", "todo");
 	}
 	Youtuber.prototype.savePriority = function() {
 		var priority = $("[data-youtuber-id='" + this.id + "'][data-input-field='priority']").val();
@@ -2025,15 +2030,23 @@ SimpleMailout = function(data) {
 			this.numRecipients++;
 		}
 	}
+	SimpleMailout.showAll = function() {
+		$("[data-simplemailout-tablerow='true']").show();
+	}
 	SimpleMailout.prototype.createTableRow = function() {
 		var html = "	<tr data-simplemailout-id='" + this.field('id') + "' data-simplemailout-tablerow='true' class='table-list' > \
 							<td data-simplemailout-id='" + this.field('id') + "' data-field='name' data-value='" + this.field('name') + "'>" + this.field('name') + "</td> \
 							<td data-simplemailout-id='" + this.field('id') + "' data-field='numRecipients' data-value='" + this.numRecipients + "'>" + this.numRecipients + "</td> \
 							<td data-simplemailout-id='" + this.field('id') + "' data-field='numOpens' data-value='" + this.numOpens + "'>...</td>\
-							<td data-simplemailout-id='" + this.field('id') + "' data-field='timestamp' data-value='" + this.field('timestamp') + "'>...</td>";
+							<td data-simplemailout-id='" + this.field('id') + "' data-field='timestamp' data-value='" + this.field('timestamp') + "'>...</td>\
+							<td data-simplemailout-id='" + this.field('id') + "' data-field='visible' data-value='" + this.field('visible') + "' style='display:none;'>" + this.field('visible') + "</td>";
 		html += "		</tr>";
 		$('#mailout-list-tbody').append(html);
 		$('#mailout-list-footer').hide();
+
+		if (!this.field('visible')) {
+			$("[data-simplemailout-id='" + this.field('id') + "'][data-simplemailout-tablerow='true']").hide();
+		}
 
 		// Events
 		var mailout = this;
@@ -3329,6 +3342,7 @@ Publication = function(data) {
 		$("[data-publication-id='" + this.id + "'][data-field='email']").html(this.field('email'));
 		$("[data-publication-id='" + this.id + "'][data-field='twitter']").html(this.field('twitter'));
 		$("[data-publication-id='" + this.id + "'][data-field='twitter_followers']").html( this.twitterCell() );
+		$("[data-publication-id='" + this.id + "'][data-field='tags']").html( impresslist.util.buildTags(this.field('tags')) );
 	}
 
 	Publication.prototype.close = function() {
@@ -3346,9 +3360,10 @@ Publication = function(data) {
 							</td> \
 \
 							<td data-publication-id='" + this.field('id') + "' data-field='priority' 			data-value='" + this.priority() + "'>" + Priority.name(this.priority()) + "</td> \
-							<td data-publication-id='" + this.field('id') + "' data-field='url' 				data-value='" + this.field('url')+ "'><a href='" + this.field('url') + "' target='new'>" + this.field('url') + "</a></td> \
+							<td data-publication-id='" + this.field('id') + "' data-field='url' 				data-value='" + this.field('url')+ "' style='max-width:250px;'><a href='" + this.field('url') + "' target='new'>" + this.field('url') + "</a></td> \
 							<td data-publication-id='" + this.field('id') + "' data-field='twitter_followers' 	data-value='" + this.field('twitter_followers')+ "'>" + this.twitterCell() + "</td> \
 							<td data-publication-id='" + this.field('id') + "' data-field='lastpostedon' 		data-value='" + this.field('lastpostedon') + "'>" + impresslist.util.relativetime_contact(this.field('lastpostedon')) + "</td> \
+							<td data-publication-id='" + this.field('id') + "' data-field='tags' 				data-value='" + this.field('tags') + "' style='max-width:200px;'>" + impresslist.util.buildTags(this.field('tags')) + "</td> \
 						</tr>";
 		$('#publications').append(html);
 
@@ -4559,13 +4574,36 @@ var impresslist = {
 
 			console.log("Loading Project");
 			impresslist.loading.category.project += 2;
-			API.listCoverage();
+			API.listCoverage(true, function(data) {
+				console.log('ha', data);
+				$('#coverage-stats-youtube-videos').html("" + impresslist.util.formatnumber(data.stats.youtube.videoCount));
+				$('#coverage-stats-youtube-views').html("" + impresslist.util.formatnumber(data.stats.youtube.viewCount));
+				$('#coverage-stats-youtube-likes').html("" + impresslist.util.formatnumber(data.stats.youtube.likeCount));
+				$('#coverage-stats-youtube-dislikes').html("" + impresslist.util.formatnumber(data.stats.youtube.dislikeCount));
+				$('#coverage-stats-youtube-favourites').html("" + impresslist.util.formatnumber(data.stats.youtube.favoriteCount));
+				$('#coverage-stats-youtube-comments').html("" + impresslist.util.formatnumber(data.stats.youtube.commentCount));
+			});
 			API.listWatchedGames();
 		}
 	},
-
+	route: function() {
+		var path = window.location.pathname;
+		if (path == "/") {
+			impresslist.changePageTo('home');
+		}
+		else if (path == "/mailout/") {
+			impresslist.changePageTo('mailout');
+		}
+		else if (path == "/project/") {
+			impresslist.changePageTo('project');
+		}
+		else if (path == "/social/") {
+			impresslist.changePageTo('social');
+		}
+	},
 	init: function() {
-		this.loading.onPageChanged('home');
+
+		this.route();
 
 		// Navigation links
 		var thiz = this;
@@ -5186,13 +5224,16 @@ var impresslist = {
 
 	},
 
-
-	changePage: function() {
-		var page = $(this).attr('data-nav-page');
+	changePageTo: function(page) {
 		$("[data-type-page='true']").hide();
 		$("[data-type-page='true'][data-page='" + page + "']").show();
 		impresslist.loading.onPageChanged(page);
 	},
+	changePage: function() {
+		var page = $(this).attr('data-nav-page');
+		impresslist.changePageTo(page);
+	},
+
 
 	refreshFilter: function() {
 		impresslist.applyFilter($('#filter-search').val().toLowerCase());
@@ -5233,6 +5274,11 @@ var impresslist = {
 		if (text.length > 0) { $('#chat-container').hide(); } else { $('#chat-container').show(); }
 	},
 	refreshTotals: function() {
+		if (impresslist.people.length == 0) { $('#people-footer').show(); } else { $('#people-footer').hide(); }
+		if (impresslist.publications.length == 0) { $('#publications-footer').show(); } else { $('#publications-footer').hide(); }
+		if (impresslist.youtubers.length == 0) { $('#youtubers-footer').show(); } else { $('#youtubers-footer').hide(); }
+		if (impresslist.twitchchannels.length == 0) { $('#twitchchannels-footer').show(); } else { $('#twitchchannels-footer').hide(); }
+
 		$('#people-count').html("(" + impresslist.people.length + ")");
 		$('#publication-count').html("(" + impresslist.publications.length + ")");
 		$('#youtuber-count').html("(" + impresslist.youtubers.length + ")");
@@ -6021,6 +6067,9 @@ impresslist.util = {
 		20, // capslock
 		91 // cmd
 	],
+	formatnumber: function(v) {
+		return new Number(v).toLocaleString();
+	},
 	iframe: function(url, title) {
 		var height = Math.round(window.innerHeight * 0.8);
 		var html = "";

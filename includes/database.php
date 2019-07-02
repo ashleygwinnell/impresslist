@@ -721,7 +721,13 @@
 					url VARCHAR(255) NOT NULL,
 					title TEXT NOT NULL,
 					thumbnail TEXT NOT NULL,
+					viewCount BIGINT NOT NULL DEFAULT 0,
+					likeCount INT NOT NULL DEFAULT 0,
+					dislikeCount INT NOT NULL DEFAULT 0,
+					favoriteCount INT NOT NULL DEFAULT 0,
+					commentCount INT NOT NULL DEFAULT 0,
 					utime INTEGER NOT NULL DEFAULT 0,
+					lastscrapedon INTEGER NOT NULL DEFAULT 0,
 					thanked INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0
 				) {$sqlEngineAndCharset} ;";

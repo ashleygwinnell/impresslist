@@ -264,9 +264,9 @@ include_once("init.php");
 					<tbody>
 						<?php
 							$crons = [
-
 								['file' => 'includes/tasks/backup-email.php', 'frequency' => 'once every day'],
 								['file' => 'includes/tasks/refresh-coverage.php', 'frequency' => 'once every 15 minutes'],
+								['file' => 'includes/tasks/refresh-coverage-twitch.php', 'frequency' => 'once every 15 minutes'],
 								['file' => 'includes/tasks/refresh-coverage-youtube.php', 'frequency' => 'once every 15 minutes'],
 								['file' => 'includes/tasks/refresh-email-latests.php', 'frequency' => 'once every minute'],
 								['file' => 'includes/tasks/refresh-email.php', 'frequency' => 'once every minute'],
@@ -274,10 +274,13 @@ include_once("init.php");
 								['file' => 'includes/tasks/refresh-emailqueue.php', 'frequency' => 'once every minute'],
 								['file' => 'includes/tasks/refresh-favicons.php', 'frequency' => 'once every 30 minutes'],
 								['file' => 'includes/tasks/refresh-rss.php', 'frequency' => 'once  every 30 minutes'],
+								['file' => 'includes/tasks/refresh-social-icons.php', 'frequency' => 'once every day'],
 								['file' => 'includes/tasks/refresh-socialqueue.php', 'frequency' => 'once every minute'],
+								['file' => 'includes/tasks/refresh-twitch.php', 'frequency' => 'once every 30 minutes'],
 								['file' => 'includes/tasks/refresh-twitter-configuration.php', 'frequency' => 'once every day'],
 								['file' => 'includes/tasks/refresh-twitter.php', 'frequency' => 'once every 30 minutes'],
 								['file' => 'includes/tasks/refresh-youtubers.php', 'frequency' => 'once every 30 minutes'],
+								['file' => 'includes/tasks/refresh-youtuber-coverage-stats.php', 'frequency' => 'once every hour'],
 							];
 						?>
 						<?php foreach ($crons as $cron): ?>

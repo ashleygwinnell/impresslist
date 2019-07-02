@@ -3117,6 +3117,14 @@ if (!isset($_GET['endpoint'])) {
 					$youtuber_coverage[$i]['type'] = "youtuber";
 				}
 
+				$youtubeStats = $db->query("SELECT COUNT(id) as videoCount,
+													SUM(viewCount) as viewCount,
+													SUM(likeCount) as likeCount,
+													SUM(dislikeCount) as dislikeCount,
+													SUM(favoriteCount) as favoriteCount,
+													SUM(commentCount) as commentCount
+												FROM youtuber_coverage WHERE game = {$user_currentGame} AND removed = 0 ORDER BY utime DESC;")[0];
+
 				$twitchchannel_coverage = $db->query("SELECT * FROM twitchchannel_coverage WHERE game = {$user_currentGame} AND removed = 0 ORDER BY utime DESC;");
 				$num_twitchchannel_coverage = count($twitchchannel_coverage);
 				for($i = 0; $i < $num_twitchchannel_coverage; $i++) {
@@ -3134,6 +3142,9 @@ if (!isset($_GET['endpoint'])) {
 				$result = new stdClass();
 				$result->success = true;
 				$result->coverage = $coverage;
+				$result->stats = array(
+					"youtube" => $youtubeStats
+				);
 			}
 		}
 		else if ($endpoint == "/coverage/publication/add/")
@@ -4529,6 +4540,7 @@ if (!isset($_GET['endpoint'])) {
 													iconurl = :iconurl,
 													subscribers = :subscribers,
 													views = :views,
+													videos = :videos,
 													twitter = :twitter,
 													" . $twitter_followers_sql . "
 													notes = :notes,
@@ -4557,6 +4569,7 @@ if (!isset($_GET['endpoint'])) {
 						$stmt->bindValue(":iconurl", $ytIconUrl, Database::VARTYPE_STRING);
 						$stmt->bindValue(":subscribers", "" . $youtuber['subscribers'], Database::VARTYPE_STRING);
 						$stmt->bindValue(":views", "" . $youtuber['views'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":videos", "" . $youtuber['videos'], Database::VARTYPE_STRING);
 						//$stmt->bindValue(":lastpostedon", $youtuber['lastpostedon'], Database::VARTYPE_INTEGER);
 
 						$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);

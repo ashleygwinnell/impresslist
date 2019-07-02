@@ -927,6 +927,35 @@ function youtube_v3_getUploads($playlist) {
 	}
 	return $results;
 }
+function youtube_v3_getVideoStatistics($videoIds = array()) {
+	global $youtube_apiKey;
+	$videosStr = "";
+	if (is_string($videoIds)) {
+		$videosStr = $videoIds;
+	} else {
+		$videosStr = implode(",", $videoIds);
+	}
+
+	$url = "https://www.googleapis.com/youtube/v3/videos?id=" . $videosStr . "&part=statistics&key=" . $youtube_apiKey;
+	//echo $url . "<br/>";
+	$text = url_get_contents($url);
+	//echo $text;
+	if (substr($text, 0, 1) != "{") {
+		return 0;
+	}
+	$content = json_decode($text, JSON_ASSOC);
+
+	// if (is_string($videoIds)) {
+	// 	return $content['items'][0]['statistics'];
+	// }
+
+	$results = array();
+	foreach ($content['items'] as $item) {
+		$results[$item['id']] = $item['statistics'];
+	}
+
+	return $results;
+}
 
 /*function user_imap_email($userObject, $to, $subject, $message, $headers ) {
 	util_setIV($userObject['emailIMAPPasswordIV']);
