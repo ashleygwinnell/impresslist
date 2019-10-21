@@ -182,7 +182,7 @@ h3 {
 
 .social-account-list-item, .coverage-row {
 	clear:both;
-	overflow:auto;
+	/*overflow:auto;*/ /* it's off because the nav menu gets hidden otherwise */
 	padding:8px;
 }
 
