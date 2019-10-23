@@ -45,6 +45,10 @@
 	        		impresslist.addAudience(new Audience(<?php echo json_encode($audiences[$i]); ?>), true);
         		<?php endfor; ?>
 
+        		<?php for($i = 0; $i < count($superadmin_companies); $i++): ?>
+        			impresslist.addCompany(new Company(<?php echo json_encode($superadmin_companies[$i]); ?>), true);
+				<?php endfor; ?>
+
         		// Tag search data/config/objs.
         		impresslist.config.misc.tagSearch = new Bloodhound({
 					datumTokenizer: Bloodhound.tokenizers.obj.whitespace("name"),
@@ -546,28 +550,8 @@
 
 							<div id='coverage-stats'>
 								<h4>Stats</h4>
-								<table class='table'>
-									<thead class='thead-light'>
-										<th colspan='6'>Youtube</th>
-									</thead>
-									<thead class='thead-light'>
-										<th>Videos</th>
-										<th>Views</th>
-										<th>Likes</th>
-										<th>Dislikes</th>
-										<th>Favourites</th>
-										<th>Comments</th>
-									</thead>
-									<tr>
-										<td id='coverage-stats-youtube-videos'>...</td>
-										<td id='coverage-stats-youtube-views'>...</td>
-										<td id='coverage-stats-youtube-likes'>...</td>
-										<td id='coverage-stats-youtube-dislikes'>...</td>
-										<td id='coverage-stats-youtube-favourites'>...</td>
-										<td id='coverage-stats-youtube-comments'>...</td>
-									</tr>
-
-								</table>
+								<div id='coverage-stats-table'>
+								</div>
 							</div>
 
 							<div>
@@ -1342,6 +1326,44 @@
 
 						<!-- Super admin bits -->
 						<div id='superadmin-pill' role="tabpanel" class='tab-pane superadmin-container'>
+							<!-- Companies and their games -->
+							<div class="panel panel-default superadmin-container">
+								<div class="panel-heading">Companies:</div>
+								<div class='pady padx'>
+									<table class='table'>
+										<thead>
+											<tr>
+												<th width=200>Name</th>
+												<th>Games</th>
+												<th></th>
+												<th></th>
+											</tr>
+										</thead>
+										<tbody id='superadmin-companies-list'>
+
+										</tbody>
+									</table>
+									<hr/>
+									<p><b>Onboarding Form:</b></p>
+									<textarea class='form-control' style='width:100%;min-height:50px' readonly>
+Hi, thanks for signing up for the Coverage Bot! I'll need some info from you to get started!
+
+* Developer name:
+* Email address:
+* Game / list of games:
+* Discord Server Invite (if you want!):
+* Discord Webhook URL:
+* Twitch Game Ids (required for Twitch-tracking):
+
+Note:
+For help setting up a webhook url: https://support.discordapp.com/hc/en-us/articles/228383668-Intro-to-Webhooks
+You can find/setup Twitch game ids at: https://dev.twitch.tv/console
+
+I'll get this setup shortly. Best advice is to route the webhook to a #coverage/#news channel, but that's totally up to you! Also, quick final note, it will pull in lots of old news to begin with. I think that's all! Thanks again for supporting me! :D </textarea>
+<button id='superadmin-add-company' class='btn btn-success' style='margin-top:10px;' onclick="API.addCompany();">Add Company</button>
+								</div>
+							</div>
+
 							<!-- Cron tasks -->
 							<div class="panel panel-default superadmin-container">
 								<div class="panel-heading">Manual Tasks:</div>

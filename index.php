@@ -54,7 +54,9 @@ $settings_resultset = $stmt->query();
 foreach ($settings_resultset as $row) { $settings[$row['key']] = $row['value']; }
 $num_settings = count($settings);
 //print_r($settings);
-
+if ($user['superadmin']) {
+	$superadmin_companies = util_superadmin_companies();
+}
 
 //$youtube = youtube_getInformation("asdasdsauhsdfkf2398423");
 //print_r($youtube);

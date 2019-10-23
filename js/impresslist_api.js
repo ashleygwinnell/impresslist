@@ -2302,6 +2302,97 @@ API.saveUserPassword = function(user, password1, password2, successCallback) {
 			API.errorMessage("Could not change User password.");
 		});
 }
+API.addCompany = function() {
+	var url = API.root + "api.php?endpoint=/superadmin/company/add/";
+	console.log(url);
+
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') {
+				API.errorMessage(result);
+				return;
+			}
+			var json = JSON.parse(result);
+			if (!json.success) {
+				API.errorMessage(json.message);
+				return;
+			}
+			API.successMessage("Company added.");
+			console.log(json);
+
+			var company = new Company(json.company);
+			impresslist.addCompany(company, false);
+		})
+		.fail(function() {
+			API.errorMessage("Could not add Company.");
+		});
+}
+API.saveCompany = function(companyObj,
+	name,
+	keywords,
+	email,
+	twitter,
+	facebook,
+	discord_enabled,
+	discord_webhookId,
+	discord_webhookToken,
+	successCallback,
+	failCallback)
+{
+	var url = API.root + "api.php?endpoint=/superadmin/company/save/";
+	url += "&id=" + encodeURIComponent(companyObj.id);
+	url += "&name=" + encodeURIComponent(name);
+	url += "&keywords=" + encodeURIComponent(keywords);
+	url += "&email=" + encodeURIComponent(email);
+	url += "&twitter=" + encodeURIComponent(twitter);
+	url += "&facebook=" + encodeURIComponent(facebook);
+	url += "&discord_enabled=" + encodeURIComponent(discord_enabled);
+	url += "&discord_webhookId=" + encodeURIComponent(discord_webhookId);
+	url += "&discord_webhookToken=" + encodeURIComponent(discord_webhookToken);
+
+	API._companyRequest(companyObj, url, "Company saved!", "Could not save Company.", successCallback, failCallback);
+}
+
+API.addCompanyGame = function(companyObj, successCallback, failCallback) {
+	var url = API.root + "api.php?endpoint=/superadmin/company/game/add/&company=" + encodeURIComponent(companyObj.id);
+	API._companyRequest(companyObj, url, "Added game - you must now edit!", "Could not add Game.", successCallback, failCallback);
+}
+API.removeCompanyGame = function(companyObj, gameId, successCallback, failCallback) {
+	var url = API.root + "api.php?endpoint=/superadmin/company/game/remove/&company=" + encodeURIComponent(companyObj.id) + "&game=" + encodeURIComponent(gameId);
+	API._companyRequest(companyObj, url, "Removed game successfully!", "Could not remove Game.", successCallback, failCallback);
+}
+API.saveCompanyGame = function(companyObj, gameId, name, keywords, twitchId, successCallback, failCallback) {
+	var url = API.root + "api.php?endpoint=/superadmin/company/game/save/";
+	url += "&company=" + encodeURIComponent(companyObj.id);
+	url += "&game=" + encodeURIComponent(gameId);
+	url += "&name=" + encodeURIComponent(name);
+	url += "&keywords=" + encodeURIComponent(keywords);
+	url += "&twitchId=" + encodeURIComponent(twitchId);
+
+	API._companyRequest(companyObj, url, "Game saved!", "Could not save Game.", successCallback, failCallback);
+}
+API.testDiscordWebhook = function(companyId) {
+	$.ajax( API.root + "api.php?endpoint=/superadmin/company/webhook/discord/test/&company=" + encodeURIComponent(companyId) );
+}
+API._companyRequest = function(companyObj, url, successMessage, failMessage, successCallback, failCallback) {
+	$.ajax( url )
+		.done(function(result) {
+			if (result.substr(0, 1) != '{') { API.errorMessage(result); return; }
+
+			var json = JSON.parse(result);
+			if (!json.success) { API.errorMessage(json.message); return; }
+
+			API.successMessage(successMessage);
+			companyObj.init(json.company);
+			companyObj.update();
+			if (successCallback) successCallback();
+		})
+		.fail(function() {
+			API.errorMessage(failMessage);
+			if (failCallback) failCallback();
+		});
+}
+
 API.request = function(endpoint, data, successCallback, failCallback) {
 	var url = API.root + "api.php?endpoint=" + encodeURIComponent(endpoint);
 	for(var field in data) {

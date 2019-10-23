@@ -947,7 +947,213 @@ Game = function(data) {
 		$('#admin-projects-list').append(html);
 	}
 
+Company = function(data) {
+	DBO.call(this, data);
+}
+	Company.prototype = Object.create(DBO.prototype)
+	Company.prototype.constructor = Company;
+	Company.prototype.init = function(data) {
+		DBO.prototype.init.call(this, data);
+		this.id = parseInt(this.field('id'));
+		this.name = this.field('name');
+	}
+	Company.prototype.update = function(data) {
+		$('#superadmin-companies-list tr[data-company-id=' + this.id + '] td[data-field="id"]').html(this.id);
+		$('#superadmin-companies-list tr[data-company-id=' + this.id + '] td[data-field="name"]').html(this.field('name'));
+		$('#superadmin-companies-list tr[data-company-id=' + this.id + '] td[data-field="games"]').html(this.buildGamesStr());
+		$('#superadmin-companies-list tr[data-company-id=' + this.id + '] td[data-field="discord"]').html(this.buildDiscordStr());
 
+	}
+	Company.prototype.buildDiscordStr = function() {
+		return ((this.field('discord_enabled') == "1")?"Discord":"N/A");
+	}
+	Company.prototype.buildGamesStr = function() {
+		var games = this.field("games");
+		var gamesStr = "None";
+  		if (games.length > 0) { gamesStr = ""; }
+  		for(var i = 0; i < games.length; i++) {
+  			gamesStr += " • " + games[i].name + "<br/>";
+  		}
+  		return gamesStr;
+	}
+
+	Company.prototype.onAdded = function() {
+		var html = "<tr data-company-container data-company-id='" + this.id + "'>\
+						<td data-field='name'>" + this.name + "</td>\
+						<td data-field='games'>" + this.buildGamesStr() + "</td>\
+						<td data-field='discord'>" + this.buildDiscordStr() + "</td>\
+						<td><button id='company-edit-open-" + this.id + "' class='btn btn-primary btn-sm fr'>Edit</button></td>\
+					</tr>";
+		$('#superadmin-companies-list').append(html);
+
+		var thiz = this;
+		$('#company-edit-open-' + this.id).click(function() { thiz.openEditModal(); });
+	}
+	Company.prototype.clearEditModal = function() {
+		$('.modal-backdrop').remove();
+		$('.editcompany_modal').remove();
+	}
+	Company.prototype.openEditModal = function() {
+		var html = "<div class='modal fade editcompany_modal' tabindex='-1' role='dialog'> \
+						<div class='modal-dialog'> \
+							<div class='modal-content' style='padding:5px;'> \
+								<div style='min-height:200px;padding:20px;'> \
+									<h3 data-company-id='" + this.id + "' data-field='name'>" + this.field("name") + "</h3> \
+									<form role='form' style='overflow:hidden' onsubmit='return false;'>	\
+										<div class='row'>\
+											<div class='form-group col-md-6'>\
+												<label for='name'>Name:&nbsp; </label> \
+												<input data-company-id='" + this.id + "' data-input-field='name' class='form-control' type='text' value='" + this.field('name') + "' />\
+											</div>\
+											<div class='form-group col-md-6'>\
+												<label for='name'>Keywords:&nbsp; </label> \
+												<input data-company-id='" + this.id + "' data-input-field='keywords' class='form-control' type='text' value='" + this.field('keywords') + "' />\
+											</div>\
+										</div>\
+										<div class='row'>\
+											<div class='form-group col-md-12'>\
+												<label for='email'>Email:&nbsp; </label> \
+												<input data-company-id='" + this.id + "' data-input-field='email' class='form-control' type='text' value='" + this.field('email') + "' />\
+											</div>\
+										</div>\
+										<div class='row'>\
+											<div class='form-group col-md-6'>\
+												<label for='twitter'>Twitter Username:&nbsp; </label> \
+												<input data-company-id='" + this.id + "' data-input-field='twitter' class='form-control' type='text' value='" + this.field('twitter') + "' />\
+											</div>\
+											<div class='form-group col-md-6'>\
+												<label for='facebook'>Facebook:&nbsp; </label> \
+												<input data-company-id='" + this.id + "' data-input-field='facebook' class='form-control' type='text' value='" + this.field('facebook') + "' />\
+											</div>\
+										</div>\
+										<div class='row'>\
+											<div class='form-group col-md-2'>\
+												<label class='checkbox-inline'>\
+												<input data-company-id='" + this.id + "' data-input-field='discord_enabled' type='checkbox' " + (((this.field('discord_enabled')==1)?"checked":"")) + "/>\
+												<strong>Discord</strong></label>\
+											</div>\
+											<div class='form-group col-md-4'>\
+												<label for='discord_webhookId'>Webhook Id:&nbsp; </label> \
+												<input data-company-id='" + this.id + "' data-input-field='discord_webhookId' class='form-control' type='text' value='" + this.field('discord_webhookId') + "' />\
+											</div>\
+											<div class='form-group col-md-6'>\
+												<label for='discord_webhookToken'>Webhook Token:&nbsp; </label> \
+												<input data-company-id='" + this.id + "' data-input-field='discord_webhookToken' class='form-control' type='text' value='" + this.field('discord_webhookToken') + "' />\
+											</div>\
+										</div>\
+										<div> \
+											<button id='company-edit-submit' type='submit' class='btn btn-primary'>Save</button> \
+											<button id='company-edit-submit' type='submit' class='btn btn-warning' onclick='API.testDiscordWebhook(" + this.id + ")'>Test Webhook</button> \
+											<button id='company-edit-close' type='submit' class='btn btn-default'>Close</button> \
+										</div>\
+										<hr/>\
+										<div class='row'>\
+											<div class='form-group col-md-12'>\
+												<h4>Games</h4>\
+												<table class='table'>\
+													<thead>\
+														<tr>\
+															<th>Name</th>\
+															<th width=120>Keywords</th>\
+															<th width=50>Twitch ID</th>\
+															<th></th>\
+														</tr>\
+													</thead>\
+													<tbody id='company-edit-games-tbody'>\
+													</tbody>\
+												</table>\
+											</div>\
+										</div>\
+										<div class='row'>\
+											<div class='form-group col-md-12'>\
+												<h4>Coverage Stats</h4>\
+												<div id='company-game-stats-container'>\
+													<p><i>Click a stats button to generate...</p></i>\
+												</div>\
+											</div>\
+										</div>\
+									</form> \
+								</div>\
+							</div>\
+						</div>\
+					</div>";
+		$('#modals').html(html);
+
+		var thiz = this;
+		var games = this.field("games");
+		for(var i = 0; i < games.length; i++) {
+			var gameHtml = "";
+			gameHtml += "<tr>\
+							<td><input data-game-id='" + games[i].id + "' data-field='name' class='form-control' type='text' value='" + games[i].name + "'/></td>\
+							<td><input data-game-id='" + games[i].id + "' data-field='keywords' class='form-control' type='text' value='" + games[i].keywords + "'/></td>\
+							<td><input data-game-id='" + games[i].id + "' data-field='twitchId' class='form-control' type='text' value='" + games[i].twitchId + "'/></td>\
+							<td>\
+								<!-- <button id='refresh-company-game-twitch-" + games[i].id + "' data-game-id='" + games[i].id + "' class='btn btn-warning btn-sm'>Refresh Twitch</button> -->\
+								<button id='save-company-game-" + games[i].id + "' data-game-id='" + games[i].id + "' class='btn btn-primary btn-sm'><span class='glyphicon glyphicon-floppy-disk' aria-hidden='true'></span></button>\
+								<button id='generatestats-company-game-" + games[i].id + "' data-game-id='" + games[i].id + "' class='btn btn-warning btn-sm'><span class='glyphicon glyphicon-signal' aria-hidden='true'></span></button>\
+								<button id='remove-company-game-" + games[i].id + "' data-game-id='" + games[i].id + "' class='btn btn-danger btn-sm'><span class='glyphicon glyphicon-trash' aria-hidden='true'></span></button>\
+							</td>\
+						 </tr>";
+			$('#company-edit-games-tbody').append(gameHtml);
+
+			$("#save-company-game-" + games[i].id).click(function() {
+				var gameId = $(this).attr('data-game-id');
+				var gameName = $("[data-game-id='" + gameId + "'][data-field='name']").val();
+				var gameKeywords = $("[data-game-id='" + gameId + "'][data-field='keywords']").val();
+				var gameTwitchId = $("[data-game-id='" + gameId + "'][data-field='twitchId']").val();
+
+				API.saveCompanyGame(thiz, gameId, gameName, gameKeywords, gameTwitchId);
+			});
+			$("#remove-company-game-" + games[i].id).click(function() {
+				var gameId = $(this).attr('data-game-id');
+				API.removeCompanyGame(thiz, gameId, function() {
+					thiz.clearEditModal();
+					thiz.openEditModal();
+				});
+			});
+
+			$("#generatestats-company-game-" + games[i].id).click(function() {
+				var gameId = $(this).attr('data-game-id');
+				API.request("/superadmin/company/game/coverage-stats/", {game: gameId}, function(data) {
+					$('#company-game-stats-container').html("<b>" + data.game.name + "</b><br/>" + impresslist.util.templates.StatsTable(data.stats));
+				}, function(){});
+
+			});
+
+
+		}
+		$('#company-edit-games-tbody').append("<button id='superadmin-add-company-game' data-company-id='" + this.id + "' class='btn btn-success' style='margin-top:10px;'>Add Game</button>");
+		$('#superadmin-add-company-game').click(function(){
+			API.addCompanyGame(thiz, function() {
+				thiz.clearEditModal();
+				thiz.openEditModal();
+			});
+		});
+
+		$('.editcompany_modal').modal("show");
+
+
+		$('#company-edit-submit').click(function() {
+			var name = $("[data-company-id='" + thiz.id + "'][data-input-field='name']").val();
+			var keywords = $("[data-company-id='" + thiz.id + "'][data-input-field='keywords']").val();
+			var email = $("[data-company-id='" + thiz.id + "'][data-input-field='email']").val();
+			var twitter = $("[data-company-id='" + thiz.id + "'][data-input-field='twitter']").val();
+			var facebook = $("[data-company-id='" + thiz.id + "'][data-input-field='facebook']").val();
+			var discord_enabled = $("[data-company-id='" + thiz.id + "'][data-input-field='discord_enabled']").prop("checked");
+			var discord_webhookId = $("[data-company-id='" + thiz.id + "'][data-input-field='discord_webhookId']").val();
+			var discord_webhookToken = $("[data-company-id='" + thiz.id + "'][data-input-field='discord_webhookToken']").val();
+
+			//console.log(name, keywords, email, twitter, facebook, discord_enabled, discord_webhookId, discord_webhookToken);
+
+			API.saveCompany(thiz, name, keywords, email, twitter, facebook, discord_enabled, discord_webhookId, discord_webhookToken,
+				function(data) { $('.editcompany_modal').modal("hide"); },
+				function(err) {}
+			);
+		});
+		$('#company-edit-close').click(function() {
+			$('.editcompany_modal').modal("hide");
+		});
+	}
 
 User = function(data) {
 	DBO.call(this, data);
@@ -4458,6 +4664,7 @@ var impresslist = {
 	podcasts: [],
 	emails: [],
 	users: [],
+	companies: [],
 	games: [],
 	audiences: [],
 	coverage: [],
@@ -4478,6 +4685,7 @@ var impresslist = {
 		twitchChannels: false,
 		emails: false,
 		users: false,
+		companies: false,
 		games: false,
 		coverage: false,
 		socialUploads: false,
@@ -4575,13 +4783,7 @@ var impresslist = {
 			console.log("Loading Project");
 			impresslist.loading.category.project += 2;
 			API.listCoverage(true, function(data) {
-				console.log('ha', data);
-				$('#coverage-stats-youtube-videos').html("" + impresslist.util.formatnumber(data.stats.youtube.videoCount));
-				$('#coverage-stats-youtube-views').html("" + impresslist.util.formatnumber(data.stats.youtube.viewCount));
-				$('#coverage-stats-youtube-likes').html("" + impresslist.util.formatnumber(data.stats.youtube.likeCount));
-				$('#coverage-stats-youtube-dislikes').html("" + impresslist.util.formatnumber(data.stats.youtube.dislikeCount));
-				$('#coverage-stats-youtube-favourites').html("" + impresslist.util.formatnumber(data.stats.youtube.favoriteCount));
-				$('#coverage-stats-youtube-comments').html("" + impresslist.util.formatnumber(data.stats.youtube.commentCount));
+				$('#coverage-stats-table').html( impresslist.util.templates.StatsTable(data.stats) );
 			});
 			API.listWatchedGames();
 		}
@@ -5443,6 +5645,11 @@ var impresslist = {
 		obj.onAdded();
 		if (!fromInit) { impresslist.refreshFilter(); }
 	},
+	addCompany: function(obj, fromInit) {
+		this.companies.push(obj);
+		obj.onAdded();
+		if (!fromInit) { impresslist.refreshFilter(); }
+	},
 	addYoutuber: function(obj, fromInit) {
 		this.youtubers.push(obj);
 		obj.onAdded();
@@ -6219,6 +6426,33 @@ impresslist.util = {
 		var str = "https://mail.google.com/mail/u/" + emailGmailIndex + "/?view=cm&fs=1&to=" + defaultEmail + "&su=" + emailSubject + "&body=" + emailBody;
 		if (emailBCC.length > 0) { str += "&bcc=" + emailBCC; }
 		return str;
+	},
+	templates: {
+		StatsTable: function(stats) {
+			var table = "";
+			table += "	<table class='table'>\
+							<thead class='thead-light'>\
+								<th colspan='6'>Youtube</th>\
+							</thead>\
+							<thead class='thead-light'>\
+								<th>Videos</th>\
+								<th>Views</th>\
+								<th>Likes</th>\
+								<th>Dislikes</th>\
+								<th>Favourites</th>\
+								<th>Comments</th>\
+							</thead>\
+							<tr>\
+								<td id='coverage-stats-youtube-videos'>" + impresslist.util.formatnumber(stats.youtube.videoCount) + "</td>\
+								<td id='coverage-stats-youtube-views'>" +  impresslist.util.formatnumber(stats.youtube.viewCount) + "</td>\
+								<td id='coverage-stats-youtube-likes'>" +  impresslist.util.formatnumber(stats.youtube.likeCount) + "</td>\
+								<td id='coverage-stats-youtube-dislikes'>" + impresslist.util.formatnumber(stats.youtube.dislikeCount) + "</td>\
+								<td id='coverage-stats-youtube-favourites'>" + impresslist.util.formatnumber(stats.youtube.favoriteCount) + "</td>\
+								<td id='coverage-stats-youtube-comments'>" + impresslist.util.formatnumber(stats.youtube.commentCount) + "</td>\
+							</tr>\
+						</table>";
+			return table;
+		}
 	}
 }
 impresslist.noop = function() {}

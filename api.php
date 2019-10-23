@@ -218,6 +218,17 @@ if (!isset($_GET['endpoint'])) {
 		"/admin/user/save/",
 		"/admin/user/remove/",
 		"/admin/user/change-password/",
+
+		// Super admin
+		"/superadmin/company/list/",
+		"/superadmin/company/add/",
+		"/superadmin/company/save/",
+		"/superadmin/company/game/add/",
+		"/superadmin/company/game/save/",
+		"/superadmin/company/game/remove/",
+		"/superadmin/company/game/coverage-stats/",
+		"/superadmin/company/webhook/discord/test/",
+
 		//"/admin/user/change-project/",
 		"/backup/",
 		"/backup-sql/",
@@ -3117,13 +3128,7 @@ if (!isset($_GET['endpoint'])) {
 					$youtuber_coverage[$i]['type'] = "youtuber";
 				}
 
-				$youtubeStats = $db->query("SELECT COUNT(id) as videoCount,
-													SUM(viewCount) as viewCount,
-													SUM(likeCount) as likeCount,
-													SUM(dislikeCount) as dislikeCount,
-													SUM(favoriteCount) as favoriteCount,
-													SUM(commentCount) as commentCount
-												FROM youtuber_coverage WHERE game = {$user_currentGame} AND removed = 0 ORDER BY utime DESC;")[0];
+				$youtubeStats = util_youtube_coverage_stats_for_game_alltime($user_currentGame);
 
 				$twitchchannel_coverage = $db->query("SELECT * FROM twitchchannel_coverage WHERE game = {$user_currentGame} AND removed = 0 ORDER BY utime DESC;");
 				$num_twitchchannel_coverage = count($twitchchannel_coverage);
@@ -4979,13 +4984,14 @@ if (!isset($_GET['endpoint'])) {
 					$result->message = 'Name and icon must be set.';
 				} else {
 
-					$stmt = $db->prepare(" INSERT INTO game (id, name, nameuniq, keywords, iconurl, twitchId, twitchLastScraped)
-													VALUES (NULL, :name, :nameuniq, '', :iconurl, 0, 0) ");
+					$stmt = $db->prepare(" INSERT INTO game (id, company, name, nameuniq, keywords, iconurl, twitchId, twitchLastScraped)
+													VALUES (NULL, :company, :name, :nameuniq, '', :iconurl, 0, 0) ");
 
 					$uniqname = urlformat($data['name']);
+					$stmt->bindValue(":company", 	$user['company'], 	Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":name", 		$data['name'], 		Database::VARTYPE_STRING);
-					$stmt->bindValue(":nameuniq", 	$uniqname, 		Database::VARTYPE_STRING);
-					$stmt->bindValue(":keywords", 	"", 		Database::VARTYPE_STRING);
+					$stmt->bindValue(":nameuniq", 	$uniqname, 			Database::VARTYPE_STRING);
+					$stmt->bindValue(":keywords", 	"", 				Database::VARTYPE_STRING);
 					$stmt->bindValue(":iconurl", 	$data['iconurl'], 	Database::VARTYPE_STRING);
 					$rs = $stmt->execute();
 
@@ -5197,6 +5203,224 @@ if (!isset($_GET['endpoint'])) {
 					$result = api_error("Query was not successful: " .  $query);
 				}*/
 				$result = api_error("This API call is disabled. ");
+			}
+		}
+		else if ($endpoint == "/superadmin/company/list/" ||
+				 $endpoint == "/superadmin/company/add/" ||
+				 $endpoint == "/superadmin/company/save/" ||
+				 $endpoint == "/superadmin/company/game/add/" ||
+				 $endpoint == "/superadmin/company/game/save/" ||
+				 $endpoint == "/superadmin/company/game/remove/" ||
+				 $endpoint == "/superadmin/company/game/coverage-stats/" ||
+				 $endpoint == "/superadmin/company/webhook/discord/test/"
+				) {
+			$require_login = true;
+			include_once("init.php");
+
+			// user must be an admin to do this.
+			$user = db_singleuser($db, $_SESSION['user']);
+			if (!$user['superadmin']) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = 'You must be a super admin.';
+			}
+			else {
+				$data = $_GET;
+
+				$companyExtraData = array('email', 'keywords', 'twitter', 'facebook', 'discord_enabled', 'discord_webhookId', 'discord_webhookToken', 'createdon');
+
+				if ($endpoint == "/superadmin/company/list/") {
+					$companies = util_superadmin_companies();
+
+					$result = new stdClass();
+					$result->success = true;
+					$result->companies = $companies;
+				}
+				else if ($endpoint == "/superadmin/company/add/") {
+
+					$stmt = $db->prepare("INSERT IGNORE INTO company (id,   name,  keywords,  discord_enabled,  createdon,  removed)
+															  VALUES (NULL, :name, :keywords, :discord_enabled, :createdon, :removed); ");
+					$stmt->bindValue(":name", 				"Untitled Company", 		Database::VARTYPE_STRING);
+					$stmt->bindValue(":keywords", 			"untitled company", 		Database::VARTYPE_STRING);
+					$stmt->bindValue(":discord_enabled",  	0, 							Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":createdon",  		time(), 					Database::VARTYPE_INTEGER);
+					$stmt->bindValue(":removed", 			0, 							Database::VARTYPE_INTEGER);
+					$stmt->execute();
+
+					$companyId = $db->lastInsertRowID();
+
+					$result = new stdClass();
+					$result->success = true;
+					$result->company = db_singlecompany( $db, $companyId, $companyExtraData );
+				}
+				else if ($endpoint == "/superadmin/company/save/") {
+					$required_fields = array(
+						array('name' => 'id', 'type' => 'integer'),
+						array('name' => 'name', 'type' => 'textarea'),
+						array('name' => 'keywords', 'type' => 'textarea'),
+						array('name' => 'email', 'type' => 'email'),
+						array('name' => 'twitter', 'type' => 'alphanumericunderscores'),
+						array('name' => 'facebook', 'type' => 'alphanumericunderscores'),
+						array('name' => 'discord_enabled', 'type' => 'boolean'),
+						array('name' => 'discord_webhookId', 'type' => 'textarea'),
+						array('name' => 'discord_webhookToken', 'type' => 'textarea')
+					);
+					$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+					if (!$error) {
+
+						$discord_enabled = ($data['discord_enabled'] == "true")?1:0;
+
+						$stmt = $db->prepare("UPDATE company
+												SET name = :name,
+													keywords = :keywords,
+													email = :email,
+													twitter = :twitter,
+													facebook = :facebook,
+													discord_enabled = :discord_enabled,
+													discord_webhookId = :discord_webhookId,
+													discord_webhookToken = :discord_webhookToken
+												WHERE id = :id
+												LIMIT 1 ;");
+						$stmt->bindValue(":name", 					$data['name'], 						Database::VARTYPE_STRING);
+						$stmt->bindValue(":keywords", 				$data['keywords'], 					Database::VARTYPE_STRING);
+						$stmt->bindValue(":email", 					$data['email'], 					Database::VARTYPE_STRING);
+						$stmt->bindValue(":twitter", 				$data['twitter'], 					Database::VARTYPE_STRING);
+						$stmt->bindValue(":facebook", 				$data['facebook'], 					Database::VARTYPE_STRING);
+						$stmt->bindValue(":discord_enabled",  		$discord_enabled, 					Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":discord_webhookId",  	$data['discord_webhookId'], 		Database::VARTYPE_STRING);
+						$stmt->bindValue(":discord_webhookToken",  	$data['discord_webhookToken'], 		Database::VARTYPE_STRING);
+						$stmt->bindValue(":id",  					$data['id'], 						Database::VARTYPE_INTEGER);
+						$rs = $stmt->execute();
+						if (!$rs) {
+							$result = new stdClass();
+							$result->success = false;
+						} else {
+							$result = new stdClass();
+							$result->success = true;
+							$company = db_singlecompany( $db, $data['id'], $companyExtraData );
+							util_superadmin_addgamestocompanyobj($company);
+							$result->company = $company;
+						}
+					}
+				}
+				else if ($endpoint == "/superadmin/company/game/add/") {
+					$required_fields = array(
+						array('name' => 'company', 'type' => 'integer')
+					);
+					$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+					if (!$error) {
+
+						$name = "Untitled Game";
+						$stmt = $db->prepare("INSERT INTO game (id,  company, name, nameuniq, keywords, iconurl, twitchId, twitchLastScraped)
+														VALUES (NULL, :company, :name, :nameuniq, '', '', 0, 0);");
+						$stmt->bindValue(":company", 			$data['company'], 	Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":name", 				$name, 				Database::VARTYPE_STRING);
+						$stmt->bindValue(":nameuniq", 			urlformat($name),	Database::VARTYPE_STRING);
+						$rs = $stmt->execute();
+
+						if (!$rs) {
+							$result = new stdClass();
+							$result->success = false;
+						} else {
+							$result = new stdClass();
+							$result->success = true;
+							$result->company = db_singlecompany( $db, $data['company'], $companyExtraData);
+							util_superadmin_addgamestocompanyobj($result->company);
+						}
+					}
+				}
+				else if ($endpoint == "/superadmin/company/game/save/") {
+					$required_fields = array(
+						array('name' => 'company', 'type' => 'integer'),
+						array('name' => 'game', 'type' => 'integer'),
+						array('name' => 'name', 'type' => 'textarea'),
+						array('name' => 'keywords', 'type' => 'textarea'),
+						array('name' => 'twitchId', 'type' => 'textarea')
+					);
+					$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+					if (!$error) {
+
+						$stmt = $db->prepare("UPDATE game
+												SET name = :name,
+													nameuniq = :nameuniq,
+													keywords = :keywords,
+													twitchId = :twitchId,
+													twitchLastScraped = :twitchLastScraped
+												WHERE id = :id AND company = :company
+												LIMIT 1 ;");
+						$stmt->bindValue(":name", 				$data['name'], 				Database::VARTYPE_STRING);
+						$stmt->bindValue(":nameuniq", 			urlformat($data['name']),	Database::VARTYPE_STRING);
+						$stmt->bindValue(":keywords", 			$data['keywords'], 			Database::VARTYPE_STRING);
+						$stmt->bindValue(":twitchId", 			$data['twitchId'], 			Database::VARTYPE_STRING);
+						$stmt->bindValue(":twitchLastScraped", 	0, 							Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":id", 				$data['game'], 				Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":company", 			$data['company'], 			Database::VARTYPE_INTEGER);
+						$rs = $stmt->execute();
+
+						if (!$rs) {
+							$result = new stdClass();
+							$result->success = false;
+						} else {
+							$result = new stdClass();
+							$result->success = true;
+							$result->company = db_singlecompany( $db, $data['company'], $companyExtraData);
+							util_superadmin_addgamestocompanyobj($result->company);
+						}
+					}
+				}
+				else if ($endpoint == "/superadmin/company/game/remove/") {
+					$required_fields = array(
+						array('name' => 'company', 'type' => 'integer'),
+						array('name' => 'game', 'type' => 'integer')
+					);
+					$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+					if (!$error) {
+
+						$name = "Untitled Game";
+						$stmt = $db->prepare("UPDATE game SET removed = 1 WHERE company = :company AND id = :id LIMIT 1;");
+						$stmt->bindValue(":company", 			$data['company'], 	Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":id", 				$data['game'], 		Database::VARTYPE_INTEGER);
+						$rs = $stmt->execute();
+
+						if (!$rs) {
+							$result = new stdClass();
+							$result->success = false;
+						} else {
+							$result = new stdClass();
+							$result->success = true;
+							$result->company = db_singlecompany( $db, $data['company'], $companyExtraData);
+							util_superadmin_addgamestocompanyobj($result->company);
+						}
+					}
+				}
+				else if ($endpoint == "/superadmin/company/game/coverage-stats/") {
+					$required_fields = array(
+						array('name' => 'game', 'type' => 'integer')
+					);
+					$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+					if (!$error) {
+						$game = db_singlegame($db, $_GET['game']);
+						if ($game) {
+							$youtubeStats = util_youtube_coverage_stats_for_game_alltime($game['id']);
+
+							$result = new stdClass();
+							$result->success = true;
+							$result->game = db_singlegame( $db, $game['id']);
+							$result->stats = array(
+								"youtube" => $youtubeStats
+							);
+						}
+					}
+				}
+				else if ($endpoint == "/superadmin/company/webhook/discord/test/") {
+					$required_fields = array(
+						array('name' => 'company', 'type' => 'integer'),
+					);
+					$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
+					if (!$error) {
+						discord_test($_GET['company'], "BZZT. BLEEP. BLOOP. Coverage Bot just testing the comms. END.");
+					}
+				}
 			}
 		}
 		else if ($endpoint == "/user/change-imap-settings/")

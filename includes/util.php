@@ -55,6 +55,34 @@ function getMIMEType($extension) {
 	}
 }
 
+function util_superadmin_companies() {
+	global $db;
+	$companies = $db->query("SELECT id, name, keywords, email, twitter, facebook, discord_enabled, discord_webhookId, discord_webhookToken, createdon
+							 FROM company
+							 WHERE removed = 0
+							 ORDER BY name;");
+
+	$companyIds = array_map(function($c) { return $c['id']; }, $companies);
+
+	$allGames = $db->query("SELECT id,company,name,keywords,iconurl,twitchId,twitchLastScraped FROM game WHERE company in (" . implode(array_values($companyIds),",") . ") AND removed = 0;");
+
+	for($i = 0; $i < count($companies); $i++)
+	{
+		$games = array_filter($allGames, function($g) use ($companies, $i) {
+			return ($g['company'] == $companies[$i]['id']);
+		});
+
+		$companies[$i]['games'] = array_values($games);
+	}
+	return $companies;
+}
+function util_superadmin_addgamestocompanyobj(&$company) {
+	global $db;
+	$games = $db->query("SELECT id,company,name,keywords,iconurl,twitchId,twitchLastScraped
+								FROM game WHERE company = '" . $company['id'] . "' AND removed = 0;");
+	$company['games'] = array_values($games);
+}
+
 function util_wouldEmailBeDuplicate($user_id, $utime, $from_email, $to_email, $subject, $contents) {
 	global $db;
 	$stmt = $db->prepare("SELECT id
@@ -848,6 +876,21 @@ function util_isLocalhost() {
 	return $_SERVER['HTTP_HOST'] == "localhost";
 }
 
+function util_youtube_coverage_stats_for_game_alltime($gameId) {
+	global $db;
+	$youtubeStats = $db->query("SELECT COUNT(id) as videoCount,
+										SUM(viewCount) as viewCount,
+										SUM(likeCount) as likeCount,
+										SUM(dislikeCount) as dislikeCount,
+										SUM(favoriteCount) as favoriteCount,
+										SUM(commentCount) as commentCount
+									FROM youtuber_coverage
+									WHERE game = {$gameId}
+									AND removed = 0
+									ORDER BY utime DESC;")[0];
+	return $youtubeStats;
+}
+
 function youtube_v3_search($terms, $order = "date", $sinceTimestamp = 0) {
 	global $youtube_apiKey;
 	if (strlen($terms) == 0) { return 0; }
@@ -1113,6 +1156,16 @@ function discord_webhook($discord_webhookId, $discord_webhookToken, $data, $deco
 
 	$result = curl_exec($ch);
 	return $result;
+}
+function discord_test($companyId, $testMessage) {
+	global $db;
+	$company = db_singlecompany($db, $companyId, array('discord_enabled', 'discord_webhookId', 'discord_webhookToken'));
+	if (!$company['discord_enabled']) { return ""; }
+
+	$data = array(
+		"content" => $testMessage
+	);
+	return discord_webhook($company['discord_webhookId'], $company['discord_webhookToken'], $data);
 }
 function discord_coverageAlert($companyId, $fromName, $coverageTitle, $url) {
 	global $db;
