@@ -25,7 +25,7 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 //$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 158;");//onelifeleft
 //$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 29;"); // appadvice
 //$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 201;"); // gonintendo
-$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 207;"); // nintendo everything
+//$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 207;"); // nintendo everything
 //$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 89;");//game people - check pub date
 //$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 202;");//nintendoworldreport
 // $db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 200;");//nintendonl
