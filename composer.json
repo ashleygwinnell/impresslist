@@ -3,7 +3,8 @@
         "erusev/parsedown": "1.6.0",
         "abraham/twitteroauth": "^0.9.2",
         "PHPMailer/PHPMailer": "5.*",
-        "facebook/php-sdk-v4": "5.0.0"
+        "facebook/php-sdk-v4": "5.0.0",
+        "j0k3r/php-readability": "^1.2"
     },
     "scripts": {
 		"post-install-cmd": [

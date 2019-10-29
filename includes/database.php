@@ -277,6 +277,9 @@
 		$sql = "DROP TABLE cache_external_twitteracc;";
 		$db->exec($sql);
 
+		$sql = "DROP TABLE cache_external_urlbools;";
+		$db->exec($sql);
+
 		$sql = "DROP TABLE company;";
 		$db->exec($sql);
 
@@ -402,6 +405,20 @@
 						`id`, 	`name`, 		`keywords`, 	`address`, 					`email`, 				`twitter`, `facebook`, `discord_enabled`, 	`discord_webhookId`, 	`discord_webhookToken`, `slack_enabled`, `slack_apiUrl`, `createdon`, 	`removed`) VALUES
 						(1, 	'Company Name', 'Company Name', 'Your full address line.',	'hello@yourdomain.com', 'twitter', 'facebook', 0, 					'', 					'', 					0, 				 '', 			 0, 			0);");
 
+		// Cache
+		// TODO: cache_external_twitteracc;
+
+
+		// 8 bits for publication id hash, 32 chars for url hash
+		// see util_publication_url_hash()
+		$sql = "CREATE TABLE IF NOT EXISTS cache_external_urlbools (
+					urlhash VARCHAR(40) PRIMARY KEY NOT NULL,
+					createdon INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+		$sql = "ALTER TABLE `cache_external_urlbools` ADD INDEX( `urlhash`);";
+		$db->exec($sql);
+
 		// Emails
 		$sql = "CREATE TABLE IF NOT EXISTS email (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
@@ -455,6 +472,7 @@
 					nameuniq VARCHAR(255),
 					iconurl VARCHAR(255) NOT NULL,
 					keywords TEXT NOT NULL,
+					blackwords TEXT NOT NULL,
 					twitchId INTEGER DEFAULT {$defaultNull},
 					twitchLastScraped INTEGER DEFAULT {$defaultNull}
 				) {$sqlEngineAndCharset} ;";
@@ -667,6 +685,7 @@
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
 					name VARCHAR(255) NOT NULL,
 					keywords TEXT NOT NULL,
+					blackwords TEXT NOT NULL,
 					removed INTEGER NOT NULL DEFAULT 0
 				) {$sqlEngineAndCharset} ;";
 		$db->exec($sql);

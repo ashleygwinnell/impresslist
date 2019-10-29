@@ -1055,6 +1055,7 @@ Company = function(data) {
 														<tr>\
 															<th>Name</th>\
 															<th width=120>Keywords</th>\
+															<th width=120>Blackwords</th>\
 															<th width=50>Twitch ID</th>\
 															<th></th>\
 														</tr>\
@@ -1079,6 +1080,8 @@ Company = function(data) {
 					</div>";
 		$('#modals').html(html);
 
+		$('.modal-dialog').css('width', '800px');
+
 		var thiz = this;
 		var games = this.field("games");
 		for(var i = 0; i < games.length; i++) {
@@ -1086,6 +1089,7 @@ Company = function(data) {
 			gameHtml += "<tr>\
 							<td><input data-game-id='" + games[i].id + "' data-field='name' class='form-control' type='text' value='" + games[i].name + "'/></td>\
 							<td><input data-game-id='" + games[i].id + "' data-field='keywords' class='form-control' type='text' value='" + games[i].keywords + "'/></td>\
+							<td><input data-game-id='" + games[i].id + "' data-field='blackwords' class='form-control' type='text' value='" + games[i].blackwords + "'/></td>\
 							<td><input data-game-id='" + games[i].id + "' data-field='twitchId' class='form-control' type='text' value='" + games[i].twitchId + "'/></td>\
 							<td>\
 								<!-- <button id='refresh-company-game-twitch-" + games[i].id + "' data-game-id='" + games[i].id + "' class='btn btn-warning btn-sm'>Refresh Twitch</button> -->\
@@ -1100,9 +1104,10 @@ Company = function(data) {
 				var gameId = $(this).attr('data-game-id');
 				var gameName = $("[data-game-id='" + gameId + "'][data-field='name']").val();
 				var gameKeywords = $("[data-game-id='" + gameId + "'][data-field='keywords']").val();
+				var gameBlackwords = $("[data-game-id='" + gameId + "'][data-field='blackwords']").val();
 				var gameTwitchId = $("[data-game-id='" + gameId + "'][data-field='twitchId']").val();
 
-				API.saveCompanyGame(thiz, gameId, gameName, gameKeywords, gameTwitchId);
+				API.saveCompanyGame(thiz, gameId, gameName, gameKeywords, gameBlackwords, gameTwitchId);
 			});
 			$("#remove-company-game-" + games[i].id).click(function() {
 				var gameId = $(this).attr('data-game-id');

@@ -492,11 +492,12 @@ if (!isset($_GET['endpoint'])) {
 					api_result($result);
 				}
 				else {
-					$stmt = $db->prepare("INSERT IGNORE INTO game (id, name, iconurl, keywords) VALUES ( :id, :name, :iconurl, :keywords ); ");
+					$stmt = $db->prepare("INSERT IGNORE INTO game (id, name, iconurl, keywords, blackwords) VALUES ( :id, :name, :iconurl, :keywords, :blackwords ); ");
 					$stmt->bindValue(":id", 			1, 				Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":name", 			'Project', 		Database::VARTYPE_STRING);
 					$stmt->bindValue(":iconurl", 		'', 			Database::VARTYPE_STRING);
 					$stmt->bindValue(":keywords", 		'project', 		Database::VARTYPE_STRING);
+					$stmt->bindValue(":blackwords", 	'', 			Database::VARTYPE_STRING);
 					$stmt->execute();
 
 					$stmt = $db->prepare("INSERT IGNORE INTO user (id, forename, surname, email, password, currentGame, admin, color, lastactivity) VALUES ( :id, :forename, :surname, :email, :password, :currentGame, :admin, :color, :lastactivity ); ");
@@ -4984,14 +4985,15 @@ if (!isset($_GET['endpoint'])) {
 					$result->message = 'Name and icon must be set.';
 				} else {
 
-					$stmt = $db->prepare(" INSERT INTO game (id, company, name, nameuniq, keywords, iconurl, twitchId, twitchLastScraped)
-													VALUES (NULL, :company, :name, :nameuniq, '', :iconurl, 0, 0) ");
+					$stmt = $db->prepare(" INSERT INTO game (id, company, name, nameuniq, keywords, blackwords, iconurl, twitchId, twitchLastScraped)
+													VALUES (NULL, :company, :name, :nameuniq, :keywords, :blackwords, :iconurl, 0, 0) ");
 
 					$uniqname = urlformat($data['name']);
 					$stmt->bindValue(":company", 	$user['company'], 	Database::VARTYPE_INTEGER);
 					$stmt->bindValue(":name", 		$data['name'], 		Database::VARTYPE_STRING);
 					$stmt->bindValue(":nameuniq", 	$uniqname, 			Database::VARTYPE_STRING);
 					$stmt->bindValue(":keywords", 	"", 				Database::VARTYPE_STRING);
+					$stmt->bindValue(":blackwords", "", 				Database::VARTYPE_STRING);
 					$stmt->bindValue(":iconurl", 	$data['iconurl'], 	Database::VARTYPE_STRING);
 					$rs = $stmt->execute();
 
@@ -5311,8 +5313,8 @@ if (!isset($_GET['endpoint'])) {
 					if (!$error) {
 
 						$name = "Untitled Game";
-						$stmt = $db->prepare("INSERT INTO game (id,  company, name, nameuniq, keywords, iconurl, twitchId, twitchLastScraped)
-														VALUES (NULL, :company, :name, :nameuniq, '', '', 0, 0);");
+						$stmt = $db->prepare("INSERT INTO game (id,  company, name, nameuniq, keywords, blackwords, iconurl, twitchId, twitchLastScraped)
+														VALUES (NULL, :company, :name, :nameuniq, '', '', '', 0, 0);");
 						$stmt->bindValue(":company", 			$data['company'], 	Database::VARTYPE_INTEGER);
 						$stmt->bindValue(":name", 				$name, 				Database::VARTYPE_STRING);
 						$stmt->bindValue(":nameuniq", 			urlformat($name),	Database::VARTYPE_STRING);
@@ -5335,6 +5337,7 @@ if (!isset($_GET['endpoint'])) {
 						array('name' => 'game', 'type' => 'integer'),
 						array('name' => 'name', 'type' => 'textarea'),
 						array('name' => 'keywords', 'type' => 'textarea'),
+						array('name' => 'blackwords', 'type' => 'textarea'),
 						array('name' => 'twitchId', 'type' => 'textarea')
 					);
 					$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
@@ -5344,6 +5347,7 @@ if (!isset($_GET['endpoint'])) {
 												SET name = :name,
 													nameuniq = :nameuniq,
 													keywords = :keywords,
+													blackwords = :blackwords,
 													twitchId = :twitchId,
 													twitchLastScraped = :twitchLastScraped
 												WHERE id = :id AND company = :company
@@ -5351,6 +5355,7 @@ if (!isset($_GET['endpoint'])) {
 						$stmt->bindValue(":name", 				$data['name'], 				Database::VARTYPE_STRING);
 						$stmt->bindValue(":nameuniq", 			urlformat($data['name']),	Database::VARTYPE_STRING);
 						$stmt->bindValue(":keywords", 			$data['keywords'], 			Database::VARTYPE_STRING);
+						$stmt->bindValue(":blackwords", 		$data['blackwords'], 		Database::VARTYPE_STRING);
 						$stmt->bindValue(":twitchId", 			$data['twitchId'], 			Database::VARTYPE_STRING);
 						$stmt->bindValue(":twitchLastScraped", 	0, 							Database::VARTYPE_INTEGER);
 						$stmt->bindValue(":id", 				$data['game'], 				Database::VARTYPE_INTEGER);

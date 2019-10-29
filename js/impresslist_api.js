@@ -2361,12 +2361,13 @@ API.removeCompanyGame = function(companyObj, gameId, successCallback, failCallba
 	var url = API.root + "api.php?endpoint=/superadmin/company/game/remove/&company=" + encodeURIComponent(companyObj.id) + "&game=" + encodeURIComponent(gameId);
 	API._companyRequest(companyObj, url, "Removed game successfully!", "Could not remove Game.", successCallback, failCallback);
 }
-API.saveCompanyGame = function(companyObj, gameId, name, keywords, twitchId, successCallback, failCallback) {
+API.saveCompanyGame = function(companyObj, gameId, name, keywords, blackwords, twitchId, successCallback, failCallback) {
 	var url = API.root + "api.php?endpoint=/superadmin/company/game/save/";
 	url += "&company=" + encodeURIComponent(companyObj.id);
 	url += "&game=" + encodeURIComponent(gameId);
 	url += "&name=" + encodeURIComponent(name);
 	url += "&keywords=" + encodeURIComponent(keywords);
+	url += "&blackwords=" + encodeURIComponent(blackwords);
 	url += "&twitchId=" + encodeURIComponent(twitchId);
 
 	API._companyRequest(companyObj, url, "Game saved!", "Could not save Game.", successCallback, failCallback);

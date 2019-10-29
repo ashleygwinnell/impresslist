@@ -1,5 +1,8 @@
 <?php
 
+use Readability\Readability;
+
+
 $url = $_SERVER['REQUEST_URI'];
 
 $ua = $_SERVER["HTTP_USER_AGENT"];
@@ -64,7 +67,7 @@ function util_superadmin_companies() {
 
 	$companyIds = array_map(function($c) { return $c['id']; }, $companies);
 
-	$allGames = $db->query("SELECT id,company,name,keywords,iconurl,twitchId,twitchLastScraped FROM game WHERE company in (" . implode(array_values($companyIds),",") . ") AND removed = 0;");
+	$allGames = $db->query("SELECT id,company,name,keywords,blackwords,iconurl,twitchId,twitchLastScraped FROM game WHERE company in (" . implode(array_values($companyIds),",") . ") AND removed = 0;");
 
 	for($i = 0; $i < count($companies); $i++)
 	{
@@ -78,7 +81,7 @@ function util_superadmin_companies() {
 }
 function util_superadmin_addgamestocompanyobj(&$company) {
 	global $db;
-	$games = $db->query("SELECT id,company,name,keywords,iconurl,twitchId,twitchLastScraped
+	$games = $db->query("SELECT id,company,name,keywords,blackwords,iconurl,twitchId,twitchLastScraped
 								FROM game WHERE company = '" . $company['id'] . "' AND removed = 0;");
 	$company['games'] = array_values($games);
 }
@@ -157,25 +160,134 @@ function util_isValidKeyFormat($platform, $key, &$result) {
 	$result = api_error("Key format validation not implemented for platform: " . $platform);
 	return false;
 }
-function util_containsKeywords($haystack, $keywordsRaw) {
+function util_cleanhtml($html) {
+	$doc = new DOMDocument();
+	@$doc->loadHTML($html);
+
+	$script_tags = $doc->getElementsByTagName('script');
+	$length = $script_tags->length;
+	for ($i = 0; $i < $length; $i++) {
+		$script_tags->item($i)->parentNode->removeChild($script_tags->item($i));
+		$length = $script_tags->length;
+		$i--;
+	}
+	$clean = $doc->saveHTML();
+	return $clean;
+}
+function util_cleanHtmlArticleContents($url, $html) {
+	$page = util_cleanhtml($html);
+
+	$readability = new Readability($page, $url);
+	$result = $readability->init();
+
+	if ($result) {
+		return $readability->getContent()->textContent;
+	    // display the title of the page
+	    //echo $readability->getTitle()->textContent;
+	    // display the *readability* content
+	    //echo $readability->getContent()->textContent;
+	}
+	return "";
+}
+function util_fixkeywords($keywordsString) {
+
+	if (strpos($keywordsString, ",") == FALSE) {
+		$bits = array( $keywordsString );
+	}
+	else {
+		$bits = explode(",", $keywordsString);
+	}
+
+
+	$r = array();
+	for ($i = 0; $i < count($bits); $i++) {
+		$r[] = trim($bits[$i]);
+	}
+	$fixed = implode(",", $r);
+	return $fixed;
+}
+function util_containsKeywords($haystack, $keywordsRaw, $verbose = false) {
 	$haystack = strtolower($haystack);
 	$keywordsRaw = strtolower($keywordsRaw);
 
 	if (strlen($keywordsRaw) == 0) { return false; }
+
 	if (strpos($keywordsRaw, ",") == FALSE) {
-		echo $haystack . " - " . $keywordsRaw . "<br/>";
-		return (strpos($haystack, $keywordsRaw) !== FALSE);
+		if ($verbose) { echo $haystack . " - " . $keywordsRaw . "<br/>"; }
+		$bits = array( $keywordsRaw );
 	}
-	$bits = explode(",", $keywordsRaw);
-	print_r($bits);
-	for ($i = 0; $i < count($bits); $i++) {
-		$bit = trim($bits[$i]);
-		echo $bit . "<br/>";
-		if (strpos($haystack, $bit) !== FALSE) {
+	else {
+		$bits = explode(",", $keywordsRaw);
+	}
+	if ($verbose) { print_r($bits); }
+
+	return util_containsKeywordsArray($haystack, $bits, $verbose);
+}
+function util_containsKeywordsArray($haystack, $keywords, $verbose = false) {
+	for ($i = 0; $i < count($keywords); $i++) {
+		//$keyword = trim($keywords[$i]);
+		$keyword = $keywords[$i];
+		if ($verbose) { echo $keyword . "<br/>"; }
+
+		$pos = strpos($haystack, $keyword);
+		if ($pos !== FALSE) {
+			if ($verbose) { echo "\"" . $keyword . "\" found<br/>"; }
 			return true;
 		}
 	}
 	return false;
+}
+function util_coverageContains($contents, $name = "", $keywords = "", $verbose = false) {
+	$contents = strtolower($contents);
+	$name = strtolower($name);
+
+	$containsName = strpos($contents, $name) !== FALSE;
+	$containsKeywords = util_containsKeywordsArray($contents, $keywords, $verbose);
+
+	if ($verbose && $containsName) { echo "The following contains watched game name:<br/>\n"; }
+	if ($verbose && $containsKeywords) { echo "The following contains watched game keywords:<br/>\n"; }
+
+	return $containsName || $containsKeywords;
+}
+function util_muddyCoverageContains($contents, $name = "", $keywords = "", $verbose = false) {
+	$contents = strtolower($contents);
+	$name = strtolower($name);
+
+	$containsName = strpos($contents, $name) !== FALSE;
+	if ($verbose && $containsName) { echo "The following contains watched game name:<br/>\n"; }
+	if ($containsName) {
+		return true;
+	}
+
+	if ($keywords == "" || strlen(trim($keywords)) == 0) { return false; }
+
+	$keywords = util_fixkeywords($keywords);
+	$keywords = strtolower($keywords);
+
+	if (strpos($keywords, ",") == FALSE) {
+		$tempArray = array( $keywords );
+	}
+	else {
+		$tempArray = explode(",", $keywords);
+	}
+
+	$approvedPrefixes = array(">");
+	$approvedSuffixes = array(".", ":", " ", "<", ",");
+
+	$keywordsArray = array();
+	for ($i = 0; $i < count($tempArray); $i++) {
+		for($j = 0; $j < count($approvedPrefixes); $j++) {
+			$keywordsArray[] = $approvedPrefixes[$j] . $tempArray[$i];
+		}
+		for($j = 0; $j < count($approvedSuffixes); $j++) {
+			$keywordsArray[] = $tempArray[$i] . $approvedSuffixes[$j];
+		}
+	}
+
+	$containsKeywords = util_containsKeywordsArray($contents, $keywordsArray, $verbose);
+	if ($verbose && $containsKeywords) { echo "The following contains watched game keywords:<br/>\n"; }
+
+	return $containsName || $containsKeywords;
 }
 function util_getFirstNameForObject($typeObj) {
 	if ($typeObj['firstname'] && strlen($typeObj['firstname']) > 0) return $typeObj['firstname'];
@@ -191,6 +303,24 @@ function util_getFullNameForObject($typeObj) {
 	if ($typeObj['name'] && strlen($typeObj['name']) > 0) return $typeObj['name'];
 	if ($typeObj['email']  && strlen($typeObj['email']) > 0) return $typeObj['email'];
 	return "Unknown";
+}
+
+function util_publication_url_hash($publicationId, $url) {
+	return "pub_" . $publicationId . "_" . md5($url);
+}
+function util_publication_url_hash_exists($hash) {
+	global $db;
+	$r = $db->query("SELECT * FROM cache_external_urlbools WHERE urlhash = '" . $hash. "' LIMIT 1;");
+	return count($r) > 0;
+}
+function util_publication_url_hash_insert($hash) {
+	global $db;
+	$db->exec("INSERT IGNORE INTO cache_external_urlbools (urlhash, createdon) VALUES ('" . $hash. "', " . time() . ");");
+}
+function util_publication_url_hash_purgeold() {
+	global $db;
+	$threeMonths = 86400 * 31 * 3;
+	$db->exec("DELETE FROM cache_external_urlbools WHERE createdon < " . (time() - $threeMonths) . ";");
 }
 
 /** Takes into account decimal points and negative values... **/
@@ -623,10 +753,13 @@ function util_get_github_releases() {
 
 function url_get_contents($url) {
 
+	$agent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.0.3705; .NET CLR 1.1.4322)';
+
 	$ch = curl_init();
 	curl_setopt ($ch, CURLOPT_URL, $url);
-	curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, 5);
-	curl_setopt ($ch, CURLOPT_TIMEOUT_MS, 5000);
+	curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, 10);
+	curl_setopt ($ch, CURLOPT_USERAGENT, $agent);
+	curl_setopt ($ch, CURLOPT_TIMEOUT_MS, 10000);
 	curl_setopt ($ch, CURLOPT_FAILONERROR, true);
 	curl_setopt ($ch, CURLOPT_VERBOSE, true);
 	curl_setopt ($ch, CURLOPT_FOLLOWLOCATION, true);
@@ -1173,9 +1306,9 @@ function discord_coverageAlert($companyId, $fromName, $coverageTitle, $url) {
 	if (!$company['discord_enabled']) { return ""; }
 
 	$data = array(
-		"content" => "*{$fromName}* - {$coverageTitle}: \n{$url}"
+		"content" => "**{$fromName}** - {$coverageTitle}: \n{$url}"
 	);
-	return discord_webhook($company['discord_webhookId'], $company['discord_webhookToken'], $data);
+	return discord_webhook($company['discord_webhookId'], $company['discord_webhookToken'], $data, true);
 }
 
 function slack_incomingWebhook($slack_apiUrl, $data) {

@@ -1,6 +1,16 @@
 <?php
 
 ini_set("allow_url_fopen", "On");
+set_time_limit(0);
+
+$testMode = false;
+
+$max_publications = 50;
+$max_url_scrapes_per_publication = 50;
+if ($testMode) {
+	$max_publications = 1;
+	$max_url_scrapes_per_publication = 50;
+}
 
 
 $startTime = time();
@@ -11,8 +21,28 @@ include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 //die($_SERVER['DOCUMENT_ROOT']);
 
 // Temp test
-//$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 165;");
+//$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 228;");//nintendo times
+//$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 158;");//onelifeleft
+//$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 29;"); // appadvice
+//$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 201;"); // gonintendo
+$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 207;"); // nintendo everything
+//$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 89;");//game people - check pub date
+//$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 202;");//nintendoworldreport
+// $db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 200;");//nintendonl
+//$db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 149;");//tech raptor
 //$db->exec("UPDATE publication SET lastscrapedon = 0;");
+
+util_publication_url_hash_purgeold();
+
+// error_reporting(E_ALL ^ E_NOTICE);
+// use Readability\Readability;
+// $readabilitytest = new Readability("", "");
+// die("no");
+
+//$db->exec("DELETE FROM publication_coverage WHERE utime > " . (time()-(86400*3)) . ";");
+// $db->exec("DELETE FROM cache_external_urlbools WHERE 1 = 1;");
+// $db->exec("UPDATE publication SET lastscrapedon = 0 WHERE id = 66;");
+//die();
 
 // Publications
 $publications = $db->query("SELECT * FROM publication WHERE lastscrapedon < " . (time()-3600) . " AND removed = 0 ORDER BY lastscrapedon ASC;");
@@ -38,7 +68,7 @@ function fixrelativeurl($host, $url) {
 	return $url;
 }
 
-function tryAddPublicationCoverage($companyId, $publicationId, $publicationName, $gameId, $watchedGameId, $title, $url, $time) {
+function tryAddPublicationCoverage($companyId, $publicationId, $publicationName, $gameId, $gameName, $watchedGameId, $watchedGameName, $title, $url, $time) {
 	// echo $publicationId . "<br/>" .
 	// 	 $publicationName . "<br/>" .
 	// 	 $gameId . "<br/>" .
@@ -50,7 +80,7 @@ function tryAddPublicationCoverage($companyId, $publicationId, $publicationName,
 	global $db;
 	// YES! We got coverage.
 	// ... but we need to make sure we don't have it saved already!
-	echo "Found Coverage!<br/>\n";
+	echo "Found Coverage for <b>{$gameName} {$watchedGameName}</b>!<br/>\n";
 	$stmt = $db->prepare("SELECT * FROM publication_coverage WHERE url = :url; ");
 	$stmt->bindValue(":url", $url, Database::VARTYPE_STRING);
 	$existingCoverage = $stmt->query();
@@ -78,14 +108,14 @@ function tryAddPublicationCoverage($companyId, $publicationId, $publicationName,
 			@discord_coverageAlert($companyId, $publicationName, $title, $url);
 		}
 	} else {
-		echo $existingCoverage[0]['url'] . "<br/>\n";c
+		echo $existingCoverage[0]['url'] . "<br/>\n";
 		echo "<i>It was already in the database.</i><br/>\n";
 	}
 }
 
 
 // for each publication
-for($i = 0; $i < $num_publications; $i++) {
+for($i = 0; $i < $num_publications && $i < $max_publications; $i++) {
 
 	echo "<b>" . $publications[$i]['name'] . "</b>!<br/>\n";
 
@@ -95,15 +125,17 @@ for($i = 0; $i < $num_publications; $i++) {
 	$rss = $publications[$i]['rssfeedurl'];
 	if (strlen($rss) > 0)
 	{
-		echo "Checking RSS...<br/>\n";
+		echo "Checking RSS... (" .$rss . ").  <br/>\n";
+
 
 
 		// Use XML parser on the feed.
 		$rsscontent = url_get_contents($rss);
-		$doc = new DOMDocument();
-		$doc->strictErrorChecking = false;
-		@$doc->loadHTML( $rsscontent );
-		$xml = @simplexml_import_dom($doc);
+		// $doc = new DOMDocument();
+		// $doc->strictErrorChecking = false;
+		// @$doc->loadXML( $rsscontent );
+		// $xml = @simplexml_import_dom($doc);
+		$xml = @simplexml_load_string($rsscontent);
 		if ($xml === FALSE) {
 			// log error.
 			echo "Invalid XML for website .<br/>\n";
@@ -112,8 +144,9 @@ for($i = 0; $i < $num_publications; $i++) {
 			echo "Invalid XML for website. Did not make XML object.<br/>\n";
 			//continue;
 		} else {
-			$items = $xml->body->rss->channel->item;
-
+			$items = $xml->channel->item;
+			//$items = $xml->body->rss->channel->item;
+			//print_r($xml);
 
 			if ($items == null) {
 				//print_r($xml);
@@ -121,35 +154,126 @@ for($i = 0; $i < $num_publications; $i++) {
 				//continue;
 			} else {
 
-
+				$countUrlScrapes = 0;
 
 				foreach ($items as $item) {
+
 					$title = htmlentities($item->title);
 					$description = htmlentities($item->description);
 					$time = strtotime($item->pubdate);
-					$url = $item->link->__toString();
-					if (strlen($url) == 0) {
-						$url = $item->guid;
+					if (!$time && strtotime($item->pubDate)) {
+						$time = strtotime($item->pubDate);
 					}
 
+
+					$url = $item->link->__toString();
+					$oldurl = $url;
+					if (strlen($url) == 0) {
+						$url = $item->guid;
+						// isPermaLink
+					}
+
+					//echo "title: " . $title . "<br/>\n";
+					//echo "time: " . $time . "<br/>\n";
+					//echo "$item->pubdate: " . $item->pubDate . "<br/>\n";
+
 					//print_r($item);
+					// echo "description: " . $description . "<br/>\n";
+					// echo "url: " . $url . "<br/>\n";
+					// echo "oldurl: " . $oldurl . "<br/>\n";
+					// echo "link: " . $item->link . "<br/>\n";
+					// echo "link: " . ((string)$item->link) . "<br/>\n";
+
+					// print_r($item);
 					//echo
 
-					foreach ($games as $game) {
+					// Scan titles and descriptions
+					foreach ($games as $game)
+					{
 						$titleContainsGame = strpos(strtolower($title), strtolower($game['name'])) !== FALSE || util_containsKeywords($title, $game['keywords']);
 						$descriptionContainsGame = strpos(strtolower($description), strtolower($game['name'])) !== FALSE || util_containsKeywords($description, $game['keywords']);
+						$articleContainsBlackwords = util_containsKeywords($title, $game['blackwords']) || util_containsKeywords($description, $game['blackwords']);
+
 						if ($titleContainsGame || $descriptionContainsGame) {
-							tryAddPublicationCoverage($game['company'], $publications[$i]['id'], $publications[$i]['name'], $game['id'], null, $title, $url, $time );
+							if (!$articleContainsBlackwords) {
+								tryAddPublicationCoverage($game['company'], $publications[$i]['id'], $publications[$i]['name'], $game['id'], $game['name'], null, "", $title, $url, $time );
+							} else {
+								echo "Found Coverage for <b>" . $game['name'] . "</b> (" . $game['id'] . ") ({$url}) - but it contained a blackword!<br/>\n";
+							}
 						}
 					}
 					foreach($watchedgames as $watchedgame) {
 						$titleContainsGame = strpos(strtolower($title), strtolower($watchedgame['name'])) !== FALSE || util_containsKeywords($title, $watchedgame['keywords']);
 						$descriptionContainsGame = strpos(strtolower($description), strtolower($watchedgame['name'])) !== FALSE || util_containsKeywords($description, $watchedgame['keywords']);
+						$articleContainsBlackwords = util_containsKeywords($title, $watchedgame['blackwords']) || util_containsKeywords($description, $watchedgame['blackwords']);
 
 						if ($titleContainsGame || $descriptionContainsGame) {
-							tryAddPublicationCoverage(0, $publications[$i]['id'], $publications[$i]['name'], null, $watchedgame['id'], $title, $url, $time );
+							if (!$articleContainsBlackwords) {
+								tryAddPublicationCoverage(0, $publications[$i]['id'], $publications[$i]['name'], null, "", $watchedgame['id'], $watchedgame['name'], $title, $url, $time );
+							} else {
+								echo "Found Coverage for watched game <b>" . $watchedgame['name'] . "</b> ({$url}) - but it contained a blackword!<br/>\n";
+							}
 						}
 					}
+
+					// Scan each rss article contents!
+					$urlhash = util_publication_url_hash($publications[$i]['id'], $url);
+					$alreadyScraped = util_publication_url_hash_exists($urlhash);
+					if ($alreadyScraped) {
+						echo "Already scraped " . $url . "<br/>\n";
+					}
+					else {
+						$articlecontents = url_get_contents($url);
+						$countUrlScrapes++;
+						if (strlen($articlecontents) == 0) {
+							echo $url . "  was empty... <br/>\n";
+						} else {
+
+							$articlecontents_lc = strtolower($articlecontents);
+							$articlecontents_lc = util_cleanHtmlArticleContents($url, $articlecontents_lc); //util_cleanhtml($articlecontents_lc);
+							if (strlen($articlecontents_lc) == 0) {
+								echo "cleaned content was empty... ({$url}) <br/>\n";
+							}
+							else {
+								foreach ($games as $game) {
+									$contains = util_muddyCoverageContains($articlecontents_lc, $game['name'], $game['keywords']);
+									$containsBlackwords = util_containsKeywords($articlecontents_lc, $game['blackwords']);
+
+									if ($contains) {
+										if (!$containsBlackwords) {
+											tryAddPublicationCoverage($game['company'], $publications[$i]['id'], $publications[$i]['name'], $game['id'], $game['name'], null, "", $title, $url, $time );
+										} else {
+											echo "Found Coverage for <b>" . $game['name'] . "</b> ({$url}) - but it contained a blackword!<br/>\n";
+										}
+									}
+								}
+								foreach($watchedgames as $watchedgame) {
+
+									$contains = util_muddyCoverageContains($articlecontents_lc, $watchedgame['name'], $watchedgame['keywords']);
+									$containsBlackwords = util_containsKeywords($articlecontents_lc, $watchedgame['blackwords']);
+
+									if ($contains) {
+										if (!$containsBlackwords) {
+											tryAddPublicationCoverage(0, $publications[$i]['id'], $publications[$i]['name'], null, "", $watchedgame['id'], $watchedgame['name'], $title, $url, $time );
+										} else {
+											echo "Found Coverage for watched game <b>" . $watchedgame['name'] . "</b> ({$url}) - but it contained a blackword!<br/>\n";
+										}
+
+
+										//print_r($articlecontents_lc);
+										//die();
+									}
+								}
+
+								util_publication_url_hash_insert($urlhash);
+							}
+						}
+						if ($countUrlScrapes >= $max_url_scrapes_per_publication) {
+							break;
+						}
+					}
+
+
 				}
 				$doScrape = false;
 				//echo $rsscontent;
@@ -284,7 +408,7 @@ for($i = 0; $i < $num_publications; $i++) {
 						);
 					}
 
-
+					// TODO: how the heck is this working?
 					// add to database!
 					foreach ($checkedUrls as $key => $checked) {
 						tryAddPublicationCoverage(
@@ -292,7 +416,9 @@ for($i = 0; $i < $num_publications; $i++) {
 							$publications[$i]['id'],
 							$publications[$i]['name'],
 							$gameId,
+							"",
 							$watchedGameId,
+							"",
 							$checkedUrls[$key]['title'],
 							fixrelativeurl($publications[$i]['url'], $checkedUrls[$key]['url']),
 							$checkedUrls[$key]['time']
