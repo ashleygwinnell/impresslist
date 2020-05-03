@@ -323,6 +323,10 @@ if (!isset($_GET['endpoint'])) {
 		"/chat/lines/",
 		"/chat/send/",
 
+		// Coverage Bot API
+		"/bot/mostrecent",
+		"/bot/games",
+
 		// Test...
 		"/test/test/",
 		"/test/phpinfo/"
@@ -332,7 +336,118 @@ if (!isset($_GET['endpoint'])) {
 		$result = api_error("API endpoint " . $endpoint . " does not exist.");
 	} else {
 
-		if ($endpoint == "/test/test/")
+		if (substr($endpoint, 0, 5) == "/bot/") {
+
+			$require_login = false;
+			include_once('init.php');
+
+			$data = $_GET;
+			if (!array_key_exists("key", $data) || $data['key'] != $coverageBot_apiKey) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = "Invalid API key";
+				api_result($result);
+				die();
+			}
+
+
+
+			$FOH_SERVER_ID = "303545432724996106";
+			$server = $data['server'];
+			if ($server != $FOH_SERVER_ID) {
+				$result = new stdClass();
+				$result->success = false;
+				$result->message = "Invalid server id";
+				api_result($result);
+				die();
+			}
+
+			if ($endpoint == "/bot/mostrecent") {
+				$company = 1;
+
+				// Get all games for company
+				$stmt = $db->prepare("SELECT game.id, game.name, company.id as company_id FROM game LEFT JOIN company on game.company = company.id WHERE company.id = :companyid; ");
+				$stmt->bindValue(":companyid", $company, Database::VARTYPE_INTEGER);
+				$rs = $stmt->query();
+				$gamesForCompany = array();
+				foreach ($rs as $row) {
+					$gamesForCompany[] = $row['id'];
+				}
+				$gamesForCompanyStr = implode(",", $gamesForCompany);
+
+				// Get all pubication coverage for games.
+				$publication_coverage = $db->query("SELECT * FROM publication_coverage WHERE game IN ({$gamesForCompanyStr}) AND removed = 0 ORDER BY utime DESC LIMIT 1;");
+				$num_publication_coverage = count($publication_coverage);
+				for($i = 0; $i < $num_publication_coverage; $i++) {
+				// 	//$publication_coverage[$i]['title'] = utf8_encode($publication_coverage[$i]['title']);
+				// 	if ($publication_coverage[$i]['title'] == null) {
+				// 		$publication_coverage[$i]['title'] = "Untitled Article";
+				// 	}
+					$publication_coverage[$i]['type'] = "publication";
+				}
+
+				$youtuber_coverage = $db->query("SELECT * FROM youtuber_coverage WHERE game IN ({$gamesForCompanyStr}) AND removed = 0 ORDER BY utime DESC LIMIT 1;");
+				// $youtuber_coverage_coverage = count($youtuber_coverage);
+				for($i = 0; $i < $youtuber_coverage_coverage; $i++) {
+					$youtuber_coverage[$i]['type'] = "youtuber";
+				}
+
+				// $youtubeStats = util_youtube_coverage_stats_for_game_alltime($user_currentGame);
+
+				$twitchchannel_coverage = $db->query("SELECT * FROM twitchchannel_coverage WHERE game IN ({$gamesForCompanyStr}) AND removed = 0 ORDER BY utime DESC LIMIT 1;");
+				$num_twitchchannel_coverage = count($twitchchannel_coverage);
+				for($i = 0; $i < $num_twitchchannel_coverage; $i++) {
+					$twitchchannel_coverage[$i]['type'] = "twitchchannel";
+				// 	$twitchchannel_coverage[$i]['thumbnail'] = str_replace("%{width}", "300", $twitchchannel_coverage[$i]['thumbnail']);
+				// 	$twitchchannel_coverage[$i]['thumbnail'] = str_replace("%{height}", "200", $twitchchannel_coverage[$i]['thumbnail']);
+				// 	// iconurl = iconurl.replace("\%{width}", "300");
+				// 	// iconurl = iconurl.replace("\%{height}", "300");
+				}
+
+				$coverage = array_merge($publication_coverage, $youtuber_coverage, $twitchchannel_coverage);
+
+				usort($coverage, "sortByUtime");
+
+				$result = new stdClass();
+				$result->success = true;
+				$result->coverage = [];
+				if (count($coverage) > 0) {
+					$result->coverage = [$coverage[0]];
+				}
+			}
+			else if ($endpoint == "/bot/games") {
+				// Get all companies/games
+				// $stmt = $db->prepare("SELECT id FROM company WHERE discord_enabled = 1;");
+				// $rs = $stmt->query();
+
+				// Get all games for company
+				$stmt = $db->prepare("SELECT company.name as name, company.twitter,
+											 game.id as game_id, game.name as game_name
+										FROM game
+											LEFT JOIN company on game.company = company.id
+										WHERE length(company.discord_webhookId) > 0
+											AND company.removed = 0
+											AND game.removed = 0; ");
+				$stmt->bindValue(":companyid", $company, Database::VARTYPE_INTEGER);
+				$rs = $stmt->query();
+				$companies = array();
+				foreach ($rs as $row) {
+					if (!array_key_exists($row['name'], $companies)) {
+						$companies[$row['name']] = array("name" => $row['name'], "twitter" => $row['twitter'], "games" => array());
+					}
+					//$company = &$companies[$row['name']];
+					//array_push($company['games'], array("id" => $row['game_id'], "name" => $row['game_name']));
+				}
+				$companies = array_values($companies);
+
+				$result = new stdClass();
+				$result->success = true;
+				$result->companies = $companies;
+				// $result->results = $rs;
+
+			}
+		}
+		else if ($endpoint == "/test/test/")
 		{
 			$require_login = false;
 			include_once('init.php');

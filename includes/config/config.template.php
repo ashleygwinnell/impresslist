@@ -11,6 +11,8 @@ $youtube_apiKey = "";
 $twitch_apiKey = "";
 $twitch_apiSecret = "";
 
+$coverageBot_apiKey = "";
+
 $impresslist_emailIMAPHost = "{email_host}";
 $impresslist_emailAddress = "{email_address}";
 $impresslist_emailPassword = "{email_password}";
