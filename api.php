@@ -387,7 +387,7 @@ if (!isset($_GET['endpoint'])) {
 				}
 
 				$youtuber_coverage = $db->query("SELECT * FROM youtuber_coverage WHERE game IN ({$gamesForCompanyStr}) AND removed = 0 ORDER BY utime DESC LIMIT 1;");
-				// $youtuber_coverage_coverage = count($youtuber_coverage);
+				$youtuber_coverage_coverage = count($youtuber_coverage);
 				for($i = 0; $i < $youtuber_coverage_coverage; $i++) {
 					$youtuber_coverage[$i]['type'] = "youtuber";
 				}
