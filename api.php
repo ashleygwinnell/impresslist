@@ -394,15 +394,16 @@ if (!isset($_GET['endpoint'])) {
 
 				// $youtubeStats = util_youtube_coverage_stats_for_game_alltime($user_currentGame);
 
-				$twitchchannel_coverage = $db->query("SELECT * FROM twitchchannel_coverage WHERE game IN ({$gamesForCompanyStr}) AND removed = 0 ORDER BY utime DESC LIMIT 1;");
-				$num_twitchchannel_coverage = count($twitchchannel_coverage);
-				for($i = 0; $i < $num_twitchchannel_coverage; $i++) {
-					$twitchchannel_coverage[$i]['type'] = "twitchchannel";
+				$twitchchannel_coverage = array();
+				//$twitchchannel_coverage = $db->query("SELECT * FROM twitchchannel_coverage WHERE game IN ({$gamesForCompanyStr}) AND removed = 0 ORDER BY utime DESC LIMIT 1;");
+				//$num_twitchchannel_coverage = count($twitchchannel_coverage);
+				//for($i = 0; $i < $num_twitchchannel_coverage; $i++) {
+				//	$twitchchannel_coverage[$i]['type'] = "twitchchannel";
 				// 	$twitchchannel_coverage[$i]['thumbnail'] = str_replace("%{width}", "300", $twitchchannel_coverage[$i]['thumbnail']);
 				// 	$twitchchannel_coverage[$i]['thumbnail'] = str_replace("%{height}", "200", $twitchchannel_coverage[$i]['thumbnail']);
 				// 	// iconurl = iconurl.replace("\%{width}", "300");
 				// 	// iconurl = iconurl.replace("\%{height}", "300");
-				}
+				//}
 
 				$coverage = array_merge($publication_coverage, $youtuber_coverage, $twitchchannel_coverage);
 
@@ -410,10 +411,7 @@ if (!isset($_GET['endpoint'])) {
 
 				$result = new stdClass();
 				$result->success = true;
-				$result->coverage = [];
-				if (count($coverage) > 0) {
-					$result->coverage = [$coverage[0]];
-				}
+				$result->coverage = array_slice($coverage, 0, 2);
 			}
 			else if ($endpoint == "/bot/games") {
 				// Get all companies/games
