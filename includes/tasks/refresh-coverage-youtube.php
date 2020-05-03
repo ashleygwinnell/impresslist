@@ -43,6 +43,7 @@ function tryAddYoutubeCoverage($companyId, $youtuberId, $youtuberName, $gameId, 
 			$thumbnail = "";
 		}
 
+		$title = remove_emoji_from_string($title);
 		echo "Adding coverage from {$youtuberName}<br/>\n";
 		echo $title . "<br/>\n";
 		echo $url . "<br/>\n";
