@@ -235,6 +235,25 @@ for($i = 0; $i < $num_publications && $i < $max_publications; $i++) {
 								echo "cleaned content was empty... ({$url}) <br/>\n";
 							}
 							else {
+								// HACKS: don't look after common "end of blog" lines like "related articles".
+								$strip_after_common_strings = array(
+									"related articles",
+									"more from author",
+									"recent mmo crowdfunding news"
+								);
+								$strip_from_potentials = array();
+								for ($stripindex = 0; $stripindex < count($strip_after_common_strings); $stripindex++) {
+									$potential_strip_index = strpos($articlecontents_lc, $strip_after_common_strings[$stripindex]);
+									if ($potential_strip_index > 0) {
+										$strip_from_potentials[] = $potential_strip_index;
+									}
+								}
+								if (count($strip_from_potentials) > 0) {
+									$articlecontents_lc = substr($articlecontents_lc, 0, min($strip_from_potentials));
+								}
+
+
+
 								foreach ($games as $game) {
 									$contains = util_muddyCoverageContains($articlecontents_lc, $game['name'], $game['keywords']);
 									$containsBlackwords = util_containsKeywords($articlecontents_lc, $game['blackwords']);

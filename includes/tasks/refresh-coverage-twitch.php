@@ -160,11 +160,8 @@ for($i = 0; $i < count($streamers); $i++) {
 			}
 
 			foreach ($games as $game) {
-				if (strpos(strtolower($item['title']), strtolower($game['name'])) !== FALSE ||
-						strpos(strtolower($item['description']), strtolower($game['name'])) !== FALSE ||
-						util_containsKeywords($item['title'], $game['keywords']) ||
-						util_containsKeywords($item['description'], $game['keywords']))
-					{
+				if (util_is_game_coverage_match($game, $item['title'], $item['description']))
+				{
 					tryAddTwitchCoverage($game['company'], $streamer['id'], $item['user_id'], $item['user_name'], $item['id'], null, $game['id'], $item['url'], $item['title'], $item['description'], $item['thumbnail_url'], strtotime($item['created_at']));
 					// TODO:
 					// $video['view_count'];

@@ -13,6 +13,9 @@ $twitch_apiSecret = "";
 
 $coverageBot_apiKey = "";
 
+$discord_adminWebhookId = "";
+$discord_adminWebhookToken = "";
+
 $impresslist_emailIMAPHost = "{email_host}";
 $impresslist_emailAddress = "{email_address}";
 $impresslist_emailPassword = "{email_password}";

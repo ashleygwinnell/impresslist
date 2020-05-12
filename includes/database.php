@@ -354,6 +354,9 @@
 
 		$sql = "DROP TABLE youtuber_coverage;";
 		$db->exec($sql);
+
+		$sql = "DROP TABLE youtuber_coverage_potential;";
+		$db->exec($sql);
 	}
 
 	// Keep these in alphabetical order please.
@@ -392,7 +395,10 @@
 					`email` varchar(255) NOT NULL,
 					`twitter` varchar(30) NOT NULL,
 					`facebook` varchar(30) NOT NULL,
+					`website` varchar(128) NOT NULL,
 					`discord_enabled` {$tinyint} NOT NULL DEFAULT 0,
+					`discord_serverId` varchar(64) NOT NULL,
+					`discord_serverUrl` TEXT NOT NULL,
 					`discord_webhookId` varchar(255) NOT NULL,
 					`discord_webhookToken` varchar(255) NOT NULL,
 					`slack_enabled` {$tinyint} NOT NULL DEFAULT 0,
@@ -474,7 +480,9 @@
 					keywords TEXT NOT NULL,
 					blackwords TEXT NOT NULL,
 					twitchId INTEGER DEFAULT {$defaultNull},
-					twitchLastScraped INTEGER DEFAULT {$defaultNull}
+					twitchLastScraped INTEGER DEFAULT {$defaultNull},
+					coverageTrackPotentials INTEGER NOT NULL DEFAULT 1,
+					removed INTEGER NOT NULL DEFAULT 0
 				) {$sqlEngineAndCharset} ;";
 		$db->exec($sql);
 
@@ -748,6 +756,23 @@
 					utime INTEGER NOT NULL DEFAULT 0,
 					lastscrapedon INTEGER NOT NULL DEFAULT 0,
 					thanked INTEGER NOT NULL DEFAULT 0,
+					removed INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		// Youtuber coverage (potential).
+		$sql = "CREATE TABLE IF NOT EXISTS youtuber_coverage_potential (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					game INTEGER DEFAULT {$defaultNull},
+					watchedgame INTEGER DEFAULT {$defaultNull},
+					coverage INTEGER DEFAULT {$defaultNull},
+					videoId VARCHAR(32) NOT NULL,
+					url VARCHAR(255) NOT NULL,
+					title TEXT NOT NULL,
+					thumbnail TEXT NOT NULL,
+					channelId TEXT NOT NULL,
+					channelTitle TEXT NOT NULL,
+					utime INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0
 				) {$sqlEngineAndCharset} ;";
 		$db->exec($sql);

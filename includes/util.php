@@ -767,8 +767,8 @@ function url_get_contents($url) {
 	curl_setopt ($ch, CURLOPT_RETURNTRANSFER, true);
 	$contents = curl_exec($ch);
 	if (curl_errno($ch)) {
-		echo curl_error($ch);
-		echo "\n<br />";
+		//echo curl_error($ch);
+		//echo "\n<br />";
 		$contents = '';
 	} else {
 		curl_close($ch);
@@ -1004,12 +1004,30 @@ function youtube_getUploads($channel) {
 	$content = json_decode($text, JSON_ASSOC);
 	return $content;
 }
+function youtube_isValidId($id) {
+    return preg_match('/^[a-zA-Z0-9_-]{11}$/', $id) > 0;
+}
 
 function util_isLocalhost() {
 	return $_SERVER['HTTP_HOST'] == "localhost";
 }
 
-function util_youtube_coverage_stats_for_game_alltime($gameId) {
+function util_youtube_coverage_stats_for_game_empty() {
+	return array(
+		"videoCount" => 0,
+		"viewCount" => 0,
+		"likeCount" => 0,
+		"dislikeCount" => 0,
+		"favoriteCount" => 0,
+		"commentCount" => 0
+	);
+}
+function util_youtube_coverage_stats_for_game_duration($gameId, $durationSeconds = -1) {
+	$durationStr = "";
+	if ($durationSeconds != -1) {
+		$durationStr = " AND utime > UNIX_TIMESTAMP() - " . $durationSeconds . " ";
+	}
+
 	global $db;
 	$youtubeStats = $db->query("SELECT COUNT(id) as videoCount,
 										SUM(viewCount) as viewCount,
@@ -1019,9 +1037,13 @@ function util_youtube_coverage_stats_for_game_alltime($gameId) {
 										SUM(commentCount) as commentCount
 									FROM youtuber_coverage
 									WHERE game = {$gameId}
+									" . $durationStr . "
 									AND removed = 0
 									ORDER BY utime DESC;")[0];
 	return $youtubeStats;
+}
+function util_youtube_coverage_stats_for_game_alltime($gameId) {
+	return util_youtube_coverage_stats_for_game_duration($gameId, -1);
 }
 
 function youtube_v3_search($terms, $order = "date", $sinceTimestamp = 0) {
@@ -1131,6 +1153,65 @@ function youtube_v3_getVideoStatistics($videoIds = array()) {
 	}
 
 	return $results;
+}
+function youtube_v3_getSummaryFromVideoId($videoId) {
+	global $youtube_apiKey;
+	$url = "https://www.googleapis.com/youtube/v3/videos?id=" . $videoId . "&part=snippet&key=" . $youtube_apiKey;
+	$text = url_get_contents($url);
+	if (substr($text, 0, 1) != "{") {
+		return 0;
+	}
+	$content = json_decode($text, JSON_ASSOC);
+	return array(
+		"id"   => $content['items'][0]['id']['videoId'],
+		"url"  => "https://www.youtube.com/watch?v=".$content['items'][0]['id']['videoId'],
+		"title"   => $content['items'][0]['snippet']['title'],
+		"thumbnail" => $content['items'][0]['snippet']['thumbnails']['standard']['url'],
+		"description"  => $content['items'][0]['snippet']['description'],
+		"published_on" => strtotime($content['items'][0]['snippet']['publishedAt']),
+		"channel_id"   => $content['items'][0]['snippet']['channelId'],
+		"channel_title" => $content['items'][0]['snippet']['channelTitle']
+	);
+}
+
+function youtuber_coverage_potential_exists($url) {
+	global $db;
+	$stmt = $db->prepare("SELECT * FROM youtuber_coverage_potential WHERE url = :url LIMIT 1;");
+	$stmt->bindValue(":url", $url, Database::VARTYPE_STRING);
+	$rs = $stmt->query();
+	if (count($rs) == 1) {
+		return true;
+	}
+	return false;
+}
+function youtuber_coverage_potential_add($gameId, $summary) {
+	global $db;
+
+	$stmt = $db->prepare("INSERT INTO youtuber_coverage_potential (id,   game, 	watchedgame, coverage, 	videoId,  url, 		title, 	thumbnail,  channelId, 	channelTitle,  utime, 	removed)
+														   VALUES (NULL, :game, NULL, 		 NULL, 		:videoId, :url, 	:title, :thumbnail, :channelId, :channelTitle, :utime, 	0 ); ");
+
+	$stmt->bindValue(":game", $gameId, Database::VARTYPE_INTEGER);
+	$stmt->bindValue(":videoId", $summary['id'], Database::VARTYPE_STRING);
+	$stmt->bindValue(":url", $summary['url'], Database::VARTYPE_STRING);
+	$stmt->bindValue(":title", $summary['title'], Database::VARTYPE_STRING);
+	$stmt->bindValue(":thumbnail", $summary['thumbnail'], Database::VARTYPE_STRING);
+	$stmt->bindValue(":channelId", $summary['channel_id'], Database::VARTYPE_STRING);
+	$stmt->bindValue(":channelTitle", $summary['channel_title'], Database::VARTYPE_STRING);
+	$stmt->bindValue(":utime", $summary['published_on'], Database::VARTYPE_INTEGER);
+	$stmt->execute();
+
+	return $db->lastInsertRowID();
+}
+
+
+function util_is_game_coverage_match($gameObj, $title, $description) {
+	if (strpos(strtolower($title), strtolower($gameObj['name'])) !== FALSE ||
+		strpos(strtolower($description), strtolower($gameObj['name'])) !== FALSE ||
+		util_containsKeywords($title, $gameObj['keywords']) ||
+		util_containsKeywords($description, $gameObj['keywords'])) {
+		return true;
+	}
+	return false;
 }
 
 /*function user_imap_email($userObject, $to, $subject, $message, $headers ) {
@@ -1310,6 +1391,14 @@ function discord_coverageAlert($companyId, $fromName, $coverageTitle, $url) {
 	);
 	return discord_webhook($company['discord_webhookId'], $company['discord_webhookToken'], $data, true);
 }
+function discord_adminMessage($message) {
+	global $discord_adminWebhookId;
+	global $discord_adminWebhookToken;
+	$data = array(
+		"content" => "**Admin Message**: {$message}"
+	);
+	return discord_webhook($discord_adminWebhookId, $discord_adminWebhookToken, $data);
+}
 
 function slack_incomingWebhook($slack_apiUrl, $data) {
 
@@ -1477,7 +1566,7 @@ function fixtags($tagsString) {
 }
 const DEFAULT_TAGS = "todo";
 const DEFAULT_LANG = "en";
-const DEFAULT_COUNTRY = "us";
+const DEFAULT_COUNTRY = "";
 
 function listlanguages() {
 	$c = array(

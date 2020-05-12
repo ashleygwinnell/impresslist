@@ -16,6 +16,7 @@ if ($require_config) {
 	include_once("includes/config/config.php");
 }
 include_once("includes/util.php");
+include_once("includes/coverage.php");
 include_once("includes/database.php");
 
 // Internal config vars

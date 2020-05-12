@@ -324,8 +324,17 @@ if (!isset($_GET['endpoint'])) {
 		"/chat/send/",
 
 		// Coverage Bot API
-		"/bot/mostrecent",
+		"/bot/latest",
 		"/bot/games",
+		"/bot/random",
+		"/bot/search",
+		"/bot/stats",
+		"/bot/submit",
+		//"/bot/report",
+		"/bot/approve",
+		"/bot/reject",
+		"/bot/potentials",
+
 
 		// Test...
 		"/test/test/",
@@ -350,33 +359,37 @@ if (!isset($_GET['endpoint'])) {
 				die();
 			}
 
-
-
-			$FOH_SERVER_ID = "303545432724996106";
+			// Make sure the server id that we're looking at is correct.
 			$server = $data['server'];
-			if ($server != $FOH_SERVER_ID) {
-				$result = new stdClass();
-				$result->success = false;
-				$result->message = "Invalid server id";
-				api_result($result);
+			$stmt = $db->prepare("SELECT id, name, discord_enabled, discord_serverUrl from company WHERE discord_serverId = :serverId AND removed = 0 LIMIT 1;");
+			$stmt->bindValue(":serverId", $server, Database::VARTYPE_INTEGER);
+			$rs = $stmt->query();
+			if (count($rs) == 0) {
+				api_result(api_error("Invalid server id"));
 				die();
 			}
+			$company_result = $rs[0];
+			$company = $company_result['id'];
+			$company_name = $company_result['name'];
+			$company_discordServerUrl = $company_result['discord_serverUrl'];
 
-			if ($endpoint == "/bot/mostrecent") {
-				$company = 1;
 
-				// Get all games for company
-				$stmt = $db->prepare("SELECT game.id, game.name, company.id as company_id FROM game LEFT JOIN company on game.company = company.id WHERE company.id = :companyid; ");
-				$stmt->bindValue(":companyid", $company, Database::VARTYPE_INTEGER);
-				$rs = $stmt->query();
-				$gamesForCompany = array();
-				foreach ($rs as $row) {
-					$gamesForCompany[] = $row['id'];
-				}
-				$gamesForCompanyStr = implode(",", $gamesForCompany);
+			// Get all games for company
+			$stmt = $db->prepare("SELECT game.id, game.name, company.id as company_id FROM game LEFT JOIN company on game.company = company.id WHERE company.id = :companyid AND game.removed = 0; ");
+			$stmt->bindValue(":companyid", $company, Database::VARTYPE_INTEGER);
+			$rs = $stmt->query();
+			$gamesForCompany = array();
+			$gamesIdsForCompany = array();
+			foreach ($rs as $row) {
+				$gamesForCompany[] = $row;
+				$gamesIdsForCompany[] = $row['id'];
+			}
+			$gamesIdsForCompanyStr = implode(",", $gamesIdsForCompany);
+
+			if ($endpoint == "/bot/latest") {
 
 				// Get all pubication coverage for games.
-				$publication_coverage = $db->query("SELECT * FROM publication_coverage WHERE game IN ({$gamesForCompanyStr}) AND removed = 0 ORDER BY utime DESC LIMIT 1;");
+				$publication_coverage = $db->query("SELECT * FROM publication_coverage WHERE game IN ({$gamesIdsForCompanyStr}) AND removed = 0 ORDER BY utime DESC LIMIT 1;");
 				$num_publication_coverage = count($publication_coverage);
 				for($i = 0; $i < $num_publication_coverage; $i++) {
 				// 	//$publication_coverage[$i]['title'] = utf8_encode($publication_coverage[$i]['title']);
@@ -386,7 +399,7 @@ if (!isset($_GET['endpoint'])) {
 					$publication_coverage[$i]['type'] = "publication";
 				}
 
-				$youtuber_coverage = $db->query("SELECT * FROM youtuber_coverage WHERE game IN ({$gamesForCompanyStr}) AND removed = 0 ORDER BY utime DESC LIMIT 1;");
+				$youtuber_coverage = $db->query("SELECT * FROM youtuber_coverage WHERE game IN ({$gamesIdsForCompanyStr}) AND removed = 0 ORDER BY utime DESC LIMIT 1;");
 				$youtuber_coverage_coverage = count($youtuber_coverage);
 				for($i = 0; $i < $youtuber_coverage_coverage; $i++) {
 					$youtuber_coverage[$i]['type'] = "youtuber";
@@ -395,7 +408,7 @@ if (!isset($_GET['endpoint'])) {
 				// $youtubeStats = util_youtube_coverage_stats_for_game_alltime($user_currentGame);
 
 				$twitchchannel_coverage = array();
-				//$twitchchannel_coverage = $db->query("SELECT * FROM twitchchannel_coverage WHERE game IN ({$gamesForCompanyStr}) AND removed = 0 ORDER BY utime DESC LIMIT 1;");
+				//$twitchchannel_coverage = $db->query("SELECT * FROM twitchchannel_coverage WHERE game IN ({$gamesIdsForCompanyStr}) AND removed = 0 ORDER BY utime DESC LIMIT 1;");
 				//$num_twitchchannel_coverage = count($twitchchannel_coverage);
 				//for($i = 0; $i < $num_twitchchannel_coverage; $i++) {
 				//	$twitchchannel_coverage[$i]['type'] = "twitchchannel";
@@ -405,21 +418,44 @@ if (!isset($_GET['endpoint'])) {
 				// 	// iconurl = iconurl.replace("\%{height}", "300");
 				//}
 
-				$coverage = array_merge($publication_coverage, $youtuber_coverage, $twitchchannel_coverage);
+				$coverage = array_merge($youtuber_coverage, $publication_coverage, $twitchchannel_coverage);
 
 				usort($coverage, "sortByUtime");
 
 				$result = new stdClass();
 				$result->success = true;
-				$result->coverage = array_slice($coverage, 0, 2);
+				$result->coverage = array_slice($coverage, 0, 1);
+			}
+			else if ($endpoint == "/bot/random") {
+
+				// Get all pubication coverage for games.
+				$mapPById = function($item) { return array("id" => $item['id'], "type" => "publication"); };
+				$mapYTById = function($item) { return array("id" => $item['id'], "type" => "youtuber"); };
+				$publication_coverage = $db->query("SELECT id FROM publication_coverage WHERE game IN ({$gamesIdsForCompanyStr}) AND removed = 0 ORDER BY utime DESC;");
+				$publication_coverage_ids = array_map($mapPById, $publication_coverage);
+
+				$youtuber_coverage = $db->query("SELECT id FROM youtuber_coverage WHERE game IN ({$gamesIdsForCompanyStr}) AND removed = 0 ORDER BY utime DESC;");
+				$youtuber_coverage_ids = array_map($mapYTById, $youtuber_coverage);
+
+				$coverage_ids = array_merge($publication_coverage_ids, $youtuber_coverage_ids);
+				$picked = array_rand($coverage_ids);
+				$item = $coverage_ids[$picked];
+
+				$coverages = $db->query("SELECT * FROM " . $item['type'] . "_coverage WHERE id = " . $item['id'] . " AND removed = 0 LIMIT 1;");
+				if (count($coverages) == 1) {
+					$coverages[0]['type'] = $item['type'];
+				}
+
+				$result = new stdClass();
+				$result->success = true;
+				$result->coverage = $coverages;
 			}
 			else if ($endpoint == "/bot/games") {
-				// Get all companies/games
-				// $stmt = $db->prepare("SELECT id FROM company WHERE discord_enabled = 1;");
-				// $rs = $stmt->query();
 
 				// Get all games for company
-				$stmt = $db->prepare("SELECT company.name as name, company.twitter,
+				$stmt = $db->prepare("SELECT company.name as name,
+											 company.discord_serverUrl,
+											 company.facebook, company.twitter, company.website,
 											 game.id as game_id, game.name as game_name
 										FROM game
 											LEFT JOIN company on game.company = company.id
@@ -431,7 +467,14 @@ if (!isset($_GET['endpoint'])) {
 				$companies = array();
 				foreach ($rs as $row) {
 					if (!array_key_exists($row['name'], $companies)) {
-						$companies[$row['name']] = array("name" => $row['name'], "twitter" => $row['twitter'], "games" => array());
+						$companies[$row['name']] = array(
+							"name" => $row['name'],
+							"twitter" => $row['twitter'],
+							"facebook" => $row['facebook'],
+							"website" => $row['website'],
+							"discord" => $row['discord_serverUrl'],
+							"games" => array()
+						);
 					}
 					//$company = &$companies[$row['name']];
 					//array_push($company['games'], array("id" => $row['game_id'], "name" => $row['game_name']));
@@ -444,6 +487,346 @@ if (!isset($_GET['endpoint'])) {
 				// $result->results = $rs;
 
 			}
+			else if ($endpoint == "/bot/search") {
+				$q = $data['q'];
+				$limit = 1;
+				if (isset($data['limit']) && intval($data['limit']) > 1) {
+					$limit = intval($data['limit']);
+				}
+				if ($limit > 5) {
+					$limit = 5;
+				}
+				$offset = 0;
+				if (isset($data['page']) && intval($data['page']) > 1) {
+					$offset = (intval($data['page'])-1) * $limit;
+				}
+
+				// Youtubers
+				$stmt = $db->prepare("SELECT
+											youtuber_coverage.title,
+											youtuber_coverage.url,
+											youtuber.name as youtuber_name
+										FROM youtuber_coverage
+											LEFT OUTER JOIN youtuber ON youtuber_coverage.youtuber = youtuber.id
+										WHERE CONCAT_WS('', title, ',', url, ',', youtuber.name) LIKE CONCAT('%',:q,'%')
+										AND game in ({$gamesIdsForCompanyStr})
+										AND youtuber_coverage.removed = 0
+										AND youtuber.removed = 0
+										ORDER BY utime DESC
+										LIMIT {$offset}, {$limit};");
+				// ORDER BY RAND() DESC
+				$stmt->bindValue(":q", $q, Database::VARTYPE_STRING);
+				$youtuberCoverage = $stmt->query();
+				for($i = 0; $i < count($youtuberCoverage); $i++) {
+					$youtuberCoverage[$i]['type'] = "youtuber";
+				}
+
+				// Publications
+				$stmt = $db->prepare("SELECT
+											publication_coverage.title,
+											publication_coverage.url,
+											publication.name as publication_name
+										FROM publication_coverage
+											LEFT OUTER JOIN publication ON publication_coverage.publication = publication.id
+										WHERE CONCAT_WS('', title, ',', publication_coverage.url, ',', publication.name) LIKE CONCAT('%',:q,'%')
+										AND game in ({$gamesIdsForCompanyStr})
+										AND publication.removed = 0
+										AND publication_coverage.removed = 0
+										ORDER BY utime DESC
+										LIMIT {$offset}, {$limit};");
+				// ORDER BY RAND() DESC
+				$stmt->bindValue(":q", $q, Database::VARTYPE_STRING);
+				$publicationCoverage = $stmt->query();
+				for($i = 0; $i < count($publicationCoverage); $i++) {
+					$publicationCoverage[$i]['type'] = "publication";
+				}
+
+				$coverage = array_merge($youtuberCoverage, $publicationCoverage);
+				$coverage = array_slice($coverage, 0, $limit);
+
+				$result = new stdClass();
+				$result->success = true;
+				$result->coverage = $coverage;
+
+			}
+			else if ($endpoint == "/bot/stats") {
+				$duration = $data['duration'];
+				$useGame = -1;
+				if (isset($data['game'])) {
+					$useGame = $data['game'];
+					if (!in_array($useGame, $gamesIdsForCompany)) {
+						api_result(api_error("Invalid game id"));
+						die();
+					}
+				}
+
+				$useDurationTime = 0;
+				if ($duration == "all") {
+					$useDurationTime = -1;
+				}
+				else if ($duration == "today") {
+					$useDurationTime = 86400;
+				}
+				else if ($duration == "week") {
+					$useDurationTime = 86400 * 7;
+				}
+				else if ($duration == "month") {
+					$useDurationTime = 86400 * 30;
+				}
+				else if ($duration == "year") {
+					$useDurationTime = 86400 * 365;
+				}
+				else {
+					api_result(api_error("Invalid duration"));
+					die();
+				}
+
+				$youtubeStatsTotal = util_youtube_coverage_stats_for_game_empty();
+
+				$useGameIds = $gamesIdsForCompanyStr;
+				if ($useGame == -1) { // all games for dev.
+					foreach ($gamesIdsForCompany as $gameId) {
+						$youtubeStats = util_youtube_coverage_stats_for_game_duration($gameId, $useDurationTime);
+						$statsKeys = array_keys($youtubeStats);
+						foreach ($statsKeys as $statsKey) {
+							$youtubeStatsTotal[$statsKey] += $youtubeStats[$statsKey];
+						}
+					}
+				}
+				else {
+					$useGameIds = $useGame;
+					$youtubeStatsTotal = util_youtube_coverage_stats_for_game_duration($useGame, $useDurationTime);
+				}
+				$publicationsTotal = $db->query("SELECT COUNT(publication_coverage.id) as total_coverage
+													FROM publication_coverage
+														LEFT OUTER JOIN game ON publication_coverage.game = game.id
+													WHERE game.id IN ({$useGameIds}) AND publication_coverage.removed = 0 AND game.removed = 0;")[0]['total_coverage'];
+
+				$result = new stdClass();
+				$result->success = true;
+				$result->stats = array(
+					"youtube" => $youtubeStatsTotal,
+					"articles" => array("count" => $publicationsTotal)
+				);
+			}
+			else if ($endpoint == "/bot/submit") {
+				$url = $data['url'];
+				$from = $data['from'];
+
+				// All Games
+				$games = $db->query("SELECT * FROM game WHERE removed = 0;");
+				$num_games = count($games);
+
+				if (filter_var($url, FILTER_VALIDATE_URL) === FALSE) {
+					api_result(api_error("Invalid url"));
+					die();
+				}
+				$autoSubmitted = false;
+				preg_match("/^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|youtube\.com\/(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user)\/))([^\?&\"'>]+)/", $url, $matches);
+
+				$fixedUrl = $url;
+
+				// If it's a youtube url, do a bunch of other stuff.
+				if (count($matches) == 2) {
+					$youtubeId = $matches[1];
+					if (youtube_isValidId($youtubeId)) {
+						$fixedUrl = "https://www.youtube.com/watch?v=".$youtubeId;
+						if (youtuber_coverage_potential_exists($fixedUrl)) { // fail early.
+							$result = new stdClass();
+							$result->success = false;
+							$result->message = "Submission already exists.";
+							api_result($result);
+							die();
+						}
+
+						$summary = youtube_v3_getSummaryFromVideoId($youtubeId);
+						if (!is_array($summary)) {
+							// In normal circumstances we'd fail and show an error,
+							// however we might have reached limit of requests per day...
+							// ... so only send
+						}
+						else {
+							// It's a valid video.
+							// But does it match any of our games?
+							// If it does: find the youtuber in the system, or add a new one?
+							foreach ($games as $game) {
+								if (util_is_game_coverage_match($game, $summary['title'], $summary['description'])) {
+
+									// Is the channel id already in the youtubers list? if so, add the coverage straight away!
+									$youtuber_exists = $db->query("SELECT * FROM youtuber WHERE youtubeId = '" . $summary['channel_id'] . "' AND removed = 0 LIMIT 1;");
+									if (is_array($youtuber_exists) && count($youtuber_exists) == 1) {
+
+										$youtuber_coverage_id = tryAddYoutubeCoverage(
+											$game['company'],
+											$youtuber_exists[0]['id'],
+											$youtuber_exists[0]['name'],
+											$game['id'],
+											0,
+											$summary['title'],
+											$fixedUrl,
+											$summary['thumbnail'],
+											$summary['published_on'],
+											false
+										);
+									}
+									else {
+										$potential_id = youtuber_coverage_potential_add($game['id'], $summary);
+										$autoSubmitted = true;
+										// Don't break, if it's a compilation video we wannt to trigger it for all games!
+										// break;
+									}
+								}
+							}
+						}
+					}
+				}
+				else {
+					// Could we check the url domain nname and see if that's in the publications list?
+					// Not sure, but let's just log it on admin webhook anyway.
+				}
+
+				@discord_adminMessage("\n" . (($autoSubmitted)?"AUTO-ADDED: true\n":"") . "URL: " . $fixedUrl. "\nCoverage Submission on [**".$company_name."**](".$company_discordServerUrl.") from _".$from."_.");
+
+				$result = new stdClass();
+				$result->success = true;
+			}
+			else if ($endpoint == "/bot/report") {
+				$result = new stdClass();
+				$result->success = false;
+			}
+			else if ($endpoint == "/bot/approve" || $endpoint == "/bot/reject") {
+				if (!isset($data['id'])){
+					api_result(api_error("invalid id"));
+					die();
+				}
+				$potentialId = $data['id'];
+
+				$stmt = $db->prepare("SELECT * FROM youtuber_coverage_potential WHERE id = :id AND game IN ({$gamesIdsForCompanyStr}) AND removed = 0 LIMIT 1;");
+				$stmt->bindValue(":id", $potentialId, Database::VARTYPE_INTEGER);
+				$results = $stmt->query();
+				if (count($results) !== 1) {
+					api_result(api_error("invalid id"));
+					die();
+				}
+				//print_r($results);
+				$potential = $results[0];
+				$youtuberChannelId = $potential['channelId'];
+
+				// Move to real coverage!
+				if ($endpoint == "/bot/approve") {
+
+					$game = db_singlegame($db, $potential['game']);
+
+					$results = $db->query("SELECT * FROM youtuber WHERE youtubeId = '" . $youtuberChannelId . "' AND removed = 0 LIMIT 1;");
+					if (count($results) == 0) {
+
+						// get the account info
+						$youtuberInfo = youtube_v3_getInformation($youtuberChannelId);
+						if ($youtuberInfo == 0) {
+							$result = api_error("Youtube channel '" . $youtuberChannelId . "' not found.");
+							api_result($result);
+							die();
+						}
+						//print_r($youtuberInfo);
+
+						$ytIconUrl = $youtuberInfo['iconurl'];
+						if (strlen(trim($ytIconUrl)) == 0) {
+							$ytIconUrl = "images/favicon.png";
+						}
+
+						// We have to add the YouTuber! AGH!
+						$audience = 1;
+						$stmt = $db->prepare(" INSERT INTO youtuber (id, 	name,  description,  audience,  youtubeId,  youtubeUploadsPlaylistId, name_override, 	 email, channel,  iconurl,  subscribers,  views, videos, 	priorities,     notes, 	country, 	lang,  tags,  twitter,   twitter_followers, 	twitter_updatedon, lastpostedon, removed)
+															VALUES  (NULL,  :name, :description, :audience, :youtubeId, '', 						'', 	 		 '',	 :channel, :iconurl, :subscribers, :views, :videos, '', 		 	:notes, :country, 	:lang, :tags, '',  		 0,    					0,	 			   0, 		  	 0);	");
+						$stmt->bindValue(":name", $potential['channelTitle'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":description", $youtuberInfo['description'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":audience", $audience, Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":youtubeId", $youtuberChannelId, Database::VARTYPE_STRING);
+						$stmt->bindValue(":channel", $youtuberChannelId, Database::VARTYPE_STRING);
+						$stmt->bindValue(":iconurl", $ytIconUrl, Database::VARTYPE_STRING);
+						$stmt->bindValue(":subscribers", "" . $youtuberInfo['subscribers'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":views", "" . $youtuberInfo['views'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":videos", "" . $youtuberInfo['videos'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":notes", "Added by Coverage Bot for game: " . $game['name'], Database::VARTYPE_STRING);
+						$stmt->bindValue(":country", DEFAULT_COUNTRY, Database::VARTYPE_STRING);
+						$stmt->bindValue(":lang", DEFAULT_LANG, Database::VARTYPE_STRING);
+						$stmt->bindValue(":tags", DEFAULT_TAGS, Database::VARTYPE_STRING);
+
+						$res = $stmt->execute();
+						$youtuber_id = $db->lastInsertRowID();
+						if (!$res) {
+							api_result(api_error("mysqli error" . $stmt->error));
+							die();
+						}
+						$youtuber = db_singleyoutubechannel($db, $youtuber_id);
+
+					}
+					else {
+						$youtuber = $results[0];
+					}
+
+					if ($youtuber) {
+
+						$youtuber_coverage_id = tryAddYoutubeCoverage(
+							$game['company'],
+							$youtuber['id'],
+							$youtuber['name'],
+							$game['id'],
+							0,
+							$potential['title'],
+							$potential['url'],
+							$potential['thumbnail'],
+							$potential['utime'],
+							false
+						);
+
+						$stmt = $db->prepare("UPDATE youtuber_coverage_potential
+												SET
+													coverage = :coverage_id,
+													removed = 1
+												WHERE id = :id
+												LIMIT 1;
+												");
+						$stmt->bindValue(":id", $potential['id'], Database::VARTYPE_INTEGER);
+						$stmt->bindValue(":coverage_id", $youtuber_coverage_id, Database::VARTYPE_INTEGER);
+						$stmt->execute();
+
+						$result = new stdClass();
+						$result->success = true;
+						api_result($result);
+						die();
+					}
+				}
+				else if ($endpoint == "/bot/reject") {
+					$stmt = $db->prepare("UPDATE youtuber_coverage_potential SET removed = 1 WHERE id = :id LIMIT 1;");
+					$stmt->bindValue(":id", $potential['id'], Database::VARTYPE_INTEGER);
+					$stmt->execute();
+
+					$result = new stdClass();
+					$result->success = true;
+				}
+
+				// youtuber: 45
+				// game: 6
+				// url: https://www.youtube.com/watch?v=SZ_QOXaqDn0
+				// title: Toast Time Review - Android
+				// thumbnail: https://i.ytimg.com/vi/SZ_QOXaqDn0/sddefault.jpg
+				// utime: 1378391007
+				// channel id: UCw2rmzS_291E3LFBeD0W9OQ
+				// channel title: Pixel Freak
+				// INSERT INTO `youtuber_coverage_potential` (`id`, `game`, `watchedgame`, `coverage`, `videoId`, `url`, `title`, `thumbnail`, `channelId`, `channelTitle`, `utime`, `removed`) VALUES (NULL, '6', NULL, NULL, 'SZ_QOXaqDn0', 'https://www.youtube.com/watch?v=SZ_QOXaqDn0', 'Toast Time Review - Android', 'https://i.ytimg.com/vi/SZ_QOXaqDn0/sddefault.jpg', 'UCw2rmzS_291E3LFBeD0W9OQ', 'Pixel Freak', '1378391007', '0');
+
+			}
+			else if ($endpoint == "/bot/potentials") {
+				$potentials = $db->query("SELECT * FROM youtuber_coverage_potential WHERE game IN ({$gamesIdsForCompanyStr}) AND removed = 0;");
+				$result = new stdClass();
+				$result->success = true;
+				for($i = 0; $i < count($potentials); $i++) {
+					$potentials[$i]['type'] = "youtuber";
+				}
+				$result->potentials = $potentials;
+			}
+
 		}
 		else if ($endpoint == "/test/test/")
 		{
@@ -5098,8 +5481,8 @@ if (!isset($_GET['endpoint'])) {
 					$result->message = 'Name and icon must be set.';
 				} else {
 
-					$stmt = $db->prepare(" INSERT INTO game (id, company, name, nameuniq, keywords, blackwords, iconurl, twitchId, twitchLastScraped)
-													VALUES (NULL, :company, :name, :nameuniq, :keywords, :blackwords, :iconurl, 0, 0) ");
+					$stmt = $db->prepare(" INSERT INTO game (id, company, name, nameuniq, keywords, blackwords, iconurl, twitchId, twitchLastScraped, coverageTrackPotentials)
+													VALUES (NULL, :company, :name, :nameuniq, :keywords, :blackwords, :iconurl, 0, 0, 1) ");
 
 					$uniqname = urlformat($data['name']);
 					$stmt->bindValue(":company", 	$user['company'], 	Database::VARTYPE_INTEGER);
@@ -5426,8 +5809,8 @@ if (!isset($_GET['endpoint'])) {
 					if (!$error) {
 
 						$name = "Untitled Game";
-						$stmt = $db->prepare("INSERT INTO game (id,  company, name, nameuniq, keywords, blackwords, iconurl, twitchId, twitchLastScraped)
-														VALUES (NULL, :company, :name, :nameuniq, '', '', '', 0, 0);");
+						$stmt = $db->prepare("INSERT INTO game (id,  company, name, nameuniq, keywords, blackwords, iconurl, twitchId, twitchLastScraped, coverageTrackPotentials)
+														VALUES (NULL, :company, :name, :nameuniq, '', '', '', 0, 0, 1);");
 						$stmt->bindValue(":company", 			$data['company'], 	Database::VARTYPE_INTEGER);
 						$stmt->bindValue(":name", 				$name, 				Database::VARTYPE_STRING);
 						$stmt->bindValue(":nameuniq", 			urlformat($name),	Database::VARTYPE_STRING);
