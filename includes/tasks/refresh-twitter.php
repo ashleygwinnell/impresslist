@@ -12,7 +12,7 @@ $require_config = true;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // People
-$people = $db->query("SELECT * FROM person WHERE twitter_updatedon < " . (time()-3600) . " AND removed = 0;");
+$people = $db->query("SELECT * FROM person WHERE twitter_updatedon < " . (time()-3600) . " AND removed = 0 LIMIT 100;");
 $num_people = count($people);
 
 for($i = 0; $i < count($people); $i++) {
@@ -33,7 +33,7 @@ for($i = 0; $i < count($people); $i++) {
 }
 
 // Publications
-$publications = $db->query("SELECT * FROM publication WHERE twitter_updatedon < " . (time()-3600) . " AND removed = 0;");
+$publications = $db->query("SELECT * FROM publication WHERE twitter_updatedon < " . (time()-3600) . " AND removed = 0 LIMIT 100;");
 $num_publications = count($publications);
 
 for($i = 0; $i < count($publications); $i++) {

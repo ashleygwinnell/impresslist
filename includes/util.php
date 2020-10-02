@@ -228,6 +228,7 @@ function util_containsKeywordsArray($haystack, $keywords, $verbose = false) {
 		//$keyword = trim($keywords[$i]);
 		$keyword = $keywords[$i];
 		if ($verbose) { echo $keyword . "<br/>"; }
+		if (strlen($keyword) == 0) { continue; }
 
 		$pos = strpos($haystack, $keyword);
 		if ($pos !== FALSE) {
@@ -767,7 +768,7 @@ function url_get_contents($url) {
 	curl_setopt ($ch, CURLOPT_RETURNTRANSFER, true);
 	$contents = curl_exec($ch);
 	if (curl_errno($ch)) {
-		//echo curl_error($ch);
+		// echo curl_error($ch);
 		//echo "\n<br />";
 		$contents = '';
 	} else {
@@ -785,9 +786,47 @@ function url_get_contents($url) {
 // ----------------------------------------------------------------------------
 // Twitch
 // ----------------------------------------------------------------------------
+function twitch_getAccessToken() {
+	global $twitch_apiKey;
+	global $twitch_apiSecret;
+
+	$url = "https://id.twitch.tv/oauth2/token";
+	$params = array();
+    $params['client_id'] = $twitch_apiKey;
+    $params['client_secret'] = $twitch_apiSecret;
+   	$params['grant_type'] = "client_credentials";
+    $params['scope'] = "";
+
+    $ch = curl_init();
+	curl_setopt ($ch, CURLOPT_URL, $url);
+	curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, 5);
+	curl_setopt ($ch, CURLOPT_TIMEOUT_MS, 5000);
+	curl_setopt ($ch, CURLOPT_FAILONERROR, true);
+	curl_setopt ($ch, CURLOPT_VERBOSE, true);
+	curl_setopt ($ch, CURLOPT_FOLLOWLOCATION, true);
+	curl_setopt ($ch, CURLOPT_MAXREDIRS, 100);
+	curl_setopt ($ch, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt ($ch, CURLOPT_POSTFIELDS, http_build_query($params));
+
+	$contents = curl_exec($ch);
+	if (curl_errno($ch)) {
+		echo curl_error($ch);
+		echo "\n<br />";
+		$contents = null;
+		return null;
+	}
+	else {
+		$data = json_decode($contents, true);
+		curl_close($ch);
+		return $data;
+	}
+	//{"access_token":"...","expires_in":5506523,"token_type":"bearer"}
+	return $data;
+}
 function twitch_apiCall($url) {
 	global $twitch_apiKey;
 	global $twitch_apiSecret;
+	global $twitch_accessToken;
 	//echo $url;
 
 	$ch = curl_init();
@@ -800,7 +839,8 @@ function twitch_apiCall($url) {
 	curl_setopt ($ch, CURLOPT_MAXREDIRS, 100);
 	curl_setopt ($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-	    'Client-ID: ' . $twitch_apiKey
+	    "Client-ID: " . $twitch_apiKey,
+	    "Authorization: Bearer " . $twitch_accessToken
 	));
 	$contents = curl_exec($ch);
 	if (curl_errno($ch)) {
@@ -815,7 +855,7 @@ function twitch_apiCall($url) {
 		$contents = null;
 		return $contents;
 	}
-	return json_decode($contents, JSON_ASSOC);
+	return json_decode($contents, true);
 }
 
 function twitch_getUsers($userIds, $requestEmails=true) {
@@ -923,10 +963,11 @@ function twitch_getClipsForUser($userId) {
 function db_try_add_twitch_channel($twitchId, $twitchDescription, $twitchBroadcasterType, $twitchProfileImage, $twitchOfflineImage, $twitchUsername, $displayname, $email, $viewCount, $subCount) {
 	global $db;
 
-	$stmt = $db->prepare("INSERT INTO twitchchannel (`id`, `twitchId`, `twitchDescription`, `twitchBroadcasterType`, `twitchProfileImageUrl`, `twitchOfflineImageUrl`, `twitchUsername`,  `name`, `email`, priorities, subscribers, `views`, twitter, twitter_followers, twitter_updatedon, notes, lang, lastpostedon, lastpostedon_updatedon, removed, lastscrapedon)
-											VALUES ( NULL, :twitchId, :twitchDescription, :twitchBroadcasterType, :twitchProfileImage, :twitchOfflineImage, :twitchUsername, :name,  :email, :priorities, :subscribers, 			 :views,  '', 		0, 					0,      		'',  	'', 	0,  		0, 						0, 			0
+	$stmt = $db->prepare("INSERT INTO twitchchannel (`id`, `audience`, `twitchId`, `twitchDescription`, `twitchBroadcasterType`, `twitchProfileImageUrl`, `twitchOfflineImageUrl`, `twitchUsername`,  `name`, `email`, priorities, subscribers, `views`, twitter, twitter_followers, twitter_updatedon, notes, lang, tags, country, lastpostedon, lastpostedon_updatedon, removed, lastscrapedon)
+											VALUES ( NULL, :audience, :twitchId, :twitchDescription, :twitchBroadcasterType, :twitchProfileImage, :twitchOfflineImage, :twitchUsername, :name,  :email, :priorities, :subscribers, 			 :views,  '', 		0, 					0,      		'',  	'', '', '".DEFAULT_COUNTRY."', 	0,  		0, 						0, 			0
 						); ");
 	$stmt->bindValue(":twitchId", $twitchId, Database::VARTYPE_INTEGER);
+	$stmt->bindValue(":audience", 1, Database::VARTYPE_INTEGER);
 	$stmt->bindValue(":twitchDescription", $twitchDescription, Database::VARTYPE_STRING);
 	$stmt->bindValue(":twitchBroadcasterType", $twitchBroadcasterType, Database::VARTYPE_STRING);
 	$stmt->bindValue(":twitchProfileImage", $twitchProfileImage, Database::VARTYPE_STRING);
@@ -966,7 +1007,47 @@ function db_try_add_twitch_channel_from_user_result($user) {
 		$subs
 	);
 	return true;
+}
 
+function twitch_coverage_exists($url) {
+	global $db;
+	$stmt = $db->prepare("SELECT * FROM twitchchannel_coverage WHERE url = :url LIMIT 1;");
+	$stmt->bindValue(":url", $url, Database::VARTYPE_STRING);
+	$rs = $stmt->query();
+	if (count($rs) == 1) {
+		return true;
+	}
+	return false;
+}
+function twitch_coverage_potential_exists($url) {
+	global $db;
+	$stmt = $db->prepare("SELECT * FROM twitchchannel_coverage_potential WHERE url = :url LIMIT 1;");
+	$stmt->bindValue(":url", $url, Database::VARTYPE_STRING);
+	$rs = $stmt->query();
+	if (count($rs) == 1) {
+		return true;
+	}
+	return false;
+}
+function twitch_coverage_potential_add($gameId, $summary) {
+	global $db;
+
+	// START HERE.
+	$stmt = $db->prepare("INSERT INTO twitchchannel_coverage_potential
+							(id,   twitchVideoId, twitchClipId, twitchChannelId, twitchUsername, game, 	videoId,  url, 		title, 	thumbnail,  channelId, 	channelTitle,  utime, 	removed)
+						VALUES (NULL, :game, NULL, 		 NULL, 		:videoId, :url, 	:title, :thumbnail, :channelId, :channelTitle, :utime, 	0 ); ");
+
+	$stmt->bindValue(":game", $gameId, Database::VARTYPE_INTEGER);
+	$stmt->bindValue(":videoId", $summary['id'], Database::VARTYPE_STRING);
+	$stmt->bindValue(":url", $summary['url'], Database::VARTYPE_STRING);
+	$stmt->bindValue(":title", $summary['title'], Database::VARTYPE_STRING);
+	$stmt->bindValue(":thumbnail", $summary['thumbnail'], Database::VARTYPE_STRING);
+	$stmt->bindValue(":channelId", $summary['channel_id'], Database::VARTYPE_STRING);
+	$stmt->bindValue(":channelTitle", $summary['channel_title'], Database::VARTYPE_STRING);
+	$stmt->bindValue(":utime", $summary['published_on'], Database::VARTYPE_INTEGER);
+	$stmt->execute();
+
+	return $db->lastInsertRowID();
 }
 
 
@@ -981,7 +1062,7 @@ function youtube_getInformation($channel) {
 	if (substr($text, 0, 1) != "{") {
 		return 0;
 	}
-	$content = json_decode($text, JSON_ASSOC);
+	$content = json_decode($text, true);
 	$result = array(
 		"name" => $content['entry']['title']['$t'],
 		"description" => strip_tags($content['entry']['content']['$t']),
@@ -1001,7 +1082,7 @@ function youtube_getUploads($channel) {
 	if (substr($text, 0, 1) != "{") {
 		return 0;
 	}
-	$content = json_decode($text, JSON_ASSOC);
+	$content = json_decode($text, true);
 	return $content;
 }
 function youtube_isValidId($id) {
@@ -1060,29 +1141,58 @@ function youtube_v3_search($terms, $order = "date", $sinceTimestamp = 0) {
 	if (substr($text, 0, 1) != "{") {
 		return 0;
 	}
-	$content = json_decode($text, JSON_ASSOC);
+	$content = json_decode($text, true);
 	//print_r($content);
 	return $content;
 
 }
-function youtube_v3_getInformation($channel) {
+function youtube_v3_getInformation($channel, &$error = "") {
 	global $youtube_apiKey;
 	if (strlen($channel) == 0) { return 0; }
 
-	$url = "https://www.googleapis.com/youtube/v3/channels?forUsername=" .$channel . "&key=" . $youtube_apiKey . "&part=contentDetails,snippet,statistics&maxResults=50";
-	$text = url_get_contents($url);
-	if (substr($text, 0, 1) != "{") {
-		return 0;
-	}
-	$content = json_decode($text, JSON_ASSOC);
+	$parts = "contentDetails,snippet,statistics";
 
-	if (count($content['items']) == 0) {
-		$url = "https://www.googleapis.com/youtube/v3/channels?id=" .$channel . "&key=" . $youtube_apiKey . "&part=contentDetails,snippet,statistics&maxResults=50";
-		$text = url_get_contents($url);
-		if (substr($text, 0, 1) != "{") {
+	$url = "https://www.googleapis.com/youtube/v3/channels?forUsername=" . $channel . "&key=" . $youtube_apiKey . "&part=" .$parts . "&maxResults=50";
+	$text = url_get_contents($url);
+
+	//echo "url: " . $url . "<br/>\n";
+	//echo "text: " . $text . "<br/>\n";
+	$got = false;
+	if (substr($text, 0, 1) == "{") {
+		$content = json_decode($text, true);
+		if (isset($content['items'])) {
+			$got = true;
+		}
+	}
+	if (!$got) {
+		//$content = json_decode($text, true);
+			//echo "json not found for username<br/>\n";
+
+		//if (count($content['items']) == 0) {
+			$url = "https://www.googleapis.com/youtube/v3/channels?id=" . $channel . "&key=" . $youtube_apiKey . "&part=" .$parts . "&maxResults=50";
+			$text = url_get_contents($url);
+			//echo "url: " . $url . "<br/>\n";
+			//echo "text: " . $text . "<br/>\n";
+			if (substr($text, 0, 1) != "{") {
+				//echo $url. "<br/>";
+				$error = "invalid json returned from items call: " . $text;
+				return 0;
+			}
+			$content = json_decode($text, true);
+		//}
+		//print_r($content);
+		if (!isset($content['items'])) {
+			$error = "invalid json response - no items: " . $text;
 			return 0;
 		}
-		$content = json_decode($text, JSON_ASSOC);
+		else {
+			$got = true;
+		}
+	}
+	if (!$got) {
+		//print_r($content);
+		$error = "invalid json response from youtube";
+		return 0;
 	}
 
 	$result = array(
@@ -1112,7 +1222,7 @@ function youtube_v3_getUploads($playlist) {
 		return 0;
 	}
 	//$text = utf8_decode($text);
-	$content = json_decode($text, JSON_ASSOC);
+	$content = json_decode($text, true);
 	$results = array();
 	foreach ($content['items'] as $item) {
 		$results[] = array(
@@ -1141,7 +1251,7 @@ function youtube_v3_getVideoStatistics($videoIds = array()) {
 	if (substr($text, 0, 1) != "{") {
 		return 0;
 	}
-	$content = json_decode($text, JSON_ASSOC);
+	$content = json_decode($text, true);
 
 	// if (is_string($videoIds)) {
 	// 	return $content['items'][0]['statistics'];
@@ -1161,7 +1271,7 @@ function youtube_v3_getSummaryFromVideoId($videoId) {
 	if (substr($text, 0, 1) != "{") {
 		return 0;
 	}
-	$content = json_decode($text, JSON_ASSOC);
+	$content = json_decode($text, true);
 	return array(
 		"id"   => $content['items'][0]['id']['videoId'],
 		"url"  => "https://www.youtube.com/watch?v=".$content['items'][0]['id']['videoId'],
@@ -1174,6 +1284,7 @@ function youtube_v3_getSummaryFromVideoId($videoId) {
 	);
 }
 
+
 function youtuber_coverage_potential_exists($url) {
 	global $db;
 	$stmt = $db->prepare("SELECT * FROM youtuber_coverage_potential WHERE url = :url LIMIT 1;");
@@ -1184,13 +1295,14 @@ function youtuber_coverage_potential_exists($url) {
 	}
 	return false;
 }
-function youtuber_coverage_potential_add($gameId, $summary) {
+function youtuber_coverage_potential_add($gameId, $watchedGameId, $summary) {
 	global $db;
 
 	$stmt = $db->prepare("INSERT INTO youtuber_coverage_potential (id,   game, 	watchedgame, coverage, 	videoId,  url, 		title, 	thumbnail,  channelId, 	channelTitle,  utime, 	removed)
-														   VALUES (NULL, :game, NULL, 		 NULL, 		:videoId, :url, 	:title, :thumbnail, :channelId, :channelTitle, :utime, 	0 ); ");
+														   VALUES (NULL, :game, :watchedgame, NULL, 	:videoId, :url, 	:title, :thumbnail, :channelId, :channelTitle, :utime, 	0 ); ");
 
 	$stmt->bindValue(":game", $gameId, Database::VARTYPE_INTEGER);
+	$stmt->bindValue(":watchedgame", $watchedGameId, Database::VARTYPE_INTEGER);
 	$stmt->bindValue(":videoId", $summary['id'], Database::VARTYPE_STRING);
 	$stmt->bindValue(":url", $summary['url'], Database::VARTYPE_STRING);
 	$stmt->bindValue(":title", $summary['title'], Database::VARTYPE_STRING);
@@ -1202,15 +1314,175 @@ function youtuber_coverage_potential_add($gameId, $summary) {
 
 	return $db->lastInsertRowID();
 }
+function youtuber_coverage_add($gameId, $watchedGameId, $summary) {
+	global $db;
 
+	$stmt = $db->prepare("INSERT INTO youtuber_coverage (id, youtuber, person, game, watchedgame, url, title, thumbnail, `utime`, thanked, removed)
+												 VALUES (NULL, :youtuber, NULL, :game, :watchedgame, :url, :title, :thumbnail, :utime, 0, 0 ); ");
+
+	$stmt->bindValue(":youtuber", $summary['youtuber_id'], Database::VARTYPE_INTEGER);
+	$stmt->bindValue(":game", $gameId, Database::VARTYPE_INTEGER);
+	$stmt->bindValue(":watchedgame", $watchedGameId, Database::VARTYPE_INTEGER);
+	$stmt->bindValue(":url", $summary['url'], Database::VARTYPE_STRING);
+	$stmt->bindValue(":title", $summary['title'], Database::VARTYPE_STRING);
+	$stmt->bindValue(":thumbnail", $summary['thumbnail'], Database::VARTYPE_STRING);
+	$stmt->bindValue(":utime", $summary['published_on'], Database::VARTYPE_INTEGER);
+	$res = $stmt->execute();
+
+	$insert_id = $db->lastInsertRowID();
+
+	if ($res) {
+		// not one of the watched games so much be a proper user-owned game.
+		if ($watchedGameId == 0) {
+			youtuber_coverage_add_alerts($insert_id);
+		}
+	}
+	return $insert_id;
+}
+function youtuber_coverage_add_alerts($youtuber_coverage_id) {
+	global $db;
+
+	$stmt = $db->prepare("SELECT
+								youtuber_coverage.game,
+								youtuber_coverage.url,
+								youtuber_coverage.utime,
+								youtuber_coverage.title,
+								youtuber.name,
+								game.company,
+								game.name as game_name
+							FROM youtuber_coverage
+							JOIN youtuber ON youtuber_coverage.youtuber = youtuber.id
+							WHERE youtuber_coverage.id = :id
+							LIMIT 1;");
+	$stmt->bindValue(":id", $youtuber_coverage_id, Database::VARTYPE_INTEGER);
+	$results = $stmt->query();
+	if (count($results) == 1) {
+		$item = $results[0];
+		if ($item['game']) {
+			$companyId = $item['company'];
+			$youtuberChannelName = $item['name'];
+			$url = $item['url'];
+			$videoTitle = $item['title'];
+			$videoTime = $item['utime'];
+			$gameName = $item['game_name'];
+			@email_new_youtube_coverage($companyId, $gameName, $youtuberChannelName, $videoTitle, $url, $videoTime);
+			@slack_coverageAlert($companyId, $gameName, $youtuberChannelName, $videoTitle, $url);
+			@discord_coverageAlert($companyId, $gameName, $youtuberChannelName, $videoTitle, $url);
+			return true;
+		}
+	}
+}
+function youtuber_add($name = "Blank", $description = "", $audience = 1, $channelId = "", $ytIconUrl = "", $subscriberCount = "0", $viewCount = "0", $videoCount = "0", $notes = "", $nameOverride = "") {
+	global $db;
+
+	$name = remove_emoji_from_string($name);
+	$description = remove_emoji_from_string($description);
+	if (strlen(trim($ytIconUrl)) == 0) {
+		$ytIconUrl = "images/favicon.png";
+	}
+
+	$stmt = $db->prepare(" INSERT INTO youtuber (id, 	name,  description,  audience,  youtubeId,  youtubeUploadsPlaylistId, name_override, 	 email, channel,  iconurl,  subscribers,  views, videos, 	priorities,     notes, 	country, 	lang,  tags,  twitter,   twitter_followers, 	twitter_updatedon, lastpostedon, removed)
+										VALUES  (NULL,  :name, :description, :audience, :youtubeId, '', 					 :nameOverride, 	 '',	 :channel, :iconurl, :subscribers, :views, :videos, '', 		 	:notes, :country, 	:lang, :tags, '',  		 0,    					0,	 			   0, 		  	 0);	");
+	$stmt->bindValue(":name", $name, Database::VARTYPE_STRING);
+	$stmt->bindValue(":description", $description, Database::VARTYPE_STRING);
+	$stmt->bindValue(":audience", $audience, Database::VARTYPE_INTEGER);
+	$stmt->bindValue(":youtubeId", $channelId, Database::VARTYPE_STRING);
+	$stmt->bindValue(":nameOverride", $nameOverride, Database::VARTYPE_STRING);
+	$stmt->bindValue(":channel", $channelId, Database::VARTYPE_STRING);
+	$stmt->bindValue(":iconurl", $ytIconUrl, Database::VARTYPE_STRING);
+	$stmt->bindValue(":subscribers", $subscriberCount, Database::VARTYPE_STRING);
+	$stmt->bindValue(":views", $viewCount, Database::VARTYPE_STRING);
+	$stmt->bindValue(":videos", $videoCount, Database::VARTYPE_STRING);
+	$stmt->bindValue(":notes", $notes, Database::VARTYPE_STRING);
+	$stmt->bindValue(":country", DEFAULT_COUNTRY, Database::VARTYPE_STRING);
+	$stmt->bindValue(":lang", DEFAULT_LANG, Database::VARTYPE_STRING);
+	$stmt->bindValue(":tags", DEFAULT_TAGS, Database::VARTYPE_STRING);
+
+	$res = $stmt->execute();
+	if (!$res) {
+		return FALSE;
+	}
+
+	return $db->lastInsertRowID();
+}
+function youtuber_coverage_potential_reject($potential) {
+	global $db;
+	$stmt = $db->prepare("UPDATE youtuber_coverage_potential SET removed = 1 WHERE id = :id LIMIT 1;");
+	$stmt->bindValue(":id", $potential['id'], Database::VARTYPE_INTEGER);
+	return $stmt->execute();
+}
+function youtuber_coverage_potential_approve($potential, $audience, $notes = "") {
+	global $db;
+
+	$gameId = $potential['game'];
+	$youtuberChannelId = $potential['channelId'];
+
+	$game = db_singlegame($db, $gameId);
+
+	$results = $db->query("SELECT * FROM youtuber WHERE youtubeId = '" . $youtuberChannelId . "' AND removed = 0 LIMIT 1;");
+	if (count($results) == 0) {
+
+		// get the account info
+		$error = "";
+		$youtuberInfo = youtube_v3_getInformation($youtuberChannelId, $error);
+		if ($youtuberInfo == 0) {
+			$result = api_error("Youtube channel '" . $youtuberChannelId . "' not found. " . $error, BotErrorCode::YOUTUBER_NOT_FOUND);
+			api_result($result);
+			die();
+		}
+		// print_r($youtuberInfo);
+
+		// We have to add the YouTuber! AGH!
+		$youtuber_id = youtuber_add($potential['channelTitle'], $youtuberInfo['description'], $audience, $youtuberChannelId, $youtuberInfo['iconurl'], "".$youtuberInfo['subscribers'], "".$youtuberInfo['views'], "".$youtuberInfo['videos'], $notes);
+		if ($youtuber_id === FALSE) {
+			return FALSE; //api_result(api_error("mysqli error" . $stmt->error, BotErrorCode::DATA_ERROR));
+		}
+		$youtuber = db_singleyoutubechannel($db, $youtuber_id);
+	}
+	else {
+		$youtuber = $results[0];
+	}
+
+	if ($youtuber) {
+
+		$summary = array(
+			"id"   => $potential['videoId'],
+			"youtuber_id" => $youtuber['id'],
+			"url"  => $potential['url'],
+			"title"   => $potential['title'],
+			"thumbnail" => $potential['thumbnail'],
+			"description"  => "",
+			"published_on" => $potential['utime'],
+			"channel_id"   => $potential['channelId'],
+			"channel_title" => $potential['channelTitle']
+		);
+		$youtuber_coverage_id = youtuber_coverage_add($gameId, 0, $summary);
+
+		// Link the "potential" to the "final" coverage.
+		$stmt = $db->prepare("UPDATE youtuber_coverage_potential SET coverage = :coverage_id, removed = 1 WHERE id = :id LIMIT 1; ");
+		$stmt->bindValue(":id", $potential['id'], Database::VARTYPE_INTEGER);
+		$stmt->bindValue(":coverage_id", $youtuber_coverage_id, Database::VARTYPE_INTEGER);
+		$stmt->execute();
+
+		return true;
+	}
+}
 
 function util_is_game_coverage_match($gameObj, $title, $description) {
 	if (strpos(strtolower($title), strtolower($gameObj['name'])) !== FALSE ||
 		strpos(strtolower($description), strtolower($gameObj['name'])) !== FALSE ||
 		util_containsKeywords($title, $gameObj['keywords']) ||
 		util_containsKeywords($description, $gameObj['keywords'])) {
+
+		// check blacklist
+		if (util_containsKeywords(strtolower($title), $gameObj['blackwords']) ||
+			util_containsKeywords(strtolower($description), $gameObj['blackwords'])) {
+			return false;
+		}
 		return true;
 	}
+
+
 	return false;
 }
 
@@ -1260,10 +1532,10 @@ function get_impress_email_template($include_footer = false, $include_trackingpi
 
 	return $message;
 }
-function email_new_coverage($companyId, $fromName, $url, $time) {
-	return email_new_youtube_coverage($fromName, $url, $time);
+function email_new_coverage($companyId, $gameName, $fromName, $title, $url, $time) {
+	return email_new_youtube_coverage($companyId, $gameName, $fromName, $title, $url, $time);
 }
-function email_new_youtube_coverage($companyId, $youtuberName, $url, $time) {
+function email_new_youtube_coverage($companyId, $gameName, $youtuberName, $title, $url, $time) {
 	global $impresslist_emailAddress;
 	global $db;
 
@@ -1279,9 +1551,10 @@ function email_new_youtube_coverage($companyId, $youtuberName, $url, $time) {
 
 	$contents = "	<h2 style='margin-top: 0; margin-bottom: 15px;'>Coverage Alert!</h2>
 					<p style='margin-top: 0; margin-bottom: 15px;'>
-						Wahoo! You have new coverage from <strong>" . $youtuberName . "</strong>.
+						Wahoo! You have new <i>" . $gameName . "</i> coverage from <strong>" . $youtuberName . "</strong>.<br/>
 					</p>
 					<p style='margin-top: 0; margin-bottom: 15px;'>
+						<strong>" . $title . "</strong><br/>
 						Check it out <a style='color: #2f7f6f;text-decoration:none' href='" . $url . "'>here</a>, and be sure to send them a message of thanks!
 					</p>";
 	$message = str_replace("{{EMAIL_CONTENTS_HTML}}", $contents, $message);
@@ -1355,6 +1628,7 @@ function discord_webhook($discord_webhookId, $discord_webhookToken, $data, $deco
 	} else {
 		$fields = $data;
 	}
+	$fields_string = "";
 	foreach($fields as $key => $value) {
 		$fields_string .= $key . '=' . $value . '&';
 	}
@@ -1381,13 +1655,13 @@ function discord_test($companyId, $testMessage) {
 	);
 	return discord_webhook($company['discord_webhookId'], $company['discord_webhookToken'], $data);
 }
-function discord_coverageAlert($companyId, $fromName, $coverageTitle, $url) {
+function discord_coverageAlert($companyId, $gameName, $fromName, $coverageTitle, $url) {
 	global $db;
 	$company = db_singlecompany($db, $companyId, array('discord_enabled', 'discord_webhookId', 'discord_webhookToken'));
 	if (!$company['discord_enabled']) { return ""; }
 
 	$data = array(
-		"content" => "**{$fromName}** - {$coverageTitle}: \n{$url}"
+		"content" => "**{$fromName}** - {$gameName} - {$coverageTitle}: \n{$url}"
 	);
 	return discord_webhook($company['discord_webhookId'], $company['discord_webhookToken'], $data, true);
 }
@@ -1420,7 +1694,7 @@ function slack_incomingWebhook($slack_apiUrl, $data) {
 	return $result;
 }
 
-function slack_coverageAlert($companyId, $fromName, $coverageTitle, $url) {
+function slack_coverageAlert($companyId, $gameName, $fromName, $coverageTitle, $url) {
 
 	global $db;
 	$company = db_singlecompany($db, $companyId, array('slack_enabled', 'slack_apiUrl'));

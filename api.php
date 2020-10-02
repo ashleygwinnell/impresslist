@@ -2,10 +2,11 @@
 
 $require_config = true;
 
-function api_error($message) {
+function api_error($message, $code = 0) {
 	$error = new stdClass();
 	$error->success = false;
 	$error->message = $message;
+	$error->errorCode = $code;
 	return $error;
 }
 
@@ -347,6 +348,16 @@ if (!isset($_GET['endpoint'])) {
 
 		if (substr($endpoint, 0, 5) == "/bot/") {
 
+			class BotErrorCode {
+				const UNKNOWN = 0;
+				const INVALID_API_KEY = 400;
+				const INVALID_SERVER = 401;
+				const INVALID_PARAMETER = 402;
+				const ALREADY_APPROVED_REJECTED = 410;
+				const YOUTUBER_NOT_FOUND = 420;
+				const DATA_ERROR = 430;
+			}
+
 			$require_login = false;
 			include_once('init.php');
 
@@ -355,7 +366,7 @@ if (!isset($_GET['endpoint'])) {
 				$result = new stdClass();
 				$result->success = false;
 				$result->message = "Invalid API key";
-				api_result($result);
+				api_result($result, BotErrorCode::INVALID_API_KEY);
 				die();
 			}
 
@@ -365,7 +376,7 @@ if (!isset($_GET['endpoint'])) {
 			$stmt->bindValue(":serverId", $server, Database::VARTYPE_INTEGER);
 			$rs = $stmt->query();
 			if (count($rs) == 0) {
-				api_result(api_error("Invalid server id"));
+				api_result(api_error("This Discord server is not yet set up with Coverage Bot - please contact Ashley.", BotErrorCode::INVALID_SERVER));
 				die();
 			}
 			$company_result = $rs[0];
@@ -555,7 +566,7 @@ if (!isset($_GET['endpoint'])) {
 				if (isset($data['game'])) {
 					$useGame = $data['game'];
 					if (!in_array($useGame, $gamesIdsForCompany)) {
-						api_result(api_error("Invalid game id"));
+						api_result(api_error("Invalid game id", BotErrorCode::INVALID_PARAMETER));
 						die();
 					}
 				}
@@ -577,7 +588,7 @@ if (!isset($_GET['endpoint'])) {
 					$useDurationTime = 86400 * 365;
 				}
 				else {
-					api_result(api_error("Invalid duration"));
+					api_result(api_error("Invalid duration", BotErrorCode::INVALID_PARAMETER));
 					die();
 				}
 
@@ -618,7 +629,7 @@ if (!isset($_GET['endpoint'])) {
 				$num_games = count($games);
 
 				if (filter_var($url, FILTER_VALIDATE_URL) === FALSE) {
-					api_result(api_error("Invalid url"));
+					api_result(api_error("Invalid url", BotErrorCode::INVALID_PARAMETER));
 					die();
 				}
 				$autoSubmitted = false;
@@ -656,14 +667,15 @@ if (!isset($_GET['endpoint'])) {
 									$youtuber_exists = $db->query("SELECT * FROM youtuber WHERE youtubeId = '" . $summary['channel_id'] . "' AND removed = 0 LIMIT 1;");
 									if (is_array($youtuber_exists) && count($youtuber_exists) == 1) {
 
-										$youtuber_coverage_id = tryAddYoutubeCoverage(
-											$game['company'],
+										$youtuber_coverage_id = coverage_tryAddYoutubeCoverageUnsure(
+											$game,
+											null,
 											$youtuber_exists[0]['id'],
+											$youtuber_exists[0]['youtubeId'],
 											$youtuber_exists[0]['name'],
-											$game['id'],
-											0,
+											$summary['id'],
 											$summary['title'],
-											$fixedUrl,
+											$summary['description'],
 											$summary['thumbnail'],
 											$summary['published_on'],
 											false
@@ -696,114 +708,44 @@ if (!isset($_GET['endpoint'])) {
 			}
 			else if ($endpoint == "/bot/approve" || $endpoint == "/bot/reject") {
 				if (!isset($data['id'])){
-					api_result(api_error("invalid id"));
+					api_result(api_error("invalid id", BotErrorCode::INVALID_PARAMETER));
 					die();
 				}
 				$potentialId = $data['id'];
+				$potentialType = $data['type'];
 
-				$stmt = $db->prepare("SELECT * FROM youtuber_coverage_potential WHERE id = :id AND game IN ({$gamesIdsForCompanyStr}) AND removed = 0 LIMIT 1;");
-				$stmt->bindValue(":id", $potentialId, Database::VARTYPE_INTEGER);
-				$results = $stmt->query();
-				if (count($results) !== 1) {
-					api_result(api_error("invalid id"));
-					die();
-				}
-				//print_r($results);
-				$potential = $results[0];
-				$youtuberChannelId = $potential['channelId'];
+				if ($potentialType == "youtube") {
 
-				// Move to real coverage!
-				if ($endpoint == "/bot/approve") {
-
-					$game = db_singlegame($db, $potential['game']);
-
-					$results = $db->query("SELECT * FROM youtuber WHERE youtubeId = '" . $youtuberChannelId . "' AND removed = 0 LIMIT 1;");
-					if (count($results) == 0) {
-
-						// get the account info
-						$youtuberInfo = youtube_v3_getInformation($youtuberChannelId);
-						if ($youtuberInfo == 0) {
-							$result = api_error("Youtube channel '" . $youtuberChannelId . "' not found.");
-							api_result($result);
-							die();
-						}
-						//print_r($youtuberInfo);
-
-						$ytIconUrl = $youtuberInfo['iconurl'];
-						if (strlen(trim($ytIconUrl)) == 0) {
-							$ytIconUrl = "images/favicon.png";
-						}
-
-						// We have to add the YouTuber! AGH!
-						$audience = 1;
-						$stmt = $db->prepare(" INSERT INTO youtuber (id, 	name,  description,  audience,  youtubeId,  youtubeUploadsPlaylistId, name_override, 	 email, channel,  iconurl,  subscribers,  views, videos, 	priorities,     notes, 	country, 	lang,  tags,  twitter,   twitter_followers, 	twitter_updatedon, lastpostedon, removed)
-															VALUES  (NULL,  :name, :description, :audience, :youtubeId, '', 						'', 	 		 '',	 :channel, :iconurl, :subscribers, :views, :videos, '', 		 	:notes, :country, 	:lang, :tags, '',  		 0,    					0,	 			   0, 		  	 0);	");
-						$stmt->bindValue(":name", $potential['channelTitle'], Database::VARTYPE_STRING);
-						$stmt->bindValue(":description", $youtuberInfo['description'], Database::VARTYPE_STRING);
-						$stmt->bindValue(":audience", $audience, Database::VARTYPE_INTEGER);
-						$stmt->bindValue(":youtubeId", $youtuberChannelId, Database::VARTYPE_STRING);
-						$stmt->bindValue(":channel", $youtuberChannelId, Database::VARTYPE_STRING);
-						$stmt->bindValue(":iconurl", $ytIconUrl, Database::VARTYPE_STRING);
-						$stmt->bindValue(":subscribers", "" . $youtuberInfo['subscribers'], Database::VARTYPE_STRING);
-						$stmt->bindValue(":views", "" . $youtuberInfo['views'], Database::VARTYPE_STRING);
-						$stmt->bindValue(":videos", "" . $youtuberInfo['videos'], Database::VARTYPE_STRING);
-						$stmt->bindValue(":notes", "Added by Coverage Bot for game: " . $game['name'], Database::VARTYPE_STRING);
-						$stmt->bindValue(":country", DEFAULT_COUNTRY, Database::VARTYPE_STRING);
-						$stmt->bindValue(":lang", DEFAULT_LANG, Database::VARTYPE_STRING);
-						$stmt->bindValue(":tags", DEFAULT_TAGS, Database::VARTYPE_STRING);
-
-						$res = $stmt->execute();
-						$youtuber_id = $db->lastInsertRowID();
-						if (!$res) {
-							api_result(api_error("mysqli error" . $stmt->error));
-							die();
-						}
-						$youtuber = db_singleyoutubechannel($db, $youtuber_id);
-
+					$stmt = $db->prepare("SELECT * FROM youtuber_coverage_potential WHERE id = :id AND game IN ({$gamesIdsForCompanyStr}) AND removed = 0 LIMIT 1;");
+					$stmt->bindValue(":id", $potentialId, Database::VARTYPE_INTEGER);
+					$results = $stmt->query();
+					if (count($results) !== 1) {
+						api_result(api_error("invalid id - already approved/rejected", BotErrorCode::ALREADY_APPROVED_REJECTED));
+						die();
 					}
-					else {
-						$youtuber = $results[0];
-					}
+					//print_r($results);
+					$potential = $results[0];
 
-					if ($youtuber) {
-
-						$youtuber_coverage_id = tryAddYoutubeCoverage(
-							$game['company'],
-							$youtuber['id'],
-							$youtuber['name'],
-							$game['id'],
-							0,
-							$potential['title'],
-							$potential['url'],
-							$potential['thumbnail'],
-							$potential['utime'],
-							false
-						);
-
-						$stmt = $db->prepare("UPDATE youtuber_coverage_potential
-												SET
-													coverage = :coverage_id,
-													removed = 1
-												WHERE id = :id
-												LIMIT 1;
-												");
-						$stmt->bindValue(":id", $potential['id'], Database::VARTYPE_INTEGER);
-						$stmt->bindValue(":coverage_id", $youtuber_coverage_id, Database::VARTYPE_INTEGER);
-						$stmt->execute();
+					// Move to real coverage!
+					if ($endpoint == "/bot/approve") {
+						youtuber_coverage_potential_approve($potential, 1, "Added by Coverage Bot for game: " . $game['name']);
 
 						$result = new stdClass();
 						$result->success = true;
-						api_result($result);
-						die();
-					}
-				}
-				else if ($endpoint == "/bot/reject") {
-					$stmt = $db->prepare("UPDATE youtuber_coverage_potential SET removed = 1 WHERE id = :id LIMIT 1;");
-					$stmt->bindValue(":id", $potential['id'], Database::VARTYPE_INTEGER);
-					$stmt->execute();
 
-					$result = new stdClass();
-					$result->success = true;
+					}
+					else if ($endpoint == "/bot/reject") {
+						youtuber_coverage_potential_reject($potential);
+
+						$result = new stdClass();
+						$result->success = true;
+					}
+					api_result($result);
+					die();
+				}
+				else {
+					api_result(api_error("invalid type - " . $potentialType . "- not yet supported. eek!", BotErrorCode::INVALID_PARAMETER));
+					die();
 				}
 
 				// youtuber: 45
@@ -818,13 +760,29 @@ if (!isset($_GET['endpoint'])) {
 
 			}
 			else if ($endpoint == "/bot/potentials") {
-				$potentials = $db->query("SELECT * FROM youtuber_coverage_potential WHERE game IN ({$gamesIdsForCompanyStr}) AND removed = 0;");
+				$allpotentials = array();
+
+				$ytpotentials = $db->query("SELECT * FROM youtuber_coverage_potential WHERE game IN ({$gamesIdsForCompanyStr}) AND removed = 0;");
+				for($i = 0; $i < count($ytpotentials); $i++) {
+					$ytpotentials[$i]['type'] = "youtuber";
+					$allpotentials[] = $ytpotentials[$i];
+				}
+
+				$ppotentials = $db->query("SELECT * FROM publication_coverage WHERE game IN ({$gamesIdsForCompanyStr}) AND approved = 0 AND removed = 0;");
+				for($i = 0; $i < count($ppotentials); $i++) {
+					$ppotentials[$i]['type'] = "publication";
+					$allpotentials[] = $ppotentials[$i];
+				}
+
+				$tpotentials = $db->query("SELECT * FROM twitch_coverage_potential WHERE game IN ({$gamesIdsForCompanyStr}) AND removed = 0;");
+				for($i = 0; $i < count($tpotentials); $i++) {
+					$tpotentials[$i]['type'] = "twitchchannel";
+					$allpotentials[] = $tpotentials[$i];
+				}
+
 				$result = new stdClass();
 				$result->success = true;
-				for($i = 0; $i < count($potentials); $i++) {
-					$potentials[$i]['type'] = "youtuber";
-				}
-				$result->potentials = $potentials;
+				$result->potentials = $allpotentials;
 			}
 
 		}
@@ -3469,7 +3427,7 @@ if (!isset($_GET['endpoint'])) {
 
 			for($i = 0; $i < $num_youtubeChannels; $i++) {
 				$twitchchannels[$i]['notes'] = utf8_encode($twitchchannels[$i]['notes']);
-				$twitchchannels[$i]['description'] = utf8_encode($twitchchannels[$i]['description']);
+				$twitchchannels[$i]['twitchDescription'] = utf8_encode($twitchchannels[$i]['twitchDescription']);
 			}
 
 			$result = new stdClass();
@@ -3654,12 +3612,16 @@ if (!isset($_GET['endpoint'])) {
 			$require_login = true;
 			include_once("init.php");
 
-			$stmt = $db->prepare(" INSERT INTO publication_coverage  (id, 	publication,  person,  game,  url,  title,  `utime`,  thanked, removed)
-															  VALUES (NULL, 0, 		  	  0,       :game,    :url, :title, :utime, :thanked, :removed); ");
+			$game = db_singlegame($db, $user_currentGame);
+			$approved = ($game['coverageRequiresApproval'] == 1)?0:1;
+
+			$stmt = $db->prepare(" INSERT INTO publication_coverage  (id, 	publication,  person,  game,  url,  title,  `utime`, approved, thanked, removed)
+															  VALUES (NULL, 0, 		  	  0,       :game,    :url, :title, :utime, :approved, :thanked, :removed); ");
 			$stmt->bindValue(":game", $user_currentGame, Database::VARTYPE_INTEGER);
 			$stmt->bindValue(":url", "http://coverage.com/", Database::VARTYPE_STRING);
 			$stmt->bindValue(":title", "A massive article about your game project.", Database::VARTYPE_STRING);
 			$stmt->bindValue(":utime", time(), Database::VARTYPE_INTEGER);
+			$stmt->bindValue(":approved", $approved, Database::VARTYPE_INTEGER);
 			$stmt->bindValue(":thanked", 0, Database::VARTYPE_INTEGER);
 			$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
 			$stmt->execute();
@@ -4755,8 +4717,8 @@ if (!isset($_GET['endpoint'])) {
 			if (!$error) {
 				// TODO: pass in audience id
 				// TODO: verify audience id once it is passed in.
-				$stmt = $db->prepare(" INSERT INTO publication (id,   audience, name,  url,  email, iconurl, rssfeedurl, twitter, twitter_followers, twitter_updatedon, notes, lang, tags, lastpostedon)
-														VALUES (NULL, :audience, :name, :url, :email, :iconurl, :rssfeedurl, :twitter, :twitter_followers, :twitter_updatedon, :notes, :lang, :tags, :lastpostedon); ");
+				$stmt = $db->prepare(" INSERT INTO publication (id,   audience, name,  url,  email, iconurl, rssfeedurl, twitter, twitter_followers, twitter_updatedon, notes, lang, tags, lastpostedon, lastscrapedon, lastscrapestatus)
+														VALUES (NULL, :audience, :name, :url, :email, :iconurl, :rssfeedurl, :twitter, :twitter_followers, :twitter_updatedon, :notes, :lang, :tags, :lastpostedon, :lastscrapedon, :lastscrapestatus); ");
 				$stmt->bindValue(":audience", $user_currentAudience, Database::VARTYPE_INTEGER);
 				$stmt->bindValue(":name", $_GET['name'], Database::VARTYPE_STRING);
 				$stmt->bindValue(":url", "http://example.com/", Database::VARTYPE_STRING);
@@ -4770,6 +4732,8 @@ if (!isset($_GET['endpoint'])) {
 				$stmt->bindValue(":lang", DEFAULT_LANG, Database::VARTYPE_STRING);
 				$stmt->bindValue(":tags", DEFAULT_TAGS, Database::VARTYPE_STRING);
 				$stmt->bindValue(":lastpostedon", 0, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":lastscrapedon", 0, Database::VARTYPE_INTEGER);
+				$stmt->bindValue(":lastscrapestatus", "{}", Database::VARTYPE_STRING);
 				$stmt->execute();
 
 				$publication_id = $db->lastInsertRowID();
@@ -4965,32 +4929,20 @@ if (!isset($_GET['endpoint'])) {
 			$error = api_checkRequiredGETFieldsWithTypes($required_fields, $result);
 			if (!$error) {
 
-				$twitter = "youtube";
-				$twitter_followers = twitter_countFollowers($twitter);
-				if ($twitter_followers == "") { $twitter_followers = 0; }
+				// $twitter = "youtube";
+				// $twitter_followers = twitter_countFollowers($twitter);
+				// if ($twitter_followers == "") { $twitter_followers = 0; }
 
-				$stmt = $db->prepare(" INSERT INTO youtuber (id, 	audience, youtubeId,  youtubeUploadsPlaylistId, name,   	name_override, 	 description, email, channel,  priorities, iconurl,   subscribers, views, notes, country, 	lang,  tags,  twitter,   twitter_followers, 	twitter_updatedon, lastpostedon, removed)
-													VALUES  (NULL,  :audience, '', 		'', 					  'Blank',  'Blank', 	 	 '', 		  '',	 :channel, '', 		   '', 		  0, 		   0, 	  '', 	 :country, 	:lang, :tags, :twitter,  :twitter_followers,    0,	 			   0, 		  	 0);	");
-				$stmt->bindValue(":audience", $user_currentAudience, Database::VARTYPE_INTEGER);
-				$stmt->bindValue(":channel", $_GET['channel'], Database::VARTYPE_STRING);
-				$stmt->bindValue(":country", DEFAULT_COUNTRY, Database::VARTYPE_STRING);
-				$stmt->bindValue(":lang", DEFAULT_LANG, Database::VARTYPE_STRING);
-				$stmt->bindValue(":tags", DEFAULT_TAGS, Database::VARTYPE_STRING);
-				$stmt->bindValue(":twitter", $twitter, Database::VARTYPE_STRING);
-				$stmt->bindValue(":twitter_followers", $twitter_followers, Database::VARTYPE_INTEGER);
-				$res = $stmt->execute();
-				if (!$res) {
-					$result = api_error("mysqli error" . $stmt->error);
-				} else {
-					$youtuber_id = $db->lastInsertRowID();
+				$youtuber_id = youtuber_add("Blank", "", $user_currentAudience, $_GET['channel'], "");
+				if ($youtuber_id === FALSE) {
+					$result = api_error("could not add youtuber");
+				}
+				else {
 					$result = new stdClass();
 					$result->success = true;
-					$result->followers = $twitter_followers;
+					$result->followers = 0; //$twitter_followers;
 					$result->youtubechannel = db_singleyoutubechannel($db, $youtuber_id);
 				}
-
-
-
 			}
 		}
 		else if ($endpoint == "/youtuber/save/")
@@ -5481,8 +5433,8 @@ if (!isset($_GET['endpoint'])) {
 					$result->message = 'Name and icon must be set.';
 				} else {
 
-					$stmt = $db->prepare(" INSERT INTO game (id, company, name, nameuniq, keywords, blackwords, iconurl, twitchId, twitchLastScraped, coverageTrackPotentials)
-													VALUES (NULL, :company, :name, :nameuniq, :keywords, :blackwords, :iconurl, 0, 0, 1) ");
+					$stmt = $db->prepare(" INSERT INTO game (id, company, name, nameuniq, keywords, blackwords, iconurl, twitchId, twitchLastScraped, coverageTrackPotentials, coverageRequiresApproval)
+													VALUES (NULL, :company, :name, :nameuniq, :keywords, :blackwords, :iconurl, 0, 0, 1, 1) ");
 
 					$uniqname = urlformat($data['name']);
 					$stmt->bindValue(":company", 	$user['company'], 	Database::VARTYPE_INTEGER);
@@ -5809,8 +5761,8 @@ if (!isset($_GET['endpoint'])) {
 					if (!$error) {
 
 						$name = "Untitled Game";
-						$stmt = $db->prepare("INSERT INTO game (id,  company, name, nameuniq, keywords, blackwords, iconurl, twitchId, twitchLastScraped, coverageTrackPotentials)
-														VALUES (NULL, :company, :name, :nameuniq, '', '', '', 0, 0, 1);");
+						$stmt = $db->prepare("INSERT INTO game (id,  company, name, nameuniq, keywords, blackwords, iconurl, twitchId, twitchLastScraped, coverageTrackPotentials, coverageRequiresApproval)
+														VALUES (NULL, :company, :name, :nameuniq, '', '', '', 0, 0, 1, 1);");
 						$stmt->bindValue(":company", 			$data['company'], 	Database::VARTYPE_INTEGER);
 						$stmt->bindValue(":name", 				$name, 				Database::VARTYPE_STRING);
 						$stmt->bindValue(":nameuniq", 			urlformat($name),	Database::VARTYPE_STRING);

@@ -11,7 +11,7 @@ $require_config = true;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // People
-$youtubeChannels = $db->query("SELECT * FROM youtuber WHERE lastpostedon_updatedon < " . (time()-3600) . " AND removed = 0;");
+$youtubeChannels = $db->query("SELECT * FROM youtuber WHERE lastpostedon_updatedon < " . (time()-3600) . " AND removed = 0 ORDER BY lastpostedon_updatedon ASC LIMIT 500;");
 $num_youtubeChannels = count($youtubeChannels);
 
 $twittersUpdated = 0;

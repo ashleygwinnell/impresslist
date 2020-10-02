@@ -8,7 +8,7 @@ $require_config = true;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
 // Publications
-$publications = $db->query("SELECT * FROM publication WHERE lastpostedon_updatedon < " . (time()-3600) . " AND removed = 0;");
+$publications = $db->query("SELECT * FROM publication WHERE lastpostedon_updatedon < " . (time()-3600) . " AND removed = 0 LIMIT 100;");
 $num_publications = count($publications);
 
 for($i = 0; $i < $num_publications; ++$i) {

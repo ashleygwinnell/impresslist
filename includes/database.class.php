@@ -76,9 +76,13 @@ class MysqliDatabase_PreparedStatement extends PreparedStatement {
 		//$method->invokeArgs($this->stmt, $this->refValues($a));
 	}
 	function query() {
+		// error_reporting(E_ALL);
+
 		$this->finishBinds();
 		$b = $this->stmt->execute();
 		if (!$b) { return array(); }
+
+		// phpinfo();
 
 		// PHP 5.3.0 only...
 		//$rs = $this->stmt->get_result();
@@ -92,9 +96,29 @@ class MysqliDatabase_PreparedStatement extends PreparedStatement {
 		$row = array();
 		$params = array();
 		$meta = $this->stmt->result_metadata();
+		// print_r($meta);
+		// echo "<br/>";
+
 		while ($field = $meta->fetch_field()) {
+			// echo "<b>".$field->name."</b><br/>";
+			// print_r($field);
+			// echo "<br/>";
 			$params[] = &$row[$field->name];
 		}
+		// echo "---<br/>";
+
+		// echo "<b>params:</b><br/>";
+		// print_r($params);
+		// echo "<br/>";
+
+		// echo "<b>meta:</b><br/>";
+		// print_r($meta);
+		// echo "<br/>";
+
+		// echo "<b>stmt:</b><br/>";
+		// print_r($this->stmt);
+		// echo "<br/>";
+
 		call_user_func_array(array($this->stmt, 'bind_result'), $params);
 
 		$results = array();
@@ -107,6 +131,9 @@ class MysqliDatabase_PreparedStatement extends PreparedStatement {
 		}
 		//$this->stmt->free_result();
 		$this->stmt->close();
+		// echo "<b>results:</b><br/>";
+		// print_r($results);
+		// echo "<br/>";
 		return $results;
 	}
 	function execute() {
@@ -192,7 +219,7 @@ class MysqliDatabase extends Database {
 		}
 
 		// set charset unicode
-		$this->db->set_charset("utf8");
+		$this->db->set_charset("utf8mb4");
 	}
 
 	function query($sql)
@@ -270,6 +297,11 @@ class MysqliDatabase extends Database {
 			if ($count >= 100) { break; }
 		}
 		//print_r($order);
+
+		// global $impresslist_verbose;
+		// if ($impresslist_verbose) {
+		// 	echo $sql . "<br/>";
+		// }
 
 		$stmt = $this->db->prepare($sql);
 		if ($stmt == false) {

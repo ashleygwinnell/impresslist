@@ -21,7 +21,7 @@ $impresslist_verbose = true;
 function scrape_youtube_stats() {
 	global $db;
 	$week = 86400 * 7; // weekly scrape
-	$youtubeCoverage = $db->query("SELECT * FROM youtuber_coverage WHERE youtuber != 0 AND game != 0 AND removed = 0 AND lastscrapedon < " . (time() - $week) . " ORDER BY lastscrapedon ASC LIMIT 50;");
+	$youtubeCoverage = $db->query("SELECT * FROM youtuber_coverage WHERE youtuber != 0 AND game != 0 AND removed = 0 AND lastscrapedon < " . (time() - $week) . " ORDER BY lastscrapedon ASC LIMIT 30;");
 	$youtubeVideoIds = array();
 	//$youtubeVideoIdsToUrls = array();
 	$youtubeVideoIdsToInternalIds = array();

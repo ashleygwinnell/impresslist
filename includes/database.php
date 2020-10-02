@@ -125,6 +125,20 @@
 		$youtubeChannels = $stmt->query();
 		return $youtubeChannels[0];
 	}
+	function db_singleyoutubechannelbychannelid($db, $youtuberChannelId) {
+		if (!is_numeric($youtuberChannelId)) { return false; }
+		$stmt = $db->prepare("SELECT youtuber.*, audience.company
+								FROM youtuber
+								JOIN audience on youtuber.audience = audience.id
+								WHERE youtuber.youtubeId = :youtuber_channel_id
+								LIMIT 1;");
+		$stmt->bindValue(":youtuber_channel_id", $youtuberChannelId, Database::VARTYPE_STRING);
+		$youtubeChannels = $stmt->query();
+		if (count($youtubeChannels) == 1) {
+			return $youtubeChannels[0];
+		}
+		return FALSE;
+	}
 	function db_singletwitchchannel($db, $twitchChannelId) {
 		if (!is_numeric($twitchChannelId)) { return false; }
 		$stmt = $db->prepare("SELECT twitchchannel.*, audience.company
@@ -133,6 +147,17 @@
 									WHERE twitchchannel.id = :twitchchannel_id
 									LIMIT 1;");
 		$stmt->bindValue(":twitchchannel_id", $twitchChannelId, Database::VARTYPE_INTEGER);
+		$twitchChannels = $stmt->query();
+		return $twitchChannels[0];
+	}
+	function db_singletwitchchannelbytwitchid($db, $twitchId) {
+		if (!is_numeric($twitchId)) { return false; }
+		$stmt = $db->prepare("SELECT twitchchannel.*, audience.company
+									FROM twitchchannel
+									JOIN audience on twitchchannel.audience = audience.id
+									WHERE twitchchannel.twitchId = :twitch_id
+									LIMIT 1;");
+		$stmt->bindValue(":twitch_id", $twitchId, Database::VARTYPE_INTEGER);
 		$twitchChannels = $stmt->query();
 		return $twitchChannels[0];
 	}
@@ -371,7 +396,7 @@
 		if ($db->type == Database::TYPE_MYSQL) {
 			$autoincrement = "AUTO_INCREMENT";
 			$blobTextDefaultToZero = "";
-			$sqlEngineAndCharset = ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
+			$sqlEngineAndCharset = ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci';
 			$defaultNull = "NULL";
 			$tinyint = "tinyint(4)";
 		}
@@ -482,6 +507,8 @@
 					twitchId INTEGER DEFAULT {$defaultNull},
 					twitchLastScraped INTEGER DEFAULT {$defaultNull},
 					coverageTrackPotentials INTEGER NOT NULL DEFAULT 1,
+					coverageRequiresApproval INTEGER NOT NULL DEFAULT 1,
+					coverageOnlyAfterUtime INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0
 				) {$sqlEngineAndCharset} ;";
 		$db->exec($sql);
@@ -622,7 +649,8 @@
 					lastcontacted INTEGER NULL DEFAULT NULL,
 					lastcontactedby INTEGER NULL DEFAULT NULL,
 					removed INTEGER NOT NULL DEFAULT 0,
-					lastscrapedon INTEGER NOT NULL DEFAULT 0
+					lastscrapedon INTEGER NOT NULL DEFAULT 0,
+					lastscrapestatus TEXT NOT NULL DEFAULT '{}'
 				) {$sqlEngineAndCharset} ;";
 		$db->exec($sql);
 
@@ -636,6 +664,7 @@
 					url VARCHAR(255) NOT NULL,
 					title TEXT NOT NULL,
 					utime INTEGER NOT NULL DEFAULT 0,
+					approved INTEGER NOT NULL DEFAULT 1,
 					thanked INTEGER NOT NULL DEFAULT 0,
 					removed INTEGER NOT NULL DEFAULT 0
 				) {$sqlEngineAndCharset} ;";
@@ -643,6 +672,12 @@
 
 		$sql = "CREATE TABLE IF NOT EXISTS settings (
 					`company` INTEGER NULL DEFAULT NULL,
+					`key` VARCHAR(255) PRIMARY KEY NOT NULL,
+					`value` TEXT
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		$sql = "CREATE TABLE IF NOT EXISTS `status` (
 					`key` VARCHAR(255) PRIMARY KEY NOT NULL,
 					`value` TEXT
 				) {$sqlEngineAndCharset} ;";
@@ -714,7 +749,7 @@
 					youtubeUploadsPlaylistId VARCHAR(255) NOT NULL,
 					name VARCHAR(255) NOT NULL,
 					name_override VARCHAR(255) NOT NULL,
-					description TEXT NOT NULL,
+					description MEDIUMTEXT NOT NULL,
 					email VARCHAR(255) NOT NULL DEFAULT '',
 					priorities VARCHAR(255) NOT NULL,
 					channel VARCHAR(255) NOT NULL,
@@ -823,6 +858,22 @@
 				) {$sqlEngineAndCharset} ;";
 		$db->exec($sql);
 
+		$sql = "CREATE TABLE IF NOT EXISTS twitchchannel_coverage_potential (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					twitchVideoId VARCHAR(255) DEFAULT {$defaultNull},
+					twitchClipId VARCHAR(255) DEFAULT {$defaultNull},
+					twitchChannelId INTEGER DEFAULT {$defaultNull},
+					twitchUsername VARCHAR(255) NOT NULL,
+					game INTEGER DEFAULT {$defaultNull},
+					url VARCHAR(255) NOT NULL,
+					title VARCHAR(255) NOT NULL,
+					description TEXT NOT NULL,
+					thumbnail TEXT NOT NULL,
+					utime INTEGER NOT NULL DEFAULT 0,
+					removed INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
 		$sql = "CREATE TABLE IF NOT EXISTS twitter_directmessage (
 					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
 					dm_id VARCHAR(50) NOT NULL,
@@ -836,6 +887,12 @@
 				) {$sqlEngineAndCharset} ;";
 		$db->exec($sql);
 
+
+		// Status vars
+		$db->exec("INSERT IGNORE INTO `status` VALUES ('cron_complete_refresh_coverage', '0'); ");
+		$db->exec("INSERT IGNORE INTO `status` VALUES ('cron_complete_refresh_coverage_youtube', '0'); ");
+		$db->exec("INSERT IGNORE INTO `status` VALUES ('cron_complete_refresh_coverage_twitch', '0'); ");
+		$db->exec("INSERT IGNORE INTO `status` VALUES ('cron_complete_refresh_coverage_lookout', '0'); ");
 
 		// Settings
 		$db->exec("INSERT IGNORE INTO settings VALUES (NULL, 'company_name', 'Company Name'); ");
