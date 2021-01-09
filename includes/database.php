@@ -159,7 +159,10 @@
 									LIMIT 1;");
 		$stmt->bindValue(":twitch_id", $twitchId, Database::VARTYPE_INTEGER);
 		$twitchChannels = $stmt->query();
-		return $twitchChannels[0];
+		if (count($twitchChannels) == 1) {
+			return $twitchChannels[0];
+		}
+		return FALSE;
 	}
 	function db_singletwitchchannelbyusername($db, $twitchUsername) {
 		if (!is_string($twitchUsername)) { return false; }
@@ -770,6 +773,15 @@
 					lastscrapedon INTEGER NOT NULL DEFAULT 0,
 					lastcontacted INTEGER NOT NULL DEFAULT 0,
 					lastcontactedby INTEGER NOT NULL DEFAULT 0
+				) {$sqlEngineAndCharset} ;";
+		$db->exec($sql);
+
+		$sql = "CREATE TABLE IF NOT EXISTS youtuber_blacklist (
+					id INTEGER PRIMARY KEY {$autoincrement} NOT NULL,
+					youtubeId VARCHAR(255) NOT NULL,
+					name VARCHAR(255) NOT NULL,
+					iconurl VARCHAR(255) NOT NULL,
+					removed INTEGER NOT NULL DEFAULT 0
 				) {$sqlEngineAndCharset} ;";
 		$db->exec($sql);
 

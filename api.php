@@ -391,9 +391,11 @@ if (!isset($_GET['endpoint'])) {
 			$rs = $stmt->query();
 			$gamesForCompany = array();
 			$gamesIdsForCompany = array();
+			$gamesIdsToNames = array();
 			foreach ($rs as $row) {
 				$gamesForCompany[] = $row;
 				$gamesIdsForCompany[] = $row['id'];
+				$gamesIdsToNames[$row['id']] = $row['name'];
 			}
 			$gamesIdsForCompanyStr = implode(",", $gamesIdsForCompany);
 
@@ -624,10 +626,6 @@ if (!isset($_GET['endpoint'])) {
 				$url = $data['url'];
 				$from = $data['from'];
 
-				// All Games
-				$games = $db->query("SELECT * FROM game WHERE removed = 0;");
-				$num_games = count($games);
-
 				if (filter_var($url, FILTER_VALIDATE_URL) === FALSE) {
 					api_result(api_error("Invalid url", BotErrorCode::INVALID_PARAMETER));
 					die();
@@ -640,61 +638,29 @@ if (!isset($_GET['endpoint'])) {
 				// If it's a youtube url, do a bunch of other stuff.
 				if (count($matches) == 2) {
 					$youtubeId = $matches[1];
-					if (youtube_isValidId($youtubeId)) {
-						$fixedUrl = "https://www.youtube.com/watch?v=".$youtubeId;
-						if (youtuber_coverage_potential_exists($fixedUrl)) { // fail early.
-							$result = new stdClass();
-							$result->success = false;
-							$result->message = "Submission already exists.";
-							api_result($result);
-							die();
-						}
 
-						$summary = youtube_v3_getSummaryFromVideoId($youtubeId);
-						if (!is_array($summary)) {
-							// In normal circumstances we'd fail and show an error,
-							// however we might have reached limit of requests per day...
-							// ... so only send
-						}
-						else {
-							// It's a valid video.
-							// But does it match any of our games?
-							// If it does: find the youtuber in the system, or add a new one?
-							foreach ($games as $game) {
-								if (util_is_game_coverage_match($game, $summary['title'], $summary['description'])) {
-
-									// Is the channel id already in the youtubers list? if so, add the coverage straight away!
-									$youtuber_exists = $db->query("SELECT * FROM youtuber WHERE youtubeId = '" . $summary['channel_id'] . "' AND removed = 0 LIMIT 1;");
-									if (is_array($youtuber_exists) && count($youtuber_exists) == 1) {
-
-										$youtuber_coverage_id = coverage_tryAddYoutubeCoverageUnsure(
-											$game,
-											null,
-											$youtuber_exists[0]['id'],
-											$youtuber_exists[0]['youtubeId'],
-											$youtuber_exists[0]['name'],
-											$summary['id'],
-											$summary['title'],
-											$summary['description'],
-											$summary['thumbnail'],
-											$summary['published_on'],
-											false
-										);
-									}
-									else {
-										$potential_id = youtuber_coverage_potential_add($game['id'], $summary);
-										$autoSubmitted = true;
-										// Don't break, if it's a compilation video we wannt to trigger it for all games!
-										// break;
-									}
-								}
-							}
-						}
+					$errorMessage = "";
+					$success = youtuber_coverage_manual_submit($youtubeId, $errorMessage, $autoSubmitted);
+					if (!$success) {
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = $errorMessage;
+						api_result($result);
+						die();
 					}
 				}
 				else {
 					// Could we check the url domain nname and see if that's in the publications list?
 					// Not sure, but let's just log it on admin webhook anyway.
+					$errorMessage = "";
+					$success = publication_coverage_manual_submit($url, $errorMessage);
+					if (!$success) {
+						$result = new stdClass();
+						$result->success = false;
+						$result->message = $errorMessage;
+						api_result($result);
+						die();
+					}
 				}
 
 				@discord_adminMessage("\n" . (($autoSubmitted)?"AUTO-ADDED: true\n":"") . "URL: " . $fixedUrl. "\nCoverage Submission on [**".$company_name."**](".$company_discordServerUrl.") from _".$from."_.");
@@ -713,6 +679,10 @@ if (!isset($_GET['endpoint'])) {
 				}
 				$potentialId = $data['id'];
 				$potentialType = $data['type'];
+				$sendAlert = true;
+				if (isset($data['alert'])) {
+					$sendAlert = filter_var($data['alert'], FILTER_VALIDATE_BOOLEAN);
+				}
 
 				if ($potentialType == "youtube") {
 
@@ -728,7 +698,8 @@ if (!isset($_GET['endpoint'])) {
 
 					// Move to real coverage!
 					if ($endpoint == "/bot/approve") {
-						youtuber_coverage_potential_approve($potential, 1, "Added by Coverage Bot for game: " . $game['name']);
+						$notes = "Added by Coverage Bot for game: " . $gamesIdsToNames[$potential['game']];
+						youtuber_coverage_potential_approve($potential, 1, $notes, $sendAlert);
 
 						$result = new stdClass();
 						$result->success = true;
@@ -739,6 +710,66 @@ if (!isset($_GET['endpoint'])) {
 
 						$result = new stdClass();
 						$result->success = true;
+					}
+					api_result($result);
+					die();
+				}
+				else if ($potentialType == "publication") {
+					$stmt = $db->prepare("SELECT * FROM publication_coverage
+											WHERE id = :id
+											AND game IN ({$gamesIdsForCompanyStr})
+											AND removed = 0
+											AND approved = 0
+											LIMIT 1;");
+					$stmt->bindValue(":id", $potentialId, Database::VARTYPE_INTEGER);
+					$results = $stmt->query();
+					if (count($results) !== 1) {
+						api_result(api_error("invalid id - already approved/rejected", BotErrorCode::ALREADY_APPROVED_REJECTED));
+						die();
+					}
+					$coverageItem = $results[0];
+
+					// Move to real coverage!
+					if ($endpoint == "/bot/approve") {
+						publication_coverage_approve($coverageItem, $sendAlert);
+
+						$result = new stdClass();
+						$result->success = true;
+
+					}
+					else if ($endpoint == "/bot/reject") {
+						publication_coverage_reject($coverageItem);
+
+						$result = new stdClass();
+						$result->success = true;
+					}
+					api_result($result);
+					die();
+				}
+				else if ($potentialType == "twitchchannel") {
+					$stmt = $db->prepare("SELECT * FROM twitchchannel_coverage_potential WHERE id = :id AND game IN ({$gamesIdsForCompanyStr}) AND removed = 0 LIMIT 1;");
+					$stmt->bindValue(":id", $potentialId, Database::VARTYPE_INTEGER);
+					$results = $stmt->query();
+					if (count($results) !== 1) {
+						api_result(api_error("invalid id - already approved/rejected", BotErrorCode::ALREADY_APPROVED_REJECTED));
+						die();
+					}
+					$coverageItem = $results[0];
+
+					// Move to real coverage!
+					if ($endpoint == "/bot/approve") {
+						$notes = "Added by Coverage Bot for game: " . $gamesIdsToNames[$coverageItem['game']];
+						$success = twitchchannel_coverage_potential_approve($coverageItem, 1, $notes, $sendAlert);
+
+						$result = new stdClass();
+						$result->success = $success;
+
+					}
+					else if ($endpoint == "/bot/reject") {
+						$success = twitchchannel_coverage_potential_reject($coverageItem);
+
+						$result = new stdClass();
+						$result->success = $success;
 					}
 					api_result($result);
 					die();
@@ -762,27 +793,55 @@ if (!isset($_GET['endpoint'])) {
 			else if ($endpoint == "/bot/potentials") {
 				$allpotentials = array();
 
+				$byGameId = array();
+
 				$ytpotentials = $db->query("SELECT * FROM youtuber_coverage_potential WHERE game IN ({$gamesIdsForCompanyStr}) AND removed = 0;");
 				for($i = 0; $i < count($ytpotentials); $i++) {
-					$ytpotentials[$i]['type'] = "youtuber";
+					$ytpotentials[$i]['type'] = "youtube";
+					$ytpotentials[$i]['game_name'] = $gamesIdsToNames[$ytpotentials[$i]['game']];
 					$allpotentials[] = $ytpotentials[$i];
+
+					if (!array_key_exists($ytpotentials[$i]['game'], $byGameId)) {
+						$byGameId[$ytpotentials[$i]['game']] = array("count" => 0, "name" => $gamesIdsToNames[$ytpotentials[$i]['game']]);
+					}
+					$byGameId[$ytpotentials[$i]['game']]['count']++;
 				}
 
 				$ppotentials = $db->query("SELECT * FROM publication_coverage WHERE game IN ({$gamesIdsForCompanyStr}) AND approved = 0 AND removed = 0;");
 				for($i = 0; $i < count($ppotentials); $i++) {
 					$ppotentials[$i]['type'] = "publication";
+					$ppotentials[$i]['game_name'] = $gamesIdsToNames[$ppotentials[$i]['game']];
 					$allpotentials[] = $ppotentials[$i];
+
+					if (!array_key_exists($ppotentials[$i]['game'], $byGameId)) {
+						$byGameId[$ppotentials[$i]['game']] = array("count" => 0, "name" => $gamesIdsToNames[$ppotentials[$i]['game']]);
+					}
+					$byGameId[$ppotentials[$i]['game']]['count']++;
 				}
 
-				$tpotentials = $db->query("SELECT * FROM twitch_coverage_potential WHERE game IN ({$gamesIdsForCompanyStr}) AND removed = 0;");
+				$tpotentials = $db->query("SELECT * FROM twitchchannel_coverage_potential WHERE game IN ({$gamesIdsForCompanyStr}) AND removed = 0;");
 				for($i = 0; $i < count($tpotentials); $i++) {
 					$tpotentials[$i]['type'] = "twitchchannel";
+					$tpotentials[$i]['game_name'] = $gamesIdsToNames[$tpotentials[$i]['game']];
 					$allpotentials[] = $tpotentials[$i];
+
+					if (!array_key_exists($tpotentials[$i]['game'], $byGameId)) {
+						$byGameId[$tpotentials[$i]['game']] = array("count" => 0, "name" => $gamesIdsToNames[$tpotentials[$i]['game']]);
+					}
+					$byGameId[$tpotentials[$i]['game']]['count']++;
 				}
 
 				$result = new stdClass();
 				$result->success = true;
 				$result->potentials = $allpotentials;
+				$result->stats = array(
+					"byType" => array(
+						"youtube" => count($ytpotentials),
+						"twitch" => count($tpotentials),
+						"website" => count($ppotentials)
+					),
+					"byGame" => $byGameId
+				);
 			}
 
 		}
@@ -3402,8 +3461,9 @@ if (!isset($_GET['endpoint'])) {
 			usort($youtubeChannels, "sortById");
 
 			for($i = 0; $i < $num_youtubeChannels; $i++) {
+				unset($youtubeChannels[$i]['description']);
 				$youtubeChannels[$i]['notes'] = utf8_encode($youtubeChannels[$i]['notes']);
-				$youtubeChannels[$i]['description'] = utf8_encode($youtubeChannels[$i]['description']);
+				// $youtubeChannels[$i]['description'] = utf8_encode($youtubeChannels[$i]['description']);
 			}
 
 			$result = new stdClass();

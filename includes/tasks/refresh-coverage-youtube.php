@@ -61,23 +61,23 @@ for($i = 0; $i < $num_youtubers; ++$i)
 				//$link = "https://www.youtube.com/watch?v=" . $video['id'];
 				$videoThumbnail = $video['thumbnail'];
 				$videoTime = strtotime($video['publishedOn']);
-				echo $title . "<br/>";
+				echo $videoTitle . "<br/>";
 
 				foreach ($games as $game) {
-					if (util_is_game_coverage_match($game, $title, $description))
+					if (util_is_game_coverage_match($game, $videoTitle, $videoDescription))
 					{
 						coverage_tryAddYoutubeCoverageUnsure(
-							$game,
-							null,
-							$youtubers[$i]['id'],
-							$youtubers[$i]['youtubeId'],
-							$youtubers[$i]['name'],
-							$video['id'],
-							$videoTitle,
-							$videoDescription,  // this is new
-							$videoThumbnail,
-							$videoTime,
-							true
+							$game,								// $game
+							null,								// $watchedGame
+							$youtubers[$i]['id'],				// $youtuberDbId
+							$youtubers[$i]['youtubeId'],		// $youtuberChannelId
+							$youtubers[$i]['name'],				// $youtuberChannelName
+							$video['id'],						// $videoId
+							$videoTitle,						// $videoTitle
+							$videoDescription,  // this is new	// $videoDescription
+							$videoThumbnail,					// $videoThumbnail
+							$videoTime,							// $videoTime
+							true								// $verbose
 						);
 					}
 				}
@@ -87,17 +87,17 @@ for($i = 0; $i < $num_youtubers; ++$i)
 						echo "<h4>Found Coverage!</h4>";
 
 						coverage_tryAddYoutubeCoverageUnsure(
-							null,
-							$watchedgame,
-							$youtubers[$i]['id'],
-							$youtubers[$i]['youtubeId'],
-							$youtubers[$i]['name'],
-							$video['id'],
-							$videoTitle,
-							$videoDescription,  // this is new
-							$videoThumbnail,
-							$videoTime,
-							true
+							null,								// $game
+							$watchedgame,						// $watchedGame
+							$youtubers[$i]['id'],				// $youtuberDbId
+							$youtubers[$i]['youtubeId'],		// $youtuberChannelId
+							$youtubers[$i]['name'],				// $youtuberChannelName
+							$video['id'],						// $videoId
+							$videoTitle,						// $videoTitle
+							$videoDescription,  // this is new	// $videoDescription
+							$videoThumbnail,					// $videoThumbnail
+							$videoTime,							// $videoTime
+							true								// $verbose
 						);
 					}
 				}

@@ -206,7 +206,7 @@ function util_fixkeywords($keywordsString) {
 	$fixed = implode(",", $r);
 	return $fixed;
 }
-function util_containsKeywords($haystack, $keywordsRaw, $verbose = false) {
+function util_containsKeywords($haystack, $keywordsRaw, &$matches = array(), $verbose = false) {
 	$haystack = strtolower($haystack);
 	$keywordsRaw = strtolower($keywordsRaw);
 
@@ -221,9 +221,9 @@ function util_containsKeywords($haystack, $keywordsRaw, $verbose = false) {
 	}
 	if ($verbose) { print_r($bits); }
 
-	return util_containsKeywordsArray($haystack, $bits, $verbose);
+	return util_containsKeywordsArray($haystack, $bits, $matches, $verbose);
 }
-function util_containsKeywordsArray($haystack, $keywords, $verbose = false) {
+function util_containsKeywordsArray($haystack, $keywords, &$matches = array(), $verbose = false) {
 	for ($i = 0; $i < count($keywords); $i++) {
 		//$keyword = trim($keywords[$i]);
 		$keyword = $keywords[$i];
@@ -232,6 +232,7 @@ function util_containsKeywordsArray($haystack, $keywords, $verbose = false) {
 
 		$pos = strpos($haystack, $keyword);
 		if ($pos !== FALSE) {
+			array_push($matches, $keyword);
 			if ($verbose) { echo "\"" . $keyword . "\" found<br/>"; }
 			return true;
 		}
@@ -242,8 +243,9 @@ function util_coverageContains($contents, $name = "", $keywords = "", $verbose =
 	$contents = strtolower($contents);
 	$name = strtolower($name);
 
+	$matches = array();
 	$containsName = strpos($contents, $name) !== FALSE;
-	$containsKeywords = util_containsKeywordsArray($contents, $keywords, $verbose);
+	$containsKeywords = util_containsKeywordsArray($contents, $keywords, $matches, $verbose);
 
 	if ($verbose && $containsName) { echo "The following contains watched game name:<br/>\n"; }
 	if ($verbose && $containsKeywords) { echo "The following contains watched game keywords:<br/>\n"; }
@@ -285,7 +287,8 @@ function util_muddyCoverageContains($contents, $name = "", $keywords = "", $verb
 		}
 	}
 
-	$containsKeywords = util_containsKeywordsArray($contents, $keywordsArray, $verbose);
+	$matches = array();
+	$containsKeywords = util_containsKeywordsArray($contents, $keywordsArray, $matches, $verbose);
 	if ($verbose && $containsKeywords) { echo "The following contains watched game keywords:<br/>\n"; }
 
 	return $containsName || $containsKeywords;
@@ -826,7 +829,9 @@ function twitch_getAccessToken() {
 function twitch_apiCall($url) {
 	global $twitch_apiKey;
 	global $twitch_apiSecret;
-	global $twitch_accessToken;
+	//global $twitch_accessToken;
+	$token_details = twitch_getAccessToken();
+	$twitch_accessToken = $token_details['access_token'];
 	//echo $url;
 
 	$ch = curl_init();
@@ -838,14 +843,14 @@ function twitch_apiCall($url) {
 	curl_setopt ($ch, CURLOPT_FOLLOWLOCATION, true);
 	curl_setopt ($ch, CURLOPT_MAXREDIRS, 100);
 	curl_setopt ($ch, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+	curl_setopt ($ch, CURLOPT_HTTPHEADER, array(
 	    "Client-ID: " . $twitch_apiKey,
 	    "Authorization: Bearer " . $twitch_accessToken
 	));
 	$contents = curl_exec($ch);
 	if (curl_errno($ch)) {
-		echo curl_error($ch);
-		echo "\n<br />";
+		echo "curlerr: " . curl_error($ch) . "\n<br />";
+		echo "url: " . $url . "\n<br />";
 		$contents = null;
 	} else {
 		curl_close($ch);
@@ -860,7 +865,11 @@ function twitch_apiCall($url) {
 
 function twitch_getUsers($userIds, $requestEmails=true) {
 	if (!is_array($userIds)){
-		return twitch_apiCall("https://api.twitch.tv/helix/users?id=" . urlencode($userIds));
+		$url = "https://api.twitch.tv/helix/users?id=" . urlencode($userIds);
+		// if ($requestEmails) {
+		// 	$url .= "&scope=user:read:email";
+		// }
+		return twitch_apiCall($url);
 	}
 	$url = "https://api.twitch.tv/helix/users?";
 	for($i = 0; $i < count($userIds); $i++) {
@@ -960,14 +969,14 @@ function twitch_getClipsForUser($userId) {
 	return twitch_apiCall("https://api.twitch.tv/helix/clips?broadcaster_id=" . $userId);
 }
 
-function db_try_add_twitch_channel($twitchId, $twitchDescription, $twitchBroadcasterType, $twitchProfileImage, $twitchOfflineImage, $twitchUsername, $displayname, $email, $viewCount, $subCount) {
+function db_try_add_twitch_channel($twitchId, $twitchDescription, $twitchBroadcasterType, $twitchProfileImage, $twitchOfflineImage, $twitchUsername, $displayname, $email, $viewCount, $subCount, $audience = 1, $notes = "") {
 	global $db;
 
-	$stmt = $db->prepare("INSERT INTO twitchchannel (`id`, `audience`, `twitchId`, `twitchDescription`, `twitchBroadcasterType`, `twitchProfileImageUrl`, `twitchOfflineImageUrl`, `twitchUsername`,  `name`, `email`, priorities, subscribers, `views`, twitter, twitter_followers, twitter_updatedon, notes, lang, tags, country, lastpostedon, lastpostedon_updatedon, removed, lastscrapedon)
-											VALUES ( NULL, :audience, :twitchId, :twitchDescription, :twitchBroadcasterType, :twitchProfileImage, :twitchOfflineImage, :twitchUsername, :name,  :email, :priorities, :subscribers, 			 :views,  '', 		0, 					0,      		'',  	'', '', '".DEFAULT_COUNTRY."', 	0,  		0, 						0, 			0
+	$stmt = $db->prepare("INSERT INTO twitchchannel (`id`, `audience`, `twitchId`, `twitchDescription`, `twitchBroadcasterType`, `twitchProfileImageUrl`, `twitchOfflineImageUrl`, `twitchUsername`,  `name`, `email`, `priorities`, `subscribers`, `views`, twitter, twitter_followers, twitter_updatedon, notes, lang, 	tags, 		country, 	lastpostedon, lastpostedon_updatedon, removed, lastscrapedon)
+											VALUES ( NULL, :audience,  :twitchId,  :twitchDescription,  :twitchBroadcasterType,  :twitchProfileImage,     :twitchOfflineImage,     :twitchUsername,   :name,  :email,  :priorities,  :subscribers,   :views, '', 	  0, 				 0,      		    :notes, :lang, :tags,		:country, 	0,  		  0, 					  0, 		0
 						); ");
+	$stmt->bindValue(":audience", $audience, Database::VARTYPE_INTEGER);
 	$stmt->bindValue(":twitchId", $twitchId, Database::VARTYPE_INTEGER);
-	$stmt->bindValue(":audience", 1, Database::VARTYPE_INTEGER);
 	$stmt->bindValue(":twitchDescription", $twitchDescription, Database::VARTYPE_STRING);
 	$stmt->bindValue(":twitchBroadcasterType", $twitchBroadcasterType, Database::VARTYPE_STRING);
 	$stmt->bindValue(":twitchProfileImage", $twitchProfileImage, Database::VARTYPE_STRING);
@@ -976,8 +985,12 @@ function db_try_add_twitch_channel($twitchId, $twitchDescription, $twitchBroadca
 	$stmt->bindValue(":name", $displayname, Database::VARTYPE_STRING);
 	$stmt->bindValue(":email", $email, Database::VARTYPE_STRING);
 	$stmt->bindValue(":priorities", db_defaultPrioritiesString($db), Database::VARTYPE_STRING);
-	$stmt->bindValue(":views", $viewCount, Database::VARTYPE_INTEGER);
 	$stmt->bindValue(":subscribers", $subCount, Database::VARTYPE_INTEGER);
+	$stmt->bindValue(":views", $viewCount, Database::VARTYPE_INTEGER);
+	$stmt->bindValue(":notes", $notes, Database::VARTYPE_STRING);
+	$stmt->bindValue(":lang", DEFAULT_LANG, Database::VARTYPE_STRING);
+	$stmt->bindValue(":tags", DEFAULT_TAGS, Database::VARTYPE_STRING);
+	$stmt->bindValue(":country", DEFAULT_COUNTRY, Database::VARTYPE_STRING);
 	$r = $stmt->execute();
 	if (!$r) {
 		die();
@@ -985,7 +998,7 @@ function db_try_add_twitch_channel($twitchId, $twitchDescription, $twitchBroadca
 	return $r;
 }
 
-function db_try_add_twitch_channel_from_user_result($user) {
+function db_try_add_twitch_channel_from_user_result($user, $audience = 1, $notes = "") {
 	global $db;
 
 	$results = $db->query("SELECT * FROM twitchchannel WHERE twitchId = '" . $user['id'] . "';");
@@ -995,34 +1008,38 @@ function db_try_add_twitch_channel_from_user_result($user) {
 
 	$subs = twitch_countSubscribers($user['id']);
 	db_try_add_twitch_channel(
-		$user['id'],
-		$user['description'],
-		$user['broadcaster_type'],
-		$user['profile_image_url'],
-		$user['offline_image_url'],
-		$user['login'],
-		$user['display_name'],
-		"",
-		$user['view_count'],
-		$subs
+		$user['id'],						// $twitchId,
+		$user['description'],				// $twitchDescription,
+		$user['broadcaster_type'],			// $twitchBroadcasterType,
+		$user['profile_image_url'],			// $twitchProfileImage,
+		$user['offline_image_url'],			// $twitchOfflineImage,
+		$user['login'],						// $twitchUsername,
+		$user['display_name'],				// $displayname,
+		"",									// $email,
+		$user['view_count'],				// $viewCount,
+		$subs,								// $subCount,
+		$audience,							// $audience = 1,
+		$notes								// $notes = ""
 	);
 	return true;
 }
 
-function twitch_coverage_exists($url) {
+function twitch_coverage_exists($url, $gameId) {
 	global $db;
-	$stmt = $db->prepare("SELECT * FROM twitchchannel_coverage WHERE url = :url LIMIT 1;");
+	$stmt = $db->prepare("SELECT * FROM twitchchannel_coverage WHERE url = :url AND game = :game LIMIT 1;");
 	$stmt->bindValue(":url", $url, Database::VARTYPE_STRING);
+	$stmt->bindValue(":game", $gameId, Database::VARTYPE_INTEGER);
 	$rs = $stmt->query();
 	if (count($rs) == 1) {
 		return true;
 	}
 	return false;
 }
-function twitch_coverage_potential_exists($url) {
+function twitch_coverage_potential_exists($url, $gameId) {
 	global $db;
-	$stmt = $db->prepare("SELECT * FROM twitchchannel_coverage_potential WHERE url = :url LIMIT 1;");
+	$stmt = $db->prepare("SELECT * FROM twitchchannel_coverage_potential WHERE url = :url AND game = :game LIMIT 1;");
 	$stmt->bindValue(":url", $url, Database::VARTYPE_STRING);
+	$stmt->bindValue(":game", $gameId, Database::VARTYPE_INTEGER);
 	$rs = $stmt->query();
 	if (count($rs) == 1) {
 		return true;
@@ -1225,13 +1242,25 @@ function youtube_v3_getUploads($playlist) {
 	$content = json_decode($text, true);
 	$results = array();
 	foreach ($content['items'] as $item) {
-		$results[] = array(
+		$result = array(
 			"id" => $item['snippet']['resourceId']['videoId'],
 			"publishedOn" => $item['snippet']['publishedAt'],
 			"title" => $item['snippet']['title'],
-			"description" => strip_tags($item['snippet']['description']),
-			"thumbnail" => $item['snippet']['thumbnails']['standard']['url']
+			"description" => strip_tags($item['snippet']['description'])
 		);
+		if (array_key_exists("standard", $item['snippet']['thumbnails'])) {
+			$result["thumbnail"] = $item['snippet']['thumbnails']['standard']['url'];
+		}
+		else if (array_key_exists("high", $item['snippet']['thumbnails'])) {
+			$result["thumbnail"] = $item['snippet']['thumbnails']['high']['url'];
+		}
+		else if (array_key_exists("default", $item['snippet']['thumbnails'])) {
+			$result["thumbnail"] = $item['snippet']['thumbnails']['default']['url'];
+		}
+		else {
+			$result["thumbnail"] = DEFAULT_THUMBNAIL;
+		}
+		$results[] = $result;
 	}
 	return $results;
 }
@@ -1273,8 +1302,8 @@ function youtube_v3_getSummaryFromVideoId($videoId) {
 	}
 	$content = json_decode($text, true);
 	return array(
-		"id"   => $content['items'][0]['id']['videoId'],
-		"url"  => "https://www.youtube.com/watch?v=".$content['items'][0]['id']['videoId'],
+		"id"   => $videoId,//$content['items'][0]['id']['videoId'],
+		"url"  => "https://www.youtube.com/watch?v=".$videoId,//$content['items'][0]['id']['videoId'],
 		"title"   => $content['items'][0]['snippet']['title'],
 		"thumbnail" => $content['items'][0]['snippet']['thumbnails']['standard']['url'],
 		"description"  => $content['items'][0]['snippet']['description'],
@@ -1285,6 +1314,69 @@ function youtube_v3_getSummaryFromVideoId($videoId) {
 }
 
 
+function youtuber_blacklist_by_video_id($youtubeVideoId, &$errorMessage = "") {
+	if (!youtube_isValidId($youtubeVideoId)) {
+		$errorMessage = "Invalid video ID";
+		return false;
+	}
+	$summary = youtube_v3_getSummaryFromVideoId($youtubeVideoId);
+	if (!is_array($summary)) {
+		$errorMessage = "Quota exceeded";
+		return false;
+		// In normal circumstances we'd fail and show an error,
+		// however we might have reached limit of requests per day...
+		// ... so only send
+	}
+	else {
+		$youtuberChannelId = $summary['channel_id'];
+
+		if (youtuber_channel_id_blacklisted($youtuberChannelId)) {
+			$errorMessage = "Channel ". $youtuberChannelId . "(".$youtuberInfo['name'].") is already blacklisted.";
+			return false;
+		}
+
+		$youtuberInfo = youtube_v3_getInformation($youtuberChannelId, $errorMessage);
+		if ($youtuberInfo === 0) {
+			return false;
+		}
+		return youtuber_add_to_blacklist($youtuberChannelId, $youtuberInfo['name'], $youtuberInfo['iconurl']);
+	}
+}
+function youtuber_add_to_blacklist($youtuberChannelId, $name, $iconurl) {
+	global $db;
+	$name = remove_emoji_from_string($name);
+	if (strlen(trim($iconurl)) == 0) {
+		$iconurl = "images/favicon.png";
+	}
+
+	echo "youtuberChannelId". $youtuberChannelId . "<br/>\n";
+	echo "name". $name . "<br/>\n";
+	echo "iconurl". $iconurl . "<br/>\n";
+	echo "removed". 0 . "<br/>\n";
+
+	$stmt = $db->prepare("INSERT INTO youtuber_blacklist (id,   youtubeId, 	 name, 	iconurl, removed) VALUES  (NULL,  :youtubeId, :name,  :iconurl, :removed); ");
+	$stmt->bindValue(":youtubeId", $youtuberChannelId, Database::VARTYPE_STRING);
+	$stmt->bindValue(":name", $name, Database::VARTYPE_STRING);
+	$stmt->bindValue(":iconurl", $iconurl, Database::VARTYPE_STRING);
+	$stmt->bindValue(":removed", 0, Database::VARTYPE_INTEGER);
+
+	$res = $stmt->execute();
+	if (!$res) {
+		return FALSE;
+	}
+
+	return $db->lastInsertRowID();
+}
+function youtuber_channel_id_blacklisted($youtuberChannelId) {
+	global $db;
+	$stmt = $db->prepare("SELECT * FROM youtuber_blacklist WHERE youtubeId = :youtuberId LIMIT 1;");
+	$stmt->bindValue(":youtuberId", $youtuberChannelId, Database::VARTYPE_STRING);
+	$rs = $stmt->query();
+	if (count($rs) == 1) {
+		return true;
+	}
+	return false;
+}
 function youtuber_coverage_potential_exists($url) {
 	global $db;
 	$stmt = $db->prepare("SELECT * FROM youtuber_coverage_potential WHERE url = :url LIMIT 1;");
@@ -1314,7 +1406,7 @@ function youtuber_coverage_potential_add($gameId, $watchedGameId, $summary) {
 
 	return $db->lastInsertRowID();
 }
-function youtuber_coverage_add($gameId, $watchedGameId, $summary) {
+function youtuber_coverage_add($gameId, $watchedGameId, $summary, $sendAlert = true) {
 	global $db;
 
 	$stmt = $db->prepare("INSERT INTO youtuber_coverage (id, youtuber, person, game, watchedgame, url, title, thumbnail, `utime`, thanked, removed)
@@ -1333,7 +1425,7 @@ function youtuber_coverage_add($gameId, $watchedGameId, $summary) {
 
 	if ($res) {
 		// not one of the watched games so much be a proper user-owned game.
-		if ($watchedGameId == 0) {
+		if ($watchedGameId == 0 && $sendAlert) {
 			youtuber_coverage_add_alerts($insert_id);
 		}
 	}
@@ -1352,6 +1444,7 @@ function youtuber_coverage_add_alerts($youtuber_coverage_id) {
 								game.name as game_name
 							FROM youtuber_coverage
 							JOIN youtuber ON youtuber_coverage.youtuber = youtuber.id
+							JOIN game on youtuber_coverage.game = game.id
 							WHERE youtuber_coverage.id = :id
 							LIMIT 1;");
 	$stmt->bindValue(":id", $youtuber_coverage_id, Database::VARTYPE_INTEGER);
@@ -1411,7 +1504,7 @@ function youtuber_coverage_potential_reject($potential) {
 	$stmt->bindValue(":id", $potential['id'], Database::VARTYPE_INTEGER);
 	return $stmt->execute();
 }
-function youtuber_coverage_potential_approve($potential, $audience, $notes = "") {
+function youtuber_coverage_potential_approve($potential, $audience, $notes = "", $sendAlert = true) {
 	global $db;
 
 	$gameId = $potential['game'];
@@ -1456,7 +1549,7 @@ function youtuber_coverage_potential_approve($potential, $audience, $notes = "")
 			"channel_id"   => $potential['channelId'],
 			"channel_title" => $potential['channelTitle']
 		);
-		$youtuber_coverage_id = youtuber_coverage_add($gameId, 0, $summary);
+		$youtuber_coverage_id = youtuber_coverage_add($gameId, 0, $summary, $sendAlert);
 
 		// Link the "potential" to the "final" coverage.
 		$stmt = $db->prepare("UPDATE youtuber_coverage_potential SET coverage = :coverage_id, removed = 1 WHERE id = :id LIMIT 1; ");
@@ -1465,6 +1558,69 @@ function youtuber_coverage_potential_approve($potential, $audience, $notes = "")
 		$stmt->execute();
 
 		return true;
+	}
+}
+
+function youtuber_coverage_manual_submit($videoId, &$errorMessage = "", &$autoSubmitted = false) {
+	global $db;
+
+	if (!youtube_isValidId($videoId)) {
+		$errorMessage = "Invalid video ID";
+		return false;
+	}
+
+	$fixedUrl = "https://www.youtube.com/watch?v=".$videoId;
+	if (youtuber_coverage_potential_exists($fixedUrl)) { // fail early.
+		$errorMessage = "Submission already exists.";
+		return false;
+	}
+
+	$summary = youtube_v3_getSummaryFromVideoId($videoId);
+	if (!is_array($summary)) {
+		$errorMessage = "Quota exceeded";
+		return false;
+		// In normal circumstances we'd fail and show an error,
+		// however we might have reached limit of requests per day...
+		// ... so only send
+	}
+	else {
+		// All Games
+		$games = $db->query("SELECT * FROM game WHERE removed = 0;");
+		$num_games = count($games);
+		// It's a valid video.
+		// But does it match any of our games?
+		// If it does: find the youtuber in the system, or add a new one?
+		$found = false;
+		foreach ($games as $game) {
+			if (util_is_game_coverage_match($game, $summary['title'], $summary['description'])) {
+				$found = true;
+				// Is the channel id already in the youtubers list? if so, add the coverage straight away!
+				$youtuber_exists = $db->query("SELECT * FROM youtuber WHERE youtubeId = '" . $summary['channel_id'] . "' AND removed = 0 LIMIT 1;");
+				if (is_array($youtuber_exists) && count($youtuber_exists) == 1) {
+
+					$youtuber_coverage_id = coverage_tryAddYoutubeCoverageUnsure(
+						$game,									// $game
+						null,									// $watchedGame
+						$youtuber_exists[0]['id'],				// $youtuberDbId
+						$youtuber_exists[0]['youtubeId'],		// $youtuberChannelId
+						$youtuber_exists[0]['name'],			// $youtuberChannelName
+						$summary['id'],							// $videoId
+						$summary['title'],						// $videoTitle
+						$summary['description'],				// $videoDescription
+						$summary['thumbnail'],					// $videoThumbnail
+						$summary['published_on'],				// $videoTime
+						false									// $verbose
+					);
+				}
+				else {
+					$potential_id = youtuber_coverage_potential_add($game['id'], null, $summary);
+					$autoSubmitted = true;
+					// Don't break, if it's a compilation video we wannt to trigger it for all games!
+					// break;
+				}
+			}
+		}
+		return $found;
 	}
 }
 
@@ -1538,6 +1694,7 @@ function email_new_coverage($companyId, $gameName, $fromName, $title, $url, $tim
 function email_new_youtube_coverage($companyId, $gameName, $youtuberName, $title, $url, $time) {
 	global $impresslist_emailAddress;
 	global $db;
+	return;
 
 	// email queue.
 	$reply_to = "no-reply" . substr($impresslist_emailAddress, strpos($impresslist_emailAddress, "@"));
@@ -1723,7 +1880,8 @@ function slack_coverageAlert($companyId, $gameName, $fromName, $coverageTitle, $
 	return slack_incomingWebhook($company['slack_apiUrl'], $data);
 }
 function slack_jobsChanged($companyId, $arr, $fromUser) {
-	global $db;
+	return;
+	/*global $db;
 	$company = db_singlecompany($db, $companyId, array('slack_enabled', 'slack_apiUrl'));
 	if (!$company || !$company['slack_enabled']) { return ""; }
 
@@ -1741,7 +1899,7 @@ function slack_jobsChanged($companyId, $arr, $fromUser) {
 				"color" => "#eeeeee",
 				"fields" => array(
 					array(
-						"title" => "by " . $fromUser,
+						"title" => ("by " . $fromUser),
 						"value" => $str,
 						"short" => false
 					)
@@ -1749,7 +1907,7 @@ function slack_jobsChanged($companyId, $arr, $fromUser) {
 			)
 		)
 	);
-	return slack_incomingWebhook($company['slack_apiUrl'], $data);
+	return slack_incomingWebhook($company['slack_apiUrl'], $data);*/
 }
 
 function user_updateActivity($user_id) {
@@ -1841,6 +1999,7 @@ function fixtags($tagsString) {
 const DEFAULT_TAGS = "todo";
 const DEFAULT_LANG = "en";
 const DEFAULT_COUNTRY = "";
+const DEFAULT_THUMBNAIL = "";
 
 function listlanguages() {
 	$c = array(

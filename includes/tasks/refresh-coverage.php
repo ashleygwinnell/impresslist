@@ -70,7 +70,7 @@ for($i = 0; $i < $num_publications && $i < $max_publications; $i++) {
 	// Scrape RSS
 	$rssError = "";
 	$pageError = "";
-	$rssScrapeSuccess = coverage_scapePublicationRSS($games, $watchedgames, $publications[$i], true, $rssError);
+	$rssScrapeSuccess = coverage_scrapePublicationRSS($games, $watchedgames, $publications[$i], true, $rssError);
 
 	// Scrape homepage
 	if (!$rssScrapeSuccess)

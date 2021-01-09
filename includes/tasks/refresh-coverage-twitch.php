@@ -7,6 +7,8 @@ $require_login = false;
 $require_config = true;
 include_once($_SERVER['DOCUMENT_ROOT'] . "/init.php");
 
+$impresslist_verbose = true;
+
 // Games
 $cacheTime = 60*60;
 $doTimelimit = true;
@@ -17,12 +19,11 @@ $all_games = $db->query("	SELECT * FROM game
 								AND removed = 0
 								ORDER BY twitchLastScraped ASC;");
 
-$streamers = $db->query("SELECT * FROM twitchchannel WHERE twitchId != 0 AND lastscrapedon < " . (time()-$cacheTime) . " AND removed = 0 ORDER BY RAND() ASC LIMIT 100;");
+$streamers = $db->query("SELECT * FROM twitchchannel WHERE twitchId != 0 AND lastscrapedon < " . (time()-$cacheTime) . " AND removed = 0 ORDER BY RAND() ASC LIMIT 30;");
 $num_streamers = count($streamers);
 
 $token_details = twitch_getAccessToken();
 $twitch_accessToken = $token_details['access_token'];
-
 
 
 // EXISTING TWITCH CHANNELS.
@@ -59,18 +60,17 @@ for($i = 0; $i < count($streamers); $i++) {
 				{
 					// potential OR proper depending on game settings.
 					tryAddTwitchCoverageUnsure(
-						$game,
-						$game['company'],
-						$streamer['id'],
-						$item['user_id'],
-						$item['user_name'],
-						$item['id'],  // video id
-						null, 		  // clip id
-						$item['url'],
-						$title,
-						$description,
-						$item['thumbnail_url'],
-						strtotime($item['created_at'])
+						$game,								// $game,
+						$streamer,							// $dbchannel,
+						$item['user_id'],					// $twitchChannelId,
+						$item['user_name'],					// $twitchChannelName,
+						$item['id'],  // video id			// $twitchVideoId,
+						null, 		  // clip id			// $twitchClipId,
+						$item['url'],						// $url,
+						$title,								// $title,
+						$description,						// $description,
+						$item['thumbnail_url'],				// $thumbnail,
+						strtotime($item['created_at'])		// $time
 					);
 					// TODO:
 					// $video['view_count'];
@@ -101,18 +101,17 @@ for($i = 0; $i < count($streamers); $i++) {
 
 				if (util_is_game_coverage_match($game, $title, $description)) {
 					tryAddTwitchCoverageUnsure(
-						$game,
-						$game['company'],
-						$streamer['id'],
-						$item['broadcaster_id'],
-						$item['broadcaster_name'],
-						null,  			// video id
-						$item['id'], 	// clip id
-						$item['url'],
-						$title,
-						$description,
-						$item['thumbnail_url'],
-						strtotime($item['created_at'])
+						$game,								// $game,
+						$streamer,							// $dbchannel,
+						$item['broadcaster_id'],			// $twitchChannelId,
+						$item['broadcaster_name'],			// $twitchChannelName,
+						null,  			// video id			// $twitchVideoId,
+						$item['id'], 	// clip id			// $twitchClipId,
+						$item['url'],						// $url,
+						$title,								// $title,
+						$description,						// $description,
+						$item['thumbnail_url'],				// $thumbnail,
+						strtotime($item['created_at'])		// $time
 					);
 					// TODO:
 					// $clip['view_count'];

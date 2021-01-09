@@ -34,7 +34,7 @@
 	echo "<h1>Twitch</h1>\n";
 	for($i = 0; $i < count($lookout_games); ++$i)
 	{
-		echo "<b>" . $lookout_games[$i]['name'] . "</b>!<br/>\n";
+		echo "<h1>" . $lookout_games[$i]['name'] . "</h1>!<br/>\n";
 
 		$twitchId = $lookout_games[$i]['twitchId'];
 		if (strlen($twitchId) > 0)
@@ -53,17 +53,17 @@
 
 					$channel = db_singletwitchchannelbytwitchid($db, $video['user_id']);
 					tryAddTwitchCoverageUnsure(
-						$lookout_games[$i],
-						$channel,
-						$video['user_id'],
-						$video['user_name'],
-						$video['id'],  	// video id
-						null, 			// clip id
-						$video['url'],
-						$title,
-						$description,
-						$video['thumbnail_url'],
-						strtotime($video['created_at'])
+						$lookout_games[$i],					// $game,
+						$channel,							// $dbchannel,
+						$video['user_id'],					// $twitchChannelId,
+						$video['user_name'],				// $twitchChannelName,
+						$video['id'],  	// video id			// $twitchVideoId,
+						null, 			// clip id			// $twitchClipId,
+						$video['url'],						// $url,
+						$title,								// $title,
+						$description,						// $description,
+						$video['thumbnail_url'],			// $thumbnail,
+						strtotime($video['created_at'])		// $time
 					);
 
 					// TODO:
@@ -87,17 +87,17 @@
 
 					$channel = db_singletwitchchannelbytwitchid($db, $clip['broadcaster_id']);\
 					tryAddTwitchCoverageUnsure(
-						$lookout_games[$i],
-						$channel,
-						$clip['broadcaster_id'],
-						$clip['broadcaster_name'],
-						null,  			// video id
-						$clip['id'], 	// clip id
-						$clip['url'],
-						$title,
-						$description,
-						$clip['thumbnail_url'],
-						strtotime($clip['created_at'])
+						$lookout_games[$i],					// $game,
+						$channel,							// $dbchannel,
+						$clip['broadcaster_id'],			// $twitchChannelId,
+						$clip['broadcaster_name'],			// $twitchChannelName,
+						null,  			// video id			// $twitchVideoId,
+						$clip['id'], 	// clip id			// $twitchClipId,
+						$clip['url'],						// $url,
+						$title,								// $title,
+						$description,						// $description,
+						$clip['thumbnail_url'],				// $thumbnail,
+						strtotime($clip['created_at'])		// $time
 					);
 
 					// TODO:
@@ -114,8 +114,8 @@
 	}
 
 	// echo "<b>Done!</b>\n";
-	die("temp done");
-	die();
+	//die("temp done");
+	//die();
 
 
 	echo "<h1>YouTube</h1>\n";
@@ -124,7 +124,7 @@
 		$game = $games[$j];
 		$gameName = $game['name'];
 
-		echo "<b>" . $game['name'] . "</b><br/>\n";
+		echo "<h1>" . $game['name'] . "</h1><br/>\n";
 
 		$searches = array(
 			array(
@@ -184,17 +184,17 @@
 					}
 
 					coverage_tryAddYoutubeCoverageUnsure(
-						$game,
-						null,
-						// $youtuberDbId,
-						$data['items'][$i]['snippet']['channelId'],
-						$data['items'][$i]['snippet']['channelTitle'],
-						$videoId,
-						$videoTitle,
-						$videoDescription,
-						$videoThumbnail,
-						$videoTime,
-						true
+						$game,											// $game
+						null,											// $watchedGame
+						$youtuberDbId, 									// $youtuberDbId
+						$data['items'][$i]['snippet']['channelId'],		// $youtuberChannelId
+						$data['items'][$i]['snippet']['channelTitle'],	// $youtuberChannelName
+						$videoId,										// $videoId
+						$videoTitle,									// $videoTitle
+						$videoDescription,								// $videoDescription
+						$videoThumbnail,								// $videoThumbnail
+						$videoTime,										// $videoTime
+						true											// $verbose
 					);
 				}
 			}

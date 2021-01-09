@@ -1727,8 +1727,8 @@ TwitchChannel = function(data) {
 			ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
 			if (ret) { return ret; }
 
-			ret = this.fields['description'].toLowerCase().indexOf(text) != -1;
-			if (ret) { return ret; }
+			// ret = this.fields['description'].toLowerCase().indexOf(text) != -1;
+			// if (ret) { return ret; }
 		}
 
 		ret = this.fields['twitter'].toLowerCase().indexOf(text) != -1;
@@ -1982,8 +1982,8 @@ Youtuber = function(data) {
 			ret = this.fields['notes'].toLowerCase().indexOf(text) != -1;
 			if (ret) { return ret; }
 
-			ret = this.fields['description'].toLowerCase().indexOf(text) != -1;
-			if (ret) { return ret; }
+			//ret = this.fields['description'].toLowerCase().indexOf(text) != -1;
+			//if (ret) { return ret; }
 		}
 
 		ret = this.fields['twitter'].toLowerCase().indexOf(text) != -1;
