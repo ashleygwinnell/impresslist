@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+	<head>
+		<?php include_once("head.html"); ?>
+	</head>
+	<body>
+
+		<br/>
+		<div class='container'>
+			<div class="jumbotron">
+				<h1><?= $audience['name']; ?></h1><Br/>
+
+				<h3>Subscribe</h3>
+
+				<? if ($success): ?>
+					<p>Hurray!</p>
+					<div class="alert alert-success" role="alert">
+				  		<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+				  		<span class="sr-only">Success:</span>
+						Your subscription was successful.
+					</div>
+
+				<? else: ?>
+
+					<? if ($error): ?>
+						<div class="alert alert-danger" role="alert">
+					  		<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+					  		<span class="sr-only">Error:</span>
+							<?= $errorMessage; ?>
+						</div>
+					<? endif; ?>
+
+
+						<p>Please enter your e-mail address to subscribe to this mailing list.</p>
+						<form class="form" role="subscribe" action='<?= $_SERVER['REQUEST_URI'] ?>' method='POST'>
+							<div class="form-group">
+								<input name='firstname' type="text" class="form-control" placeholder="First Name"/>
+								<input name='email' type="text" class="form-control" placeholder="Email" <?php
+
+								if (isset($_POST['email'])) {
+									echo "value='" . $_POST['email'] . "' ";
+								}
+
+								?> />
+							</div>
+
+							<button type="submit" class="btn btn-primary">Subscribe</button>
+						</form>
+
+
+				<? endif; ?>
+
+			</div>
+		</div>
+	</body>
+</html>

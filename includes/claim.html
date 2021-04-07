@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+	<head>
+		<?php include_once("head.html"); ?>
+	</head>
+	<body>
+
+		<br/>
+		<div class='container'>
+			<div class="jumbotron">
+				<h1><?= $game['name']; ?></h1><Br/>
+
+				<h3>Claim Key</h3>
+				<h4><?= $platformsForKeys[$platform];?></h4>
+
+				<? if ($success): ?>
+					<p>Hurray!</p>
+					<div class="alert alert-success" role="alert">
+				  		<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+				  		<span class="sr-only">Success:</span>
+						Your key claim was successful. Please check your e-mail address. If you need more keys please get in contact.
+					</div>
+
+				<? else: ?>
+
+
+
+					<? if ($error): ?>
+						<div class="alert alert-danger" role="alert">
+					  		<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+					  		<span class="sr-only">Error:</span>
+							<?= $errorMessage; ?>
+						</div>
+					<? endif; ?>
+
+
+					<? //print_r($_POST); ?>
+
+					<? if ($platform == "switch"): ?>
+						<p>Please enter your e-mail address and Nintendo Switch region. You will receive your key automagically through e-mail.</p>
+						<form class="form" role="claim" action='<?= $_SERVER['REQUEST_URI'] ?>' method='POST'>
+							<div class="form-group">
+								<input name='email' type="text" class="form-control" placeholder="Email" <?php
+
+								if (isset($_POST['email'])) {
+									echo "value='" . $_POST['email'] . "' ";
+								}
+
+								?> />
+							</div>
+							<div class="form-group">
+								<select name='region' type="region" class="form-control"  <?php
+
+								//if (isset($_POST['region'])) {
+								//	echo "value='" . $_POST['region']. "' ";
+								//}
+
+								?>>
+								<option value='--'>Please Select</option>
+								<?php
+								foreach ($validRegions as $rkey => $rdisplay ) {
+									echo "<option value='" . $rkey. "' " . (($region == $rkey)?"selected":""). ">" . $rdisplay . "</option>";
+								}
+								?>
+							</select>
+							</div>
+							<button type="submit" class="btn btn-primary">Claim Key</button>
+						</form>
+					<? else: ?>
+
+						<p>Not implemented...</p>
+
+					<? endif; ?>
+
+				<? endif; ?>
+
+			</div>
+		</div>
+	</body>
+</html>

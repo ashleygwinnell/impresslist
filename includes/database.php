@@ -442,7 +442,6 @@
 		// Cache
 		// TODO: cache_external_twitteracc;
 
-
 		// 8 bits for publication id hash, 32 chars for url hash
 		// see util_publication_url_hash()
 		$sql = "CREATE TABLE IF NOT EXISTS cache_external_urlbools (

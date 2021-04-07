@@ -1330,12 +1330,12 @@ function youtuber_blacklist_by_video_id($youtubeVideoId, &$errorMessage = "") {
 	else {
 		$youtuberChannelId = $summary['channel_id'];
 
+		$youtuberInfo = youtube_v3_getInformation($youtuberChannelId, $errorMessage);
 		if (youtuber_channel_id_blacklisted($youtuberChannelId)) {
 			$errorMessage = "Channel ". $youtuberChannelId . "(".$youtuberInfo['name'].") is already blacklisted.";
 			return false;
 		}
 
-		$youtuberInfo = youtube_v3_getInformation($youtuberChannelId, $errorMessage);
 		if ($youtuberInfo === 0) {
 			return false;
 		}
